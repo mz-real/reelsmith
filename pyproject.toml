@@ -69,3 +69,8 @@ markers = [
     "integration: full pipeline test with ffmpeg and optional Playwright",
     "models: real Kokoro and Whisper model test, needs REELSMITH_TEST_MODELS=1 and downloads models",
 ]
+
+[tool.reelsmith]
+# Flip to true in the release PR, when the version is on PyPI. The generated
+# instructions then show "uv tool install reelsmith" instead of the Git URL.
+published = false

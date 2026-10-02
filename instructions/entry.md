@@ -8,7 +8,7 @@ Help the user get a finished, narrated demo video of their app that they are hap
 
 ## Before you start
 
-1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install reelsmith` (or `uv tool install "reelsmith[clone]"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
+1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `{{install}}` (or `{{install_clone}}` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
 2. Run `reelsmith doctor` with the expected version set, so it warns if the CLI and these instructions do not match:
    - macOS and Linux: `REELSMITH_EXPECTED_VERSION={{version}} reelsmith doctor`
    - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="{{version}}"; reelsmith doctor`
