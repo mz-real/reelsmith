@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Terminal replay</title>
+    <style>
+      :root {
+        --page: #0b0f12;
+        --window: #0d1b1e;
+        --bar: #111820;
+        --text: #f0f2f4;
+        --dim: #8a9299;
+        --prompt: #7fd18b;
+        --you: #2dd4bf;
+        --claude-label: #e8ecef;
+        --claude-body: #d8dde2;
+        --ok: #7fd18b;
+        --warn: #f0c36c;
+        --error: #f07c7c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: linear-gradient(165deg, var(--page) 0%, var(--window) 100%);
+      }
+      body {
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+        padding: 0;
+      }
+      .window {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--window);
+        overflow: hidden;
+      }
+      .bar {
+        flex: none;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bar);
+        color: var(--dim);
+        font: 15px ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+      }
+      .screen {
+        flex: 1;
+        overflow: auto;
+        padding: 20px 28px;
+        color: var(--text);
+        font: 22px/1.5 ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .note {
+        color: var(--dim);
+      }
+      .cmd {
+        margin-top: 12px;
+      }
+      .cmd:first-child,
+      .note + .cmd {
+        margin-top: 0;
+      }
+      .note {
+        margin-top: 12px;
+      }
+      .note:first-child {
+        margin-top: 0;
+      }
+      .prompt {
+        color: var(--prompt);
+        margin-right: 0.5em;
+      }
+      .prompt.you {
+        color: var(--you);
+      }
+      .prompt.claude {
+        color: var(--claude-label);
+      }
+      .caret {
+        display: inline-block;
+        width: 0.55em;
+        height: 1.1em;
+        vertical-align: text-bottom;
+        background: var(--text);
+        animation: blink 1s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .out {
+        color: #c8ccd2;
+      }
+      .out .claude-line {
+        color: var(--claude-body);
+      }
+      .ok {
+        color: var(--ok);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .error {
+        color: var(--error);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="window">
+      <div class="bar" data-testid="title">terminal</div>
+      <div class="screen" data-testid="screen" id="screen"></div>
+    </div>
+    <script src="sessions.js"></script>
+    <script src="replay.js"></script>
+  </body>
+</html>
