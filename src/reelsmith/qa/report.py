@@ -17,10 +17,12 @@ class ReportMeta:
     engine: str | None
     voice: str | None
     notes: list[str]
+    preview: bool = False
 
 
 def render_report(meta: ReportMeta, rows: list[CheckRow], sheet_paths: list[str]) -> str:
-    lines = ["# QA report", ""]
+    title = "QA report (preview check)" if meta.preview else "QA report"
+    lines = [f"# {title}", ""]
     lines.append(f"Generated: {meta.generated_at.strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"Format: {meta.format}")
     lines.append(f"Master: {meta.master} ({meta.master_duration:.2f}s)")

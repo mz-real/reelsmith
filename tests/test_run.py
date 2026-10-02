@@ -38,7 +38,7 @@ def rec(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Recorder:
     monkeypatch.setattr(run_cmd, "run_generate", lambda root: r.hit("voice generate"))
     monkeypatch.setattr(run_cmd, "run_slides", lambda root: r.hit("slides"))
     monkeypatch.setattr(run_cmd, "_load_compose", lambda: lambda root, preview: r.hit("compose"))
-    monkeypatch.setattr(run_cmd, "_load_qa", lambda: lambda root, fmt: r.hit("qa"))
+    monkeypatch.setattr(run_cmd, "_load_qa", lambda: lambda root, fmt, preview: r.hit("qa"))
     monkeypatch.setattr(run_cmd, "_load_export", lambda: lambda root, name: r.hit("export"))
     return r
 
@@ -126,7 +126,7 @@ def test_qa_runs_once_per_format(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     save_model(tmp_path / "spec.yaml", SpecModel(formats=["16:9", "9:16"]))
     seen: list[str] = []
 
-    def fake_qa(root: Path, fmt: str) -> Result:
+    def fake_qa(root: Path, fmt: str, preview: bool) -> Result:
         seen.append(fmt)
         return ok()
 
@@ -135,6 +135,20 @@ def test_qa_runs_once_per_format(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     assert steps["qa"].fn is not None
     steps["qa"].fn()
     assert seen == ["16x9", "9x16"]
+
+
+def test_qa_gets_the_preview_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    seen: list[bool] = []
+
+    def fake_qa(root: Path, fmt: str, preview: bool) -> Result:
+        seen.append(preview)
+        return ok()
+
+    monkeypatch.setattr(run_cmd, "_load_qa", lambda: fake_qa)
+    steps = {s.name: s for s in run_cmd.build_steps(tmp_path, preview=True)}
+    assert steps["qa"].fn is not None
+    steps["qa"].fn()
+    assert seen == [True]
 
 
 def test_compose_gets_the_preview_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -197,3 +211,9 @@ def test_loaders_fall_back_to_the_typer_command(monkeypatch: pytest.MonkeyPatch)
     assert compose is not None
     compose(Path("demo"), True)
     assert seen == [["compose", "demo", "--preview"]]
+
+    seen.clear()
+    qa = run_cmd._load_qa()
+    assert qa is not None
+    qa(Path("demo"), "16x9", True)
+    assert seen == [["qa", "demo", "--format", "16x9", "--preview"]]

@@ -41,3 +41,9 @@ def test_extra_heard_words_are_not_reported() -> None:
     missing, changed = compare_words("Save the recipe.", "um save the recipe okay")
     assert missing == []
     assert changed == []
+
+
+def test_spelling_variant_is_not_reported_as_missing() -> None:
+    missing, changed = compare_words("Browse your saved favourites.", "browse your saved favorites")
+    assert missing == []
+    assert changed == []
