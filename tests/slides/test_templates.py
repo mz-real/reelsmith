@@ -42,6 +42,6 @@ def test_flow_arrows_only_between_sequence_steps() -> None:
         exits=["Cancel"],
     )
     html = render_slide_html(slide, _theme(), build_index=None, width=1920, height=1080)
-    assert html.count('class="flow-arrow"') == 2
+    assert html.count('class="flow-arrow') == 2
     assert "Cancel" in html
     assert html.index("flow-arrow") < html.index("Cancel")

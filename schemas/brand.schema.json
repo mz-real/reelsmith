@@ -120,6 +120,18 @@
       "default": null,
       "title": "Name"
     },
+    "tagline": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tagline"
+    },
     "logo": {
       "anyOf": [
         {

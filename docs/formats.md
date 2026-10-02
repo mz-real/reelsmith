@@ -22,7 +22,7 @@ demo/
   voice/             one wav per line, plus timings.json
     preview/         voice preview files
     compare/         voice compare output
-  slides/            rendered slide images: slides/<id>.png and slides/<format>/<id>.png
+  slides/            rendered slides: slides/<format>/<id>_step<n>.png and .mp4, and <id>.png
   build/             working files and master_<format>.mp4, safe to delete
   qa/                report.md and contact sheets
   out/               final videos, narration and .srt
@@ -54,7 +54,7 @@ audience: customers
 target_seconds: 90
 formats: ["16:9"]        # any of 16:9, 9:16, 1:1
 quality: 1080p           # 1080p or 4k
-theme: dark              # dark, light or minimal
+theme: studio            # studio (the default), dark, light or minimal
 footage: web             # import, web or mobile
 voice:
   engine: kokoro         # kokoro, chatterbox or none
@@ -138,8 +138,17 @@ slides:
     subtitle: Find, save and cook your favourite dishes
   - id: why
     kind: flow                 # steps shown in order, they build in with the narration
-    title: How it works
-    steps: [Find a dish, Open it, Save it, Cook it]
+    eyebrow: The basics        # optional small label above the title
+    title: How it *works*      # *words* are drawn in the accent colour, \* is a plain star
+    subtitle: Four steps, about a minute
+    chapter: 1                 # optional big faded number, top right
+    step_style: dim            # dim (future steps faded) or reveal (hidden until their step)
+    steps:
+      - title: Find a dish
+        detail: Search by name or ingredient   # optional one line under the title
+      - Open it                # a plain string works too
+      - Save it
+      - Cook it
     exits: []                  # optional labels, shown once every step is in
   - id: growth
     kind: chart
@@ -155,7 +164,11 @@ slides:
       - Save recipes to Favourites
 ```
 
-`reelsmith slides` renders each slide once per format in spec.yaml. Images go under `slides/16x9/`, `slides/9x16/` and `slides/1x1/` at that format's pixel size. The first format is also copied to `slides/<id>.png` for older demos. Theme comes from spec.yaml, colours, logo and font from brand.yaml.
+Every kind takes the optional `eyebrow`, `subtitle`, `chapter` and `step_style` fields shown on the flow. In a flow without an `eyebrow`, the label counts the steps ("Step 2 of 4").
+
+`reelsmith slides` renders each slide once per format in spec.yaml, under `slides/16x9/`, `slides/9x16/` and `slides/1x1/` at that format's pixel size. Each build step gets a still, `<id>_step<n>.png`, and its intro animation, `<id>_step<n>.mp4` (0.7 s). Step 0 is the slide's entrance. `<id>.png` is the finished slide. Compose plays each clip when its phrase starts, then holds the still. The first format's images are also copied to `slides/` for older demos. Theme comes from spec.yaml, colours, logo and font from brand.yaml.
+
+The `studio` theme is a deep gradient with soft glows, large left aligned titles and cards. Its accent is brand.yaml `colors.accent` (or `colors.primary`), teal by default. The footer shows brand.yaml `name` and the spec `goal` (or brand.yaml `tagline`).
 
 ## brand.yaml
 
@@ -164,6 +177,7 @@ Optional. Every field can be left out.
 ```yaml
 version: 1
 name: My product
+tagline: null              # short line for the studio slide footer, when spec.yaml has no goal
 logo: null                 # path to a local image
 colors:                    # #rrggbb, any of primary, secondary, accent, background, text
   primary: "#2563eb"

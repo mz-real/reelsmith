@@ -27,6 +27,7 @@ class BrandFont(StrictModel):
 class BrandModel(StrictModel):
     version: Literal[1] = 1
     name: str | None = None
+    tagline: str | None = None  # short line for the slide footer
     logo: str | None = None  # path to a local image
     colors: BrandColors = Field(default_factory=BrandColors)
     font: BrandFont = Field(default_factory=BrandFont)

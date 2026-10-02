@@ -5,7 +5,7 @@ audience: customers
 target_seconds: 90
 formats: ["16:9"]
 quality: 1080p
-theme: dark
+theme: studio
 footage: web
 voice:
   engine: kokoro

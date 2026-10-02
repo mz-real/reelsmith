@@ -9,6 +9,53 @@
           "title": "Id",
           "type": "string"
         },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
         "kind": {
           "const": "bullets",
           "title": "Kind",
@@ -49,6 +96,53 @@
         "id": {
           "minLength": 1,
           "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
           "type": "string"
         },
         "kind": {
@@ -111,6 +205,53 @@
           "title": "Id",
           "type": "string"
         },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
         "kind": {
           "const": "flow",
           "title": "Kind",
@@ -130,7 +271,14 @@
         },
         "steps": {
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/FlowStep"
+              }
+            ]
           },
           "minItems": 1,
           "title": "Steps",
@@ -152,6 +300,32 @@
       "title": "FlowSlide",
       "type": "object"
     },
+    "FlowStep": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "FlowStep",
+      "type": "object"
+    },
     "TitleSlide": {
       "additionalProperties": false,
       "properties": {
@@ -160,14 +334,17 @@
           "title": "Id",
           "type": "string"
         },
-        "kind": {
-          "const": "title",
-          "title": "Kind",
-          "type": "string"
-        },
-        "title": {
-          "title": "Title",
-          "type": "string"
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
         },
         "subtitle": {
           "anyOf": [
@@ -180,6 +357,38 @@
           ],
           "default": null,
           "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "title",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
         }
       },
       "required": [

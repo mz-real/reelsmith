@@ -83,8 +83,13 @@ slides:
     subtitle: Save the recipes you love
   - id: how
     kind: flow
-    title: How saving works
-    steps: [Find a recipe, Open it, Tap the heart]
+    eyebrow: Saving
+    title: How *saving* works
+    steps:
+      - title: Find a recipe
+        detail: Search by name or ingredient
+      - title: Open it
+      - title: Tap the heart
     exits: [Favourites tab]
   - id: usage
     kind: chart
@@ -98,9 +103,11 @@ slides:
     items: [Search by ingredient, Favourites tab, New recipe form]
 ```
 
+Every slide can also take `eyebrow` (a small label above the title), `subtitle`, `chapter` (a number shown large and faded) and `step_style` (`dim` shows future steps faded, `reveal` hides them). In any text, `*words*` are drawn in the accent colour; write `\*` for a plain star. A flow step is either a short string or a card with `title` and an optional one line `detail`. Flow and bullets build in one step per phrase.
+
 Only use numbers in a chart that the user gave you or that come from the app. Never make up figures.
 
-`reelsmith slides` writes PNGs under `slides/<format>/` (for example `slides/9x16/intro.png`) at the size compose uses for that format. The first format in spec.yaml is also copied to `slides/<id>.png`.
+`reelsmith slides` writes, under `slides/<format>/`, a still and a short intro clip for each build step (`intro_step0.png`, `intro_step0.mp4`) and the finished slide (`intro.png`), at the size compose uses for that format. The first format's images are also copied to `slides/`.
 
 **Check the script** against spec.yaml and the clips:
 

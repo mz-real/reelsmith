@@ -72,7 +72,7 @@ audience: customers
 target_seconds: 90
 formats: ["16:9"]
 quality: 1080p          # 1080p or 4k
-theme: dark             # dark, light or minimal
+theme: studio           # studio, dark, light or minimal
 footage: web            # import, web or mobile
 voice:
   engine: kokoro        # kokoro, chatterbox or none

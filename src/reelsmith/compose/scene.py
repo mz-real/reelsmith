@@ -30,7 +30,7 @@ from reelsmith.compose.graph import (
     SlideStep,
     Still,
 )
-from reelsmith.compose.inputs import SceneSource
+from reelsmith.compose.inputs import SceneSource, slide_clip
 from reelsmith.compose.layouts import (
     Box,
     Layout,
@@ -117,7 +117,9 @@ def plan_for_scene(
         blur = blur_boxes(look.blur, clip.id, src.width, src.height)
     else:
         times = step_times(len(slides), timeline.placements, timeline.duration)
-        source = SlideSource([SlideStep(p, t) for p, t in zip(slides, times, strict=True)])
+        source = SlideSource(
+            [SlideStep(p, t, slide_clip(p)) for p, t in zip(slides, times, strict=True)]
+        )
         blur = []
     audio = [
         AudioPiece(p.wav, p.audio_start, p.audio_end, placement.out_start)

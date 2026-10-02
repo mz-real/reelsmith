@@ -30,8 +30,9 @@ class ClipSource:
 
 @dataclass(frozen=True)
 class SlideStep:
-    image: Path
+    image: Path  # the finished still of this build step
     start: float
+    clip: Path | None = None  # the intro of this step, played at start, then the still holds
 
 
 @dataclass(frozen=True)
@@ -149,6 +150,47 @@ def _slide_source(graph: _Graph, plan: ScenePlan, source: SlideSource) -> None:
         f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
         f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=0x{plan.background.lstrip('#')},setsar=1"
     )
+    if any(step.clip is not None for step in source.steps):
+        current = _slide_clip_steps(graph, plan, source, fit)
+    else:
+        current = _slide_still_steps(graph, plan, source, fit)
+    if plan.zoom <= 0:
+        graph.chains.append(f"[{current}]null[src]")
+        return
+    grow = f"(1+{num(plan.zoom)}*t/{num(plan.total)})"
+    graph.chains.append(
+        f"[{current}]scale=w='2*trunc({w}*{grow}/2)':h='2*trunc({h}*{grow}/2)':eval=frame,"
+        f"crop={w}:{h},setsar=1[src]"
+    )
+
+
+def _slide_clip_steps(graph: _Graph, plan: ScenePlan, source: SlideSource, fit: str) -> str:
+    """Each step plays its intro clip at its cue, then holds its still until the next."""
+    steps = source.steps
+    norm = f"{fit},fps={FPS},format=yuv420p,setpts=PTS-STARTPTS"
+    for number, step in enumerate(steps):
+        end = steps[number + 1].start if number + 1 < len(steps) else plan.total
+        length = num(max(end - step.start, 1 / FPS))
+        still = graph.add_input(*_image_input(step.image, float(length)))
+        if step.clip is None:
+            graph.chains.append(f"[{still}:v]{norm},trim=duration={length}[sp{number}]")
+            continue
+        clip = graph.add_input("-i", str(step.clip))
+        graph.chains.append(f"[{clip}:v]{norm}[sclip{number}]")
+        graph.chains.append(f"[{still}:v]{norm}[shold{number}]")
+        graph.chains.append(
+            f"[sclip{number}][shold{number}]concat=n=2:v=1:a=0,"
+            f"trim=duration={length},setpts=PTS-STARTPTS[sp{number}]"
+        )
+    if len(steps) == 1:
+        return "sp0"
+    joined = "".join(f"[sp{number}]" for number in range(len(steps)))
+    graph.chains.append(f"{joined}concat=n={len(steps)}:v=1:a=0[slides]")
+    return "slides"
+
+
+def _slide_still_steps(graph: _Graph, plan: ScenePlan, source: SlideSource, fit: str) -> str:
+    """Older slides without clips: each step fades in over the one before."""
     current = ""
     for number, step in enumerate(source.steps):
         index = graph.add_input(*_image_input(step.image, plan.total))
@@ -165,14 +207,7 @@ def _slide_source(graph: _Graph, plan: ScenePlan, source: SlideSource) -> None:
             f"[{current}][step{number}]overlay=0:0:enable='gte(t,{start})'[slide{number}]"
         )
         current = f"slide{number}"
-    if plan.zoom <= 0:
-        graph.chains.append(f"[{current}]null[src]")
-        return
-    grow = f"(1+{num(plan.zoom)}*t/{num(plan.total)})"
-    graph.chains.append(
-        f"[{current}]scale=w='2*trunc({w}*{grow}/2)':h='2*trunc({h}*{grow}/2)':eval=frame,"
-        f"crop={w}:{h},setsar=1[src]"
-    )
+    return current
 
 
 def _layout(graph: _Graph, plan: ScenePlan) -> str:

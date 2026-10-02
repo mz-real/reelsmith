@@ -4,10 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from reelsmith.compose.layouts import canvas_size
 from reelsmith.models import BrandModel
 from reelsmith.models.spec import SpecModel, VideoFormat
+
+ThemeStyle = Literal["studio", "classic"]
+SYSTEM_FONTS = (
+    "Inter, system-ui, -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, "
+    "'Helvetica Neue', Arial, sans-serif"
+)
 
 
 @dataclass(frozen=True)
@@ -21,9 +28,20 @@ class SlideTheme:
     font_family: str
     font_face_css: str
     logo_uri: str | None
+    style: ThemeStyle = "classic"
+    brand_name: str = ""
+    footer_title: str = ""
 
 
 _BASE_THEMES: dict[str, dict[str, str]] = {
+    "studio": {
+        "background": "#05070a",
+        "text": "#f5f7fa",
+        "primary": "#2dd4bf",
+        "secondary": "#94a3b8",
+        "accent": "#2dd4bf",
+        "muted": "#151a21",
+    },
     "dark": {
         "background": "#0f172a",
         "text": "#f8fafc",
@@ -81,16 +99,20 @@ def _font_face_css(demo_root: Path, brand: BrandModel, family: str) -> str:
 def resolve_theme(spec: SpecModel, brand: BrandModel, demo_root: Path) -> SlideTheme:
     """Merge spec theme defaults with optional brand colours, logo and fonts."""
     base = _BASE_THEMES[spec.theme]
+    studio = spec.theme == "studio"
     colors = brand.colors
     background = _pick_color(colors.background, base["background"])
     text = _pick_color(colors.text, base["text"])
     primary = _pick_color(colors.primary, base["primary"])
     secondary = _pick_color(colors.secondary, base["secondary"])
     accent = _pick_color(colors.accent, base["accent"])
+    if studio and colors.accent is None and colors.primary is not None:
+        accent = colors.primary  # studio has one accent, so a brand primary drives it
     muted = base["muted"]
-    if brand.colors.background is not None:
+    if brand.colors.background is not None and not studio:
         muted = _pick_color(colors.secondary, base["muted"])
-    family = brand.font.family or "system-ui, -apple-system, Segoe UI, sans-serif"
+    default_family = SYSTEM_FONTS if studio else "system-ui, -apple-system, Segoe UI, sans-serif"
+    family = brand.font.family or default_family
     if brand.font.files:
         family = "ReelsmithBrand, " + family
     logo_uri: str | None = None
@@ -108,6 +130,9 @@ def resolve_theme(spec: SpecModel, brand: BrandModel, demo_root: Path) -> SlideT
         font_family=family,
         font_face_css=_font_face_css(demo_root, brand, "ReelsmithBrand"),
         logo_uri=logo_uri,
+        style="studio" if studio else "classic",
+        brand_name=(brand.name or "").strip(),
+        footer_title=(spec.goal or brand.tagline or "").strip(),
     )
 
 
@@ -155,6 +180,9 @@ h1 {{
 }}
 .muted {{
   color: {theme.secondary};
+}}
+.hl {{
+  color: {theme.accent};
 }}
 .is-hidden {{
   visibility: hidden;

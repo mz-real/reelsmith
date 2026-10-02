@@ -15,7 +15,7 @@ from reelsmith.models import BrandModel, SpecModel, load_model
 from reelsmith.models.slides import SlidesModel
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
-from reelsmith.slides.render import render_slides_to_dir
+from reelsmith.slides.render import RenderStats, render_slides_to_dir
 from reelsmith.slides.themes import frame_size, resolve_theme
 
 
@@ -39,18 +39,20 @@ def run_slides(root: Path) -> Result:
         width, height = frame_size(spec, fmt)
         slug = format_slug(fmt)
         fmt_dir = paths.slides / slug
+        stats: list[RenderStats] = []
         written = render_slides_to_dir(
-            slides,
-            theme,
-            fmt_dir,
-            width=width,
-            height=height,
+            slides, theme, fmt_dir, width=width, height=height, stats=stats
         )
-        details.append(f"{slug}: {len(written)} image(s) at {width}x{height}")
+        images = [name for name in written if name.endswith(".png")]
+        clips = len(written) - len(images)
+        details.append(
+            f"{slug}: {len(images)} image(s) and {clips} clip(s) at {width}x{height}"
+            f" in {stats[0].seconds:.1f} s"
+        )
         if fmt == first_fmt:
-            for name in written:
+            for name in images:
                 shutil.copy2(fmt_dir / name, paths.slides / name)
-                details.append(f"wrote slides/{name}")
+            details.append(f"copied {len(images)} image(s) to slides/ for older demos")
     count = len(spec.formats)
     label = "format" if count == 1 else "formats"
     return Result(

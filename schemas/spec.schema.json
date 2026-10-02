@@ -295,8 +295,9 @@
       "type": "string"
     },
     "theme": {
-      "default": "dark",
+      "default": "studio",
       "enum": [
+        "studio",
         "dark",
         "light",
         "minimal"
