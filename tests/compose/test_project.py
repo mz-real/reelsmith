@@ -116,9 +116,11 @@ def test_missing_slide_says_to_render_slides(ready: Path) -> None:
 
 def test_missing_wav_says_to_generate_voice(ready: Path) -> None:
     (ready / "voice" / "search__l1.wav").unlink()
-    with pytest.raises(ReelsmithError) as info:
+    with pytest.raises(
+        ReelsmithError, match="search.*l1.*no audio file voice/search__l1.wav"
+    ) as info:
         compose_project(DemoPaths.at(ready), PREVIEW, FakeFfmpeg())
-    assert info.value.fix == "reelsmith voice generate"
+    assert info.value.fix == "reelsmith voice generate --only search/l1"
 
 
 def test_step_times_follow_phrases_then_spread() -> None:

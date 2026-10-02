@@ -112,8 +112,9 @@ Then show the user the whole script as it will be read, scene by scene, with the
 - **Speed up repetitive taps.** Do not narrate the fifth identical tap. Say it once ("Add each ingredient the same way") and either cut the repeats from the flow or set `speed_up_waits: true` in spec.yaml so quiet stretches play faster.
 - **Keep the voice from running ahead of the clicks.** A phrase must fit in the gap before the next pinned event. At about 2.5 words per second, a 2 second gap holds about five words. If it does not fit, shorten the phrase. Holds (a frozen frame while the voice finishes) are a last resort, only if `allow_holds` is on, and at most about 3 seconds.
 - **Business logic first, then the screen.** Lead with what the user gets ("Your favourites stay on this device"), then where to click.
-- **Truth rule.** Only claim what the viewer can see in that moment. No "instantly", "secure" or "AI powered" unless the screen shows it.
+- **Truth rule.** Only claim what the viewer can see in that moment. No "instantly", "secure" or "AI powered" unless the screen shows it. Say "click" for web and desktop footage and "tap" for mobile footage, because this rule covers the words you use too.
 - Use short sentences and plain words. Spell numbers and names the way they should be spoken, or add `say:` when the captions should keep the written form.
+- **After you rename or split a line**, run `reelsmith voice generate` for every line, or `reelsmith voice generate --only` once per new scene/line id. The old line's audio is set aside automatically.
 
 ## Reading the output
 

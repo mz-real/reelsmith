@@ -69,6 +69,34 @@ def test_line_without_voice_is_an_error(demo: Path) -> None:
     assert info.value.fix == "reelsmith voice generate"
 
 
+def test_stale_timings_entry_not_in_script_is_ignored(demo: Path) -> None:
+    timings = json.loads((demo / "voice" / "timings.json").read_text(encoding="utf-8"))
+    timings["lines"].append(
+        {
+            "scene": "search",
+            "line": "l3",
+            "file": "search__l3.wav",
+            "duration": 1.0,
+            "hash": "old",
+            "phrases": [{"index": 0, "start": 0.0, "end": 1.0}],
+            "wpm": 150.0,
+            "transcript_ok": True,
+            "attempts": 1,
+        }
+    )
+    (demo / "voice" / "timings.json").write_text(json.dumps(timings), encoding="utf-8")
+    load_project(DemoPaths.at(demo))
+
+
+def test_script_line_with_no_audio_timing_is_a_clear_error(demo: Path) -> None:
+    timings = json.loads((demo / "voice" / "timings.json").read_text(encoding="utf-8"))
+    timings["lines"] = [row for row in timings["lines"] if row["scene"] != "search"]
+    (demo / "voice" / "timings.json").write_text(json.dumps(timings), encoding="utf-8")
+    with pytest.raises(ReelsmithError, match="search.*l1.*no voice yet") as info:
+        load_project(DemoPaths.at(demo))
+    assert info.value.fix == "reelsmith voice generate"
+
+
 def test_phrase_count_mismatch_is_an_error(demo: Path) -> None:
     timings = json.loads((demo / "voice" / "timings.json").read_text(encoding="utf-8"))
     timings["lines"][1]["phrases"] = timings["lines"][1]["phrases"][:1]
