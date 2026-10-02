@@ -101,6 +101,7 @@ class VoiceReport:
     voice: str
     lines: list[LineReport]
     dropped_stale: int = 0
+    rerecorded_on_request: int = 0
 
 
 def _line_hash(line: Line, engine_name: str, voice: str, speed: float) -> str:
@@ -308,6 +309,7 @@ def generate(
     dropped_stale = _drop_stale_lines(paths.voice, existing, script)
 
     line_reports: list[LineReport] = []
+    rerecorded_on_request = 0
     for scene in script.scenes:
         for line in scene.lines:
             key = f"{scene.id}/{line.id}"
@@ -320,11 +322,14 @@ def generate(
             text = line.spoken_text
             line_hash = _line_hash(line, active_engine.name, voice_id, spec.voice.speed)
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
+            forced = only is not None and key in only
 
             prior = existing.get(key)
-            if prior is not None and prior.hash == line_hash and wav_path.exists():
+            if not forced and prior is not None and prior.hash == line_hash and wav_path.exists():
                 line_reports.append(replace(prior, skipped=True))
                 continue
+            if forced:
+                rerecorded_on_request += 1
 
             (
                 audio,
@@ -373,6 +378,7 @@ def generate(
         voice=voice_id,
         lines=line_reports,
         dropped_stale=dropped_stale,
+        rerecorded_on_request=rerecorded_on_request,
     )
     _write_timings(timings_path, report)
     return report

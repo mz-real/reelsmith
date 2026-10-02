@@ -286,11 +286,39 @@ def test_generate_with_only_filters_lines_and_leaves_others_untouched(tmp_path: 
     )
 
     by_line = {line.line: line for line in second.lines}
-    assert by_line["l1"].skipped is True
+    assert by_line["l1"].skipped is False
     assert by_line["l1"].left_out is False
     assert "l2" in by_line
     assert by_line["l2"].left_out is True
-    assert len(only_engine.calls) == 0
+    assert by_line["l2"].hash == first.lines[1].hash
+    assert len(only_engine.calls) == 1
+    assert second.rerecorded_on_request == 1
+    assert list(paths.voice.glob("s__l1.wav.bak-*"))
+
+
+def test_generate_only_always_rerecords_even_when_unchanged(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    spec = _spec()
+    script = _script({"l1": "hello world"})
+
+    engine = FakeEngine(durations=[0.8])
+    transcriber = FakeTranscriber(results=[_words_for("hello world")])
+    generate(paths, spec, script, None, engine=engine, transcribe_fn=transcriber)
+
+    only_engine = FakeEngine(durations=[0.8])
+    only_transcriber = FakeTranscriber(results=[_words_for("hello world")])
+    report = generate(
+        paths,
+        spec,
+        script,
+        {"s/l1"},
+        engine=only_engine,
+        transcribe_fn=only_transcriber,
+    )
+
+    assert len(only_engine.calls) == 1
+    assert report.rerecorded_on_request == 1
+    assert list(paths.voice.glob("s__l1.wav.bak-*"))
 
 
 def test_generate_backs_up_an_existing_wav_before_overwriting(tmp_path: Path) -> None:

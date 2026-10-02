@@ -102,7 +102,12 @@ def _scene_slide_images(
     """Make sure every file the scene needs is there. Returns its slide images."""
     for phrase in scene.phrases:
         if phrase.wav is not None and not phrase.wav.is_file():
-            raise ReelsmithError(f"{phrase.wav} is missing", fix="reelsmith voice generate")
+            scene_id = scene.spec.id
+            line_id = phrase.line_id
+            raise ReelsmithError(
+                f"Scene '{scene_id}', line '{line_id}' has no audio file voice/{phrase.wav.name}.",
+                fix=f"reelsmith voice generate --only {scene_id}/{line_id}",
+            )
     if scene.clip is not None and scene.clip_dir is not None:
         video = scene.clip_dir / scene.clip.video
         if not video.is_file():

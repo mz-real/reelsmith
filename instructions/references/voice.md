@@ -34,13 +34,13 @@ Generate every line:
 reelsmith voice generate
 ```
 
-Regenerate only some lines, as `scene/line`. Repeat `--only` once per line:
+Regenerate only some lines, as `scene/line`. Repeat `--only` once per line. Each named line is always re-recorded, even when its text and voice did not change, so you can fix a bad take without touching the rest:
 
 ```
 reelsmith voice generate --only search/l1 --only intro/l2
 ```
 
-This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line it checks the pace (about 130 to 210 words per minute) and transcribes it locally to catch dropped words, and tries again with a new seed if either fails. It trims clicks and breaths after the last word. Lines whose text and voice did not change are skipped, so reruns are fast.
+This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line it checks the pace (about 130 to 210 words per minute) and transcribes it locally to catch dropped words, and tries again with a new seed if either fails. It trims clicks and breaths after the last word. On a full run, lines whose text and voice did not change are skipped, so reruns are fast.
 
 After you rename or split a line in script.yaml, run `reelsmith voice generate` for every line, or `--only` once per new scene/line id. Entries for ids that are no longer in the script are dropped from timings.json and their wav files are set aside as backups.
 
