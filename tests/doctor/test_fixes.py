@@ -54,6 +54,28 @@ def test_apply_fixes_runs_brew_on_darwin(monkeypatch: pytest.MonkeyPatch) -> Non
     assert run_mock.call_args[0][0] == ["brew", "install", "ffmpeg"]
 
 
+def test_apply_fixes_runs_openjdk_on_darwin_java(monkeypatch: pytest.MonkeyPatch) -> None:
+    checks = [
+        Check(
+            name="java",
+            status=Status.WARN,
+            found="missing",
+            fix="brew install openjdk@17",
+        )
+    ]
+    monkeypatch.setattr("platform.system", lambda: "Darwin")
+    run_mock = MagicMock()
+    monkeypatch.setattr("subprocess.run", run_mock)
+    monkeypatch.setattr(
+        "reelsmith.doctor.checks.run_all_checks",
+        lambda spec_path=None: checks,
+    )
+
+    apply_fixes(checks, spec_path=None, yes=True, ask_confirm=lambda _p: True)
+    run_mock.assert_called_once()
+    assert run_mock.call_args[0][0] == ["brew", "install", "openjdk@17"]
+
+
 def test_apply_fixes_chromium_uses_playwright_module(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

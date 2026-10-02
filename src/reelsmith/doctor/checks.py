@@ -15,8 +15,9 @@ from pathlib import Path
 import yaml
 
 from reelsmith import __version__
-from reelsmith.fsutil import cache_dir
 from reelsmith.result import Status
+from reelsmith.voice.models_dl import KOKORO_INT8, KOKORO_VOICES, models_dir
+from reelsmith.voice.transcribe import WHISPER_MODEL, whisper_model_cache_dir
 
 
 @dataclass(frozen=True)
@@ -27,9 +28,8 @@ class Check:
     fix: str | None
 
 
-_KOKORO_MODEL = "kokoro-v1.0.int8.onnx"
-_VOICES_BIN = "voices-v1.0.bin"
-_WHISPER_MODEL = "base.en"
+_KOKORO_MODEL = KOKORO_INT8.filename
+_VOICES_BIN = KOKORO_VOICES.filename
 
 _MIN_PYTHON = (3, 11)
 _MAX_PYTHON = (3, 14)
@@ -168,12 +168,12 @@ def check_java() -> Check:
 def _java_install_fix() -> str:
     system = platform.system()
     if system == "Darwin":
-        return "brew install --cask temurin@17"
+        return "brew install openjdk@17"
     if system == "Windows":
         return "winget install EclipseAdoptium.Temurin.17.JDK"
     if shutil.which("dnf"):
         return "sudo dnf install java-17-openjdk"
-    return "sudo apt install temurin-17-jdk"
+    return "sudo apt install openjdk-17-jdk"
 
 
 def _java_major_version() -> int | None:
@@ -257,8 +257,8 @@ def check_adb() -> Check:
 
 def check_kokoro_model() -> Check:
     name = "kokoro model"
-    path = cache_dir() / "models" / _KOKORO_MODEL
-    voices = cache_dir() / "models" / _VOICES_BIN
+    path = models_dir() / _KOKORO_MODEL
+    voices = models_dir() / _VOICES_BIN
     if path.is_file() and voices.is_file():
         return Check(name=name, status=Status.OK, found="cached locally", fix=None)
     missing: list[str] = []
@@ -276,13 +276,13 @@ def check_kokoro_model() -> Check:
 
 def check_whisper_model() -> Check:
     name = "whisper model"
-    marker = cache_dir() / "models" / f"whisper-{_WHISPER_MODEL}"
-    if marker.is_dir() or marker.is_file():
-        return Check(name=name, status=Status.OK, found=f"{_WHISPER_MODEL} cached", fix=None)
+    marker = whisper_model_cache_dir()
+    if marker.is_dir():
+        return Check(name=name, status=Status.OK, found=f"{WHISPER_MODEL} cached", fix=None)
     return Check(
         name=name,
         status=Status.WARN,
-        found=f"{_WHISPER_MODEL} not cached",
+        found=f"{WHISPER_MODEL} not cached",
         fix="reelsmith voice generate (downloads on first use)",
     )
 

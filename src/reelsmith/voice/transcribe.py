@@ -9,6 +9,7 @@ plain array is used as is and skips that decode step entirely.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -19,6 +20,12 @@ from reelsmith.voice.models_dl import models_dir
 
 WHISPER_MODEL = "base.en"
 _TARGET_SAMPLE_RATE = 16000
+
+
+def whisper_model_cache_dir() -> Path:
+    """Folder faster-whisper creates under ``models_dir()`` for ``WHISPER_MODEL``."""
+    return models_dir() / f"models--Systran--faster-whisper-{WHISPER_MODEL}"
+
 
 _model_singleton: Any = None
 
