@@ -175,3 +175,21 @@ def test_transcript_matches_still_reports_a_really_missing_vocabulary_word() -> 
 
     assert ok is False
     assert missing == ["reelsmith"]
+
+
+def test_a_line_passes_when_the_take_matches_the_written_text_but_not_say() -> None:
+    from reelsmith.voice.quality import transcript_matches_any
+    from reelsmith.voice.transcribe import Word
+
+    heard = [Word(t, 0.0, 0.1) for t in "ask for a demo".split()]
+    ok, missing = transcript_matches_any(["ask for uh demo", "ask for a demo"], heard)
+    assert ok and missing == []
+
+
+def test_a_line_still_fails_when_neither_text_matches() -> None:
+    from reelsmith.voice.quality import transcript_matches_any
+    from reelsmith.voice.transcribe import Word
+
+    heard = [Word(t, 0.0, 0.1) for t in "ask for demo".split()]
+    ok, missing = transcript_matches_any(["ask for uh demo", "ask for a demo"], heard)
+    assert not ok and missing
