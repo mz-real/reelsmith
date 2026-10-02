@@ -61,3 +61,59 @@ jobs:
 
       - name: Check generated instruction files
         run: uv run python scripts/gen_instructions.py --check
+
+      - name: Check version consistency
+        if: runner.os == 'Linux'
+        run: uv run python scripts/check_version.py
+
+  integration:
+    name: integration / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install ffmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: Install ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Resolve model cache path
+        id: cache
+        shell: bash
+        run: echo "dir=$(uv run python -c 'from reelsmith.fsutil import cache_dir; print(cache_dir())')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Kokoro and Whisper models
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.cache.outputs.dir }}/models
+          key: reelsmith-models-${{ runner.os }}-kokoro-v1.0.int8.onnx-voices-v1.0.bin-whisper-base.en
+          restore-keys: |
+            reelsmith-models-${{ runner.os }}-
+
+      - name: Install Playwright Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Integration tests
+        env:
+          REELSMITH_TEST_MODELS: "1"
+        run: uv run pytest -q -m "integration or models"
