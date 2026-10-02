@@ -69,6 +69,14 @@ class QAContext:
     rules: TimingRules = field(default_factory=TimingRules)
 
 
+def _skip_row(name: str) -> CheckRow:
+    return CheckRow(
+        name,
+        CheckStatus.PASS,
+        ["Skipped: voice.engine is none in spec.yaml, so there is no narration to check."],
+    )
+
+
 def _scene_where(scene_id: str) -> str:
     return f"scene '{scene_id}'"
 
@@ -92,7 +100,11 @@ def check_transcript(ctx: QAContext) -> CheckRow:
     instead of a FAIL. Every line gets its own detail line, ok or not, so
     a PASS report can still be checked line by line instead of trusted
     on one blanket sentence.
+
+    Skipped when voice.engine is none: there is no narration to transcribe.
     """
+    if ctx.spec.voice.engine == "none":
+        return _skip_row("Transcript vs script")
     status = CheckStatus.PASS
     details: list[str] = []
     scenes_by_id = {s.id: s for s in ctx.script.scenes}
@@ -272,7 +284,12 @@ def check_end_noise(ctx: QAContext) -> CheckRow:
     line often starts well inside that window, so a window reaching past
     it would measure speech, not silence. When the next line starts too
     soon to leave a real gap, the line is skipped rather than measured.
+
+    Skipped entirely when voice.engine is none: there is no narration to
+    leave noise after.
     """
+    if ctx.spec.voice.engine == "none":
+        return _skip_row("End of line noise")
     status = CheckStatus.PASS
     details: list[str] = []
     all_starts = sorted(
@@ -335,7 +352,13 @@ def _group_by_line(placements: list[PlacementOut]) -> dict[str, list[PlacementOu
 
 
 def check_loudness(ctx: QAContext) -> CheckRow:
-    """5. Loudness: integrated loudness and true peak within spec."""
+    """5. Loudness: integrated loudness and true peak within spec.
+
+    Skipped when voice.engine is none: the master is silent by design, so
+    there is nothing for a loudness target to mean.
+    """
+    if ctx.spec.voice.engine == "none":
+        return _skip_row("Loudness")
     integrated, true_peak = ebur128_loudness(ctx.master)
     details: list[str] = []
     status = CheckStatus.PASS

@@ -59,6 +59,19 @@ def test_preview_skips_export(rec: Recorder, tmp_path: Path) -> None:
     assert any("export" in d and "skipped" in d for d in result.details)
 
 
+def test_voice_step_skipped_when_engine_is_none(rec: Recorder, tmp_path: Path) -> None:
+    from reelsmith.models import SpecModel, VoiceSettings, save_model
+
+    save_model(tmp_path / "spec.yaml", SpecModel(voice=VoiceSettings(engine="none")))
+
+    result = _run(rec, tmp_path)
+
+    assert "voice generate" not in rec.calls
+    assert rec.calls == ["script check", "slides", "compose", "qa", "export"]
+    assert result.status == Status.OK
+    assert any("skipped" in d and "engine is none" in d for d in result.details)
+
+
 def test_slides_only_run_when_slides_yaml_exists(rec: Recorder, tmp_path: Path) -> None:
     (tmp_path / "slides.yaml").unlink()
     _run(rec, tmp_path)

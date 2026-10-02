@@ -1,9 +1,10 @@
 """`reelsmith run`: every step from script check to export, in order.
 
-Steps: script check, voice generate, slides (only with slides.yaml),
-compose, qa and export (not with --preview). The run stops at the first
-ERROR. A WARN does not stop it, but is listed at the end. A step whose
-code is not in this build is skipped with a WARN.
+Steps: script check, voice generate (skipped when voice.engine is none),
+slides (only with slides.yaml), compose, qa and export (not with
+--preview). The run stops at the first ERROR. A WARN does not stop it,
+but is listed at the end. A step whose code is not in this build is
+skipped with a WARN.
 """
 
 from __future__ import annotations
@@ -97,10 +98,13 @@ def _load_export() -> ExportFn | None:
     return lambda root, name: fallback([str(root)])
 
 
-def _formats(root: Path) -> list[str]:
+def _load_spec(root: Path) -> SpecModel:
     spec_path = DemoPaths.at(root).spec
-    spec = load_model(spec_path, SpecModel) if spec_path.is_file() else SpecModel()
-    return [fmt.replace(":", "x") for fmt in spec.formats]
+    return load_model(spec_path, SpecModel) if spec_path.is_file() else SpecModel()
+
+
+def _formats(root: Path) -> list[str]:
+    return [fmt.replace(":", "x") for fmt in _load_spec(root).formats]
 
 
 def _qa_all_formats(qa: QaFn, root: Path, preview: bool) -> Result:
@@ -117,10 +121,11 @@ def _qa_all_formats(qa: QaFn, root: Path, preview: bool) -> Result:
 
 
 def build_steps(root: Path, preview: bool) -> list[Step]:
-    steps = [
-        Step("script check", lambda: run_check(root)),
-        Step("voice generate", lambda: run_generate(root)),
-    ]
+    steps = [Step("script check", lambda: run_check(root))]
+    if _load_spec(root).voice.engine == "none":
+        steps.append(Step("voice", None, "skipped, engine is none"))
+    else:
+        steps.append(Step("voice generate", lambda: run_generate(root)))
     if (root / "slides.yaml").is_file():
         steps.append(Step("slides", lambda: run_slides(root)))
     else:

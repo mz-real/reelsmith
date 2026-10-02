@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from reelsmith.commands.voice import _plural, _result_for
+from pathlib import Path
+
+from reelsmith.commands.voice import _plural, _result_for, run_generate
+from reelsmith.models import SpecModel, VoiceSettings, save_model
 from reelsmith.result import Status
 from reelsmith.voice.pipeline import LineReport, VoiceReport
 
@@ -156,6 +159,21 @@ def test_result_for_ignores_pronunciation_warnings_on_a_skipped_line() -> None:
 
     assert result.status == Status.OK
     assert not any("stale" in detail for detail in result.details)
+
+
+def test_run_generate_is_ok_and_does_not_call_the_engine_when_voice_is_none(
+    tmp_path: Path,
+) -> None:
+    from reelsmith.models import ScriptModel
+
+    save_model(tmp_path / "spec.yaml", SpecModel(voice=VoiceSettings(engine="none")))
+    save_model(tmp_path / "script.yaml", ScriptModel())
+
+    result = run_generate(tmp_path)
+
+    assert result.status == Status.OK
+    assert "none" in result.message
+    assert not (tmp_path / "voice" / "timings.json").exists()
 
 
 def test_result_for_repeats_only_for_each_failing_line() -> None:

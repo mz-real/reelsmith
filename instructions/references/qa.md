@@ -39,6 +39,8 @@ reelsmith export                # after qa passes: writes out/
 | Blur | listed regions covered on every frame they apply to |
 | Contact sheets | frames at each scene start, event and transition, for you to look at |
 
+With `voice.engine: none` there is no narration, so Transcript vs script, End of line noise and Loudness are skipped (a note in the report says why) instead of failing. The rest still run.
+
 **Do these yourself too, every time:**
 
 1. **View the frames.** Open every image in `qa/sheets/`. Check that each frame shows what the narration says at that moment, the captions fit, and the layout is right.
@@ -46,7 +48,7 @@ reelsmith export                # after qa passes: writes out/
 3. **Check the blur, including held frames.** Every listed region must be covered on every frame, including frames that are held while the voice finishes and the last frame of each scene. Look for private data the blur list missed: emails, names, tokens, prices, notifications.
 4. **Ask the user to watch it.** You cannot hear the audio. Ask them to listen to the full render before export.
 
-`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
+`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. With `voice.engine: none` the silent copy and the narration wav are left out, since the main video already carries no narration. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
 
 ## Reading the output
 
