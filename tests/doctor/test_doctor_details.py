@@ -45,10 +45,14 @@ def test_run_doctor_details_in_output(
             fix="brew install ffmpeg",
         )
     ]
-    monkeypatch.setattr("reelsmith.doctor.run_all_checks", lambda spec_path=None: checks)
+    monkeypatch.setattr(
+        "reelsmith.doctor.run_all_checks",
+        lambda spec_path=None, profile=None: checks,
+    )
 
     code = run_doctor(
         spec_path=None,
+        profile=None,
         apply_fix=False,
         yes=False,
         ask_confirm=lambda _p: False,

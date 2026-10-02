@@ -20,6 +20,7 @@ from reelsmith.doctor.checks import (
     check_whisper_model,
     run_all_checks,
 )
+from reelsmith.doctor.profiles import DoctorProfile
 from reelsmith.result import Status
 from reelsmith.voice.models_dl import KOKORO_INT8, KOKORO_VOICES
 from reelsmith.voice.transcribe import whisper_model_cache_dir
@@ -208,6 +209,7 @@ def test_plugin_version_mismatch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_chatterbox_check_only_with_spec(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("shutil.which", lambda name: f"/bin/{name}")
 
     def fake_run(cmd: list[str], **kwargs: object) -> MagicMock:
@@ -236,11 +238,11 @@ def test_chatterbox_check_only_with_spec(tmp_path: Path, monkeypatch: pytest.Mon
         "version: 1\nvoice:\n  engine: kokoro\n",
         encoding="utf-8",
     )
-    names = [c.name for c in run_all_checks(spec_path=spec)]
+    names = [c.name for c in run_all_checks(spec_path=spec, profile=DoctorProfile.WEB)]
     assert "chatterbox" not in names
 
     spec.write_text(
-        "version: 1\nvoice:\n  engine: chatterbox\n",
+        "version: 1\nvoice:\n  engine: chatterbox\n  sample: ref.wav\n  consent: own\n",
         encoding="utf-8",
     )
     names = [c.name for c in run_all_checks(spec_path=spec)]

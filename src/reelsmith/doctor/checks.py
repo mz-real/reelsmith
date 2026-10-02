@@ -9,12 +9,17 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-import yaml
-
 from reelsmith import __version__
+from reelsmith.doctor.profiles import (
+    DoctorProfile,
+    active_check_names,
+    check_run_order,
+    resolve_profile,
+)
 from reelsmith.result import Status
 from reelsmith.voice.models_dl import KOKORO_INT8, KOKORO_VOICES, models_dir
 from reelsmith.voice.transcribe import WHISPER_MODEL, whisper_model_cache_dir
@@ -35,40 +40,42 @@ _MIN_PYTHON = (3, 11)
 _MAX_PYTHON = (3, 14)
 
 
-def run_all_checks(spec_path: Path | None = None) -> list[Check]:
-    """Run every doctor check and return the results."""
-    want_chatterbox = _spec_wants_chatterbox(spec_path)
-    checks = [
-        check_python(),
-        check_ffmpeg(),
-        check_playwright_chromium(),
-        check_java(),
-        check_maestro(),
-        check_simctl(),
-        check_adb(),
-        check_kokoro_model(),
-        check_whisper_model(),
-        check_gpu(),
-        check_plugin_version(),
-    ]
-    if want_chatterbox:
-        checks.append(check_chatterbox())
+def run_all_checks(
+    spec_path: Path | None = None,
+    *,
+    profile: DoctorProfile | None = None,
+) -> list[Check]:
+    """Run doctor checks for the resolved profile and return the results."""
+    resolved_profile, resolved_spec = resolve_profile(profile, spec_path)
+    active = active_check_names(resolved_profile, resolved_spec)
+    checks: list[Check] = []
+    for name in check_run_order():
+        if name not in active:
+            continue
+        runner = _check_runner(name)
+        checks.append(runner())
     return checks
 
 
-def _spec_wants_chatterbox(spec_path: Path | None) -> bool:
-    if spec_path is None or not spec_path.is_file():
-        return False
-    try:
-        data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError):
-        return False
-    if not isinstance(data, dict):
-        return False
-    voice = data.get("voice")
-    if not isinstance(voice, dict):
-        return False
-    return voice.get("engine") == "chatterbox"
+def _check_runner(name: str) -> Callable[[], Check]:
+    runners: dict[str, Callable[[], Check]] = {
+        "python": check_python,
+        "ffmpeg": check_ffmpeg,
+        "chromium": check_playwright_chromium,
+        "java": check_java,
+        "maestro": check_maestro,
+        "simctl": check_simctl,
+        "adb": check_adb,
+        "kokoro model": check_kokoro_model,
+        "whisper model": check_whisper_model,
+        "chatterbox": check_chatterbox,
+        "gpu": check_gpu,
+        "plugin version": check_plugin_version,
+    }
+    fn = runners.get(name)
+    if fn is None:
+        raise KeyError(name)
+    return fn
 
 
 def check_python() -> Check:
@@ -268,9 +275,9 @@ def check_kokoro_model() -> Check:
         missing.append(_VOICES_BIN)
     return Check(
         name=name,
-        status=Status.WARN,
-        found=f"not cached ({', '.join(missing)})",
-        fix="reelsmith voice generate (downloads on first use)",
+        status=Status.OK,
+        found=f"not cached yet ({', '.join(missing)}); downloads on first use, about 290 MB",
+        fix=None,
     )
 
 
@@ -281,9 +288,9 @@ def check_whisper_model() -> Check:
         return Check(name=name, status=Status.OK, found=f"{WHISPER_MODEL} cached", fix=None)
     return Check(
         name=name,
-        status=Status.WARN,
-        found=f"{WHISPER_MODEL} not cached",
-        fix="reelsmith voice generate (downloads on first use)",
+        status=Status.OK,
+        found=f"{WHISPER_MODEL} not cached yet; downloads on first use, about 290 MB",
+        fix=None,
     )
 
 

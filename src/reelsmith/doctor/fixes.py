@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from reelsmith.doctor.checks import Check
+from reelsmith.doctor.profiles import DoctorProfile
 from reelsmith.result import Status
 
 
@@ -26,6 +27,7 @@ def apply_fixes(
     checks: list[Check],
     *,
     spec_path: Path | None,
+    profile: DoctorProfile,
     yes: bool,
     ask_confirm: Callable[[str], bool],
 ) -> list[Check]:
@@ -58,7 +60,7 @@ def apply_fixes(
 
     from reelsmith.doctor.checks import run_all_checks
 
-    return run_all_checks(spec_path=spec_path)
+    return run_all_checks(spec_path=spec_path, profile=profile)
 
 
 def _format_prompt(plan: _FixPlan) -> str:
