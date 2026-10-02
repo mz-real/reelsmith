@@ -1,0 +1,101 @@
+"""Tests for the result formatting in reelsmith.commands.voice."""
+
+from __future__ import annotations
+
+from reelsmith.commands.voice import _plural, _result_for
+from reelsmith.result import Status
+from reelsmith.voice.pipeline import LineReport, VoiceReport
+
+
+def _line(**overrides: object) -> LineReport:
+    base: dict[str, object] = {
+        "scene": "s",
+        "line": "l1",
+        "file": "s__l1.wav",
+        "duration": 2.0,
+        "hash": "abc",
+        "phrases": [],
+        "wpm": 170.0,
+        "transcript_ok": True,
+        "attempts": 1,
+    }
+    base.update(overrides)
+    return LineReport(**base)  # type: ignore[arg-type]
+
+
+def test_plural_singular_and_plural() -> None:
+    assert _plural(1, "line") == "1 line"
+    assert _plural(2, "line") == "2 lines"
+    assert _plural(0, "line") == "0 lines"
+
+
+def test_result_for_all_ok_has_no_details() -> None:
+    report = VoiceReport(engine="kokoro", voice="af_heart", lines=[_line()])
+
+    result = _result_for(report)
+
+    assert result.status == Status.OK
+    assert result.message == "Voice generated for 1 line"
+    assert result.details == []
+    assert result.next_step == "reelsmith compose --preview"
+
+
+def test_result_for_reports_pace_transcript_and_skip_counts() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[
+            _line(pace_retried=True),
+            _line(line="l2", transcript_retried=True),
+            _line(line="l3", skipped=True),
+        ],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.OK
+    assert "1 line regenerated for pace" in result.details
+    assert "1 line regenerated for dropped words" in result.details
+    assert "1 line skipped, already up to date" in result.details
+
+
+def test_result_for_warns_on_remaining_transcript_failures() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(transcript_ok=False, missing_words=["fast"])],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.WARN
+    assert "need review" in result.message
+    assert result.next_step == "reelsmith voice generate --only s/l1"
+    assert any("dropped words" in detail for detail in result.details)
+
+
+def test_result_for_warns_on_a_line_that_still_fails_pace() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(wpm=60.0, pace_retried=True)],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.WARN
+    assert "need review" in result.message
+    assert any("pace" in detail for detail in result.details)
+
+
+def test_result_for_never_ok_when_a_line_still_fails() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(wpm=400.0, transcript_ok=False)],
+    )
+
+    result = _result_for(report)
+
+    assert result.status != Status.OK
+    assert "s/l1 still fails: pace and dropped words" in result.details
