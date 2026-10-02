@@ -186,7 +186,9 @@ def generate(
     only holds "scene/line" keys. When given, lines outside it are left as
     they are: kept from any previous run, otherwise skipped entirely.
     """
-    active_engine = engine if engine is not None else get_engine(spec)
+    active_engine = engine if engine is not None else get_engine(spec, root=paths.root)
+    # A cloned voice is identified by its sample, so a new sample regenerates.
+    voice_id = str(getattr(active_engine, "voice_id", "") or spec.voice.kokoro_voice)
     paths.voice.mkdir(parents=True, exist_ok=True)
     timings_path = paths.voice / "timings.json"
     existing = _load_existing(timings_path)
@@ -202,9 +204,7 @@ def generate(
                 continue
 
             text = line.text
-            line_hash = _line_hash(
-                text, active_engine.name, spec.voice.kokoro_voice, spec.voice.speed
-            )
+            line_hash = _line_hash(text, active_engine.name, voice_id, spec.voice.speed)
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
 
             prior = existing.get(key)
@@ -250,9 +250,7 @@ def generate(
                 )
             )
 
-    report = VoiceReport(
-        engine=active_engine.name, voice=spec.voice.kokoro_voice, lines=line_reports
-    )
+    report = VoiceReport(engine=active_engine.name, voice=voice_id, lines=line_reports)
     _write_timings(timings_path, report)
     return report
 

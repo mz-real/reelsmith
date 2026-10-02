@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 import numpy as np
@@ -32,18 +33,24 @@ class VoiceEngine(Protocol):
     def synthesize(self, text: str, seed: int) -> Audio: ...
 
 
-def get_engine(spec: SpecModel) -> VoiceEngine:
-    """Build the voice engine named in spec.yaml."""
+def get_engine(spec: SpecModel, root: Path | None = None) -> VoiceEngine:
+    """Build the voice engine named in spec.yaml.
+
+    root is the demo folder. A relative voice.sample path is read from
+    there, or from the working folder when root is not given.
+    """
     engine_name = spec.voice.engine
     if engine_name == "kokoro":
         from reelsmith.voice.kokoro_engine import KokoroEngine
 
         return KokoroEngine(voice=spec.voice.kokoro_voice, speed=spec.voice.speed)
     if engine_name == "chatterbox":
-        raise ReelsmithError(
-            "Chatterbox voice cloning is not installed.",
-            fix='uv tool install "reelsmith[clone]"',
-        )
+        from reelsmith.voice.chatterbox_engine import ChatterboxEngine
+
+        sample = Path(spec.voice.sample or "")
+        if root is not None and not sample.is_absolute():
+            sample = root / sample
+        return ChatterboxEngine(sample=sample, consent=spec.voice.consent)
     if engine_name == "none":
         raise ReelsmithError(
             "spec.yaml sets voice.engine to none, so there is no narration to generate."

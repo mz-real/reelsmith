@@ -99,3 +99,19 @@ def test_result_for_never_ok_when_a_line_still_fails() -> None:
 
     assert result.status != Status.OK
     assert "s/l1 still fails: pace and dropped words" in result.details
+
+
+def test_result_for_repeats_only_for_each_failing_line() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[
+            _line(scene="a", line="l1", transcript_ok=False),
+            _line(scene="b", line="l2", wpm=60.0),
+            _line(scene="c", line="l3"),
+        ],
+    )
+
+    result = _result_for(report)
+
+    assert result.next_step == "reelsmith voice generate --only a/l1 --only b/l2"
