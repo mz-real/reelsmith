@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from reelsmith.cli import run
 from reelsmith.commands.init import init_demo
 from reelsmith.errors import ReelsmithError
+from reelsmith.models import BrandModel, ScriptModel, SpecModel
+from reelsmith.models.io import load_model
 from reelsmith.paths import DemoPaths
 
 
@@ -75,3 +78,13 @@ def test_init_force_skips_backup_of_unchanged_files(tmp_path: Path) -> None:
     init_demo(root, force=False)
     init_demo(root, force=True)
     assert not list(root.glob("*.bak-*"))
+
+
+@pytest.mark.parametrize(
+    ("name", "model"),
+    [("spec.yaml", SpecModel), ("script.yaml", ScriptModel), ("brand.yaml", BrandModel)],
+)
+def test_starter_files_match_the_models(tmp_path: Path, name: str, model: type[Any]) -> None:
+    root = tmp_path / "demo"
+    init_demo(root, force=False)
+    load_model(root / name, model)
