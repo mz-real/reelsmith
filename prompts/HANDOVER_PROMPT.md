@@ -293,7 +293,7 @@ blur: []
 
 Run these from inside the demo folder, or add the demo folder `DIR` as the last argument to each command.
 
-1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml:
+1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml, and (like every id) can only use letters, numbers, `-` or `_`, starting with a letter or number (see docs/formats.md):
 
    ```
    reelsmith capture import ~/Movies/invoice.mov --id main
@@ -424,6 +424,8 @@ Record each web scene as a clip with Playwright, with every click logged at its 
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.py`. It must define `async def flow(page, log)`. `page` is a Playwright page that starts blank, so open the app first. `log` performs an action and records it as an event:
 
 | Call | What it does | Event |
@@ -524,6 +526,8 @@ Record each mobile scene as a clip on an iOS simulator or an Android emulator or
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.yaml` in Maestro's format:
 
 ```yaml
@@ -608,6 +612,8 @@ Write the words the viewer hears and reads: script.yaml for every scene, and sli
 - Check the length against `target_seconds` in spec.yaml. Narration runs at about 150 to 170 words per minute, so 90 seconds is about 230 words in total.
 
 ## Commands
+
+Scene, line and slide ids must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
 
 **script.yaml.** One entry per spec.yaml scene, same ids. Each line is split into phrases. A phrase with `pin:` starts on that event of the scene's clip.
 

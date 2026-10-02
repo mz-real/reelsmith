@@ -5,12 +5,12 @@
       "additionalProperties": false,
       "properties": {
         "from": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "From",
           "type": "string"
         },
         "to": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "To",
           "type": "string"
         },
@@ -38,7 +38,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -125,7 +125,7 @@
       "description": "Boxes in columns joined by arrows. Each node is one build step, in layout order.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -205,7 +205,7 @@
         "layout": {
           "items": {
             "items": {
-              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
               "type": "string"
             },
             "type": "array"
@@ -236,7 +236,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -423,7 +423,7 @@
       "description": "2 to 6 cards in a grid, one card per build step.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -513,7 +513,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -621,7 +621,7 @@
       "description": "A terminal or file card. ``highlight`` brightens lines per build step.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -764,7 +764,7 @@
       "description": "Before and now rows, one row per build step.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -864,7 +864,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -1029,7 +1029,7 @@
       "description": "2 or 3 images in device frames, side by side. Each image is one build step.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -1206,7 +1206,7 @@
       "description": "A hero number that counts up, then metric cards one per step, then chips.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -1358,7 +1358,7 @@
         "id": {
           "anyOf": [
             {
-              "minLength": 1,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
               "type": "string"
             },
             {
@@ -1419,7 +1419,7 @@
       "description": "A track in seconds: clicks, phrases snapping onto them, holds and conflicts.\n\nSteps: the track first, then the phrases, then the holds, then the conflicts.",
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },
@@ -1540,7 +1540,7 @@
       "additionalProperties": false,
       "properties": {
         "id": {
-          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
           "title": "Id",
           "type": "string"
         },

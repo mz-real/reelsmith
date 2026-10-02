@@ -7,6 +7,7 @@ from typing import Annotated
 
 import typer
 
+from reelsmith.commands._common import validate_id_option
 from reelsmith.detect import run_detect, run_detect_around
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
@@ -46,6 +47,7 @@ def register(app: typer.Typer) -> None:
         ] = 0.1,
     ) -> int:
         """Find screen changes in a clip and write contact sheets."""
+        clip_id = validate_id_option(clip_id)
         paths = DemoPaths.at(directory)
         if around is not None:
             around_summary = run_detect_around(paths.clips, clip_id, around, span=span, step=step)

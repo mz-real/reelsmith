@@ -10,7 +10,7 @@ import typer
 from reelsmith.capture.importer import import_recording
 from reelsmith.capture.mobile import run_mobile_flow
 from reelsmith.capture.web import run_web_flow
-from reelsmith.commands._common import DemoDirArgument, DemoDirOption, demo_dir
+from reelsmith.commands._common import DemoDirArgument, DemoDirOption, demo_dir, validate_id_option
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
 
@@ -26,6 +26,7 @@ def register(app: typer.Typer) -> None:
         demo_option: DemoDirOption = None,
     ) -> None:
         """Normalise a recording into capture/clips/<id>/."""
+        clip_id = validate_id_option(clip_id)
         paths = DemoPaths.at(demo_dir(directory, demo_option))
         clip = import_recording(source, clip_id, paths.clips)
         raise typer.Exit(
@@ -58,6 +59,7 @@ def register(app: typer.Typer) -> None:
         demo_option: DemoDirOption = None,
     ) -> None:
         """Record a Playwright flow into capture/clips/<id>/."""
+        clip_id = validate_id_option(clip_id)
         paths = DemoPaths.at(demo_dir(directory, demo_option))
         clip = run_web_flow(
             flow,
@@ -95,6 +97,7 @@ def register(app: typer.Typer) -> None:
         demo_option: DemoDirOption = None,
     ) -> None:
         """Record a Maestro flow into capture/clips/<id>/."""
+        clip_id = validate_id_option(clip_id)
         paths = DemoPaths.at(demo_dir(directory, demo_option))
         result = run_mobile_flow(
             flow,
