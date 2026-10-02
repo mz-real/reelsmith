@@ -639,6 +639,31 @@ scenes:
 - Line ids must be unique inside a scene. Phrases in one line are voiced together, so keep a line to one or two sentences.
 - Slide scenes cannot have pins. Their build steps (flow steps, bullet items) appear one per phrase: step 1 at the start, step 2 with phrase 2, and so on. So write one phrase per step.
 
+**Points, zoom and cursor for footage scenes.** In spec.yaml, a phone, browser or full scene can show curated points beside the footage instead of the spoken words:
+
+```yaml
+  - id: favourite
+    layout: browser
+    clip: favourite
+    eyebrow: Step 3
+    title: Save it for *later*
+    points:
+      - text: One click adds it to *Favourites*
+        line: fav-1
+    zoom:
+      - box: [0.06, 0.10, 0.48, 0.48]
+        at: e2
+        hold: 1.8
+    cursor: true
+```
+
+- Each point appears when its `line` starts and stays. Use line ids from the same scene. Write points as short claims, not as the spoken words.
+- `*stars*` draw words in the accent colour. `\*` is a plain star.
+- `zoom` eases in to `box` (fractions of the clip) just before `at` (an event id or seconds), holds for `hold` seconds, then eases out. Keep boxes to about half the frame or larger.
+- The cursor is on by default for web clips in browser and full scenes. Set `cursor: false` to hide it.
+- With points, spoken words go to the srt only, unless `options.captions` is `burned` or `both`.
+- These fields change spec.yaml, so show them to the user with the script for approval.
+
 **Say it differently from how it reads.** A phrase can have `say:` as well as `text:`. The captions and the srt show `text`. The voice reads `say`, and the transcript checks compare against `say`. Keep `text` as the viewer should read it.
 
 ```yaml

@@ -75,6 +75,16 @@ scenes:                  # in playing order
   - id: search
     layout: browser
     clip: search         # a clip id under capture/clips/
+    eyebrow: Step 1      # optional: small label above the title
+    title: Find a dish *fast*   # optional: *stars* draw words in the accent colour
+    points:              # optional: shown beside the footage instead of the spoken words
+      - text: Search by *name* or ingredient
+        line: search-2   # appears when this script line starts, then stays
+    zoom:                # optional: ease in to a region around a moment
+      - box: [0.55, 0.0, 0.45, 0.25]   # x, y, width, height as fractions of the clip
+        at: e2           # an event id, or seconds in clip time
+        hold: 1.5        # seconds to stay zoomed after the moment
+    cursor: true         # optional: a drawn pointer that moves to each click
 blur:
   - clip: search
     box: [0.05, 0.10, 0.30, 0.06]   # x, y, width, height as fractions of the frame
@@ -86,6 +96,12 @@ Rules worth knowing:
 
 - A `slide` scene needs `slide:`. Every other layout needs `clip:`.
 - Use `browser` for web footage, `phone` for mobile footage, `full` for raw recordings and desktop apps.
+- `eyebrow`, `title`, `points`, `zoom` and `cursor` only work on footage scenes (phone, browser, full).
+- With points, the panel shows the eyebrow, title and points in the Studio look, and the spoken words go to the srt only. Set `options.captions: burned` to also burn them as subtitles under the footage.
+- Each point names a line id from the same scene in script.yaml.
+- A zoom is fully in a quarter second before its moment, holds, then eases out. It zooms the footage only, never the frame or the panel. Keep boxes to about half the frame or larger, since a closer zoom makes the recording soft. The zoom is at most 2.5 times.
+- The cursor is on by default for web footage in `browser` and `full` scenes. It arrives just before each click and the click pulses in the accent colour. Set `cursor: false` to turn it off. Phone scenes show a tap pulse instead.
+- Web pages recorded at phone size get a drawn status bar above them in the `phone` frame, so nothing sits under the camera cutout.
 - `engine: chatterbox` needs both `sample` and `consent`. See [voices.md](voices.md).
 - `vocabulary` lists rare words such as your product name. They are passed to the speech model that checks the narration, as hints. Unusual words in the script (capitalised in mid sentence, or with digits, dots or underscores) are added for you.
 

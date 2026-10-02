@@ -6,7 +6,7 @@ encoder never has to round them.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from reelsmith.models import BrandModel
@@ -23,12 +23,16 @@ FORMAT_SIZES: dict[str, tuple[int, int]] = {
 
 # Frame borders around the screen, in pixels at 1080p.
 FRAME_INSETS: dict[str, tuple[int, int, int, int]] = {
-    "browser": (8, 52, 8, 8),  # left, top, right, bottom
-    "phone": (22, 22, 22, 22),
+    "browser": (2, 46, 2, 2),  # left, top, right, bottom
+    "phone": (18, 18, 18, 18),
 }
 
 SIDE_PANEL_SHARE = 0.30
 BAND_SHARE = {"16:9": 0.17, "9:16": 0.15, "1:1": 0.17}
+POINTS_SIDE_SHARE = 0.31
+POINTS_BAND_SHARE = {"16:9": 0.30, "9:16": 0.30, "1:1": 0.33}
+STATUS_BAR_SHARE = 0.125  # phone status bar height, as a share of the screen width
+SUBTITLE_SHARE = 0.075  # a strip for spoken subtitles under the device
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,8 @@ class Layout:
     panel_kind: PanelKind | None
     blurred_background: bool
     unit: float  # pixels per 1080p pixel
+    subtitle: Box | None = None  # spoken subtitles when the panel shows points
+    inset: Box | None = None  # the footage inside the screen, under a status bar
 
 
 @dataclass(frozen=True)
@@ -110,32 +116,128 @@ def theme_colors(theme: str, brand: BrandModel) -> ThemeColors:
     )
 
 
-def plan_layout(kind: LayoutKind, fmt: str, canvas: Size, src: Size, *, captions: bool) -> Layout:
-    """Lay out one scene: the content box, its frame and the caption panel."""
+def plan_layout(
+    kind: LayoutKind,
+    fmt: str,
+    canvas: Size,
+    src: Size,
+    *,
+    captions: bool,
+    points: bool = False,
+    subtitles: bool = False,
+    status_bar: bool = False,
+) -> Layout:
+    """Lay out one scene: the content box, its frame and the caption panel.
+
+    With points, the panel holds curated points beside or below the
+    footage, and full footage sits in a box of its own instead of filling
+    the canvas. With subtitles too, a strip under the footage holds the
+    spoken words. With a status bar, a phone screen is made taller by the
+    bar and the footage sits below it, letterboxed and never stretched.
+    """
     unit = unit_of(canvas)
     whole = Box(0, 0, canvas.width, canvas.height)
-    if kind in ("slide", "full"):
+    if kind == "slide" or (kind == "full" and not points):
         content = whole if kind == "slide" else fit(src, whole)
         panel = _band(canvas, fmt) if captions else None
         return Layout(canvas, content, None, None, panel, "band" if panel else None, False, unit)
-    region, panel, panel_kind = _regions(kind, fmt, canvas, captions)
+    strip: Box | None = None
+    panel_kind: PanelKind | None
+    if points:
+        region, panel, panel_kind, strip = _points_regions(kind, fmt, canvas, subtitles)
+    else:
+        region, panel, panel_kind = _regions(kind, fmt, canvas, captions)
+    if kind == "full":
+        content = fit(src, region)
+        layout = Layout(canvas, content, None, None, panel, panel_kind, False, unit, strip)
+        return _group_band(layout) if points else layout
     left, top, right, bottom = (round(v * unit) for v in FRAME_INSETS[kind])
     inner = Box(region.x + left, region.y + top, region.w - left - right, region.h - top - bottom)
-    content = fit(src, inner)
+    bar = status_bar and kind == "phone"
+    screen_src = Size(src.width, src.height + round(src.width * STATUS_BAR_SHARE)) if bar else src
+    content = fit(screen_src, inner)
+    inset = _below_bar(src, content) if bar else None
     frame = Box(
         content.x - left, content.y - top, content.w + left + right, content.h + top + bottom
     )
     frame_kind: FrameKind = "phone" if kind == "phone" else "browser"
-    return Layout(canvas, content, frame, frame_kind, panel, panel_kind, kind == "phone", unit)
+    blurred = kind == "phone" and not points
+    layout = Layout(
+        canvas, content, frame, frame_kind, panel, panel_kind, blurred, unit, strip, inset
+    )
+    if not points:
+        return layout
+    return _group_side(layout) if kind == "phone" else _group_band(layout)
+
+
+def _below_bar(src: Size, screen: Box) -> Box:
+    """Where footage goes inside a phone screen: under the status bar, aspect kept."""
+    bar = round(screen.w * STATUS_BAR_SHARE)
+    room = fit(src, Box(0, bar, screen.w, screen.h - bar))
+    return Box(room.x, bar, room.w, room.h)
+
+
+def _group_side(layout: Layout) -> Layout:
+    """Bring a narrow phone and the side panel together, centred as one group."""
+    if layout.panel_kind != "side" or layout.panel is None or layout.frame is None:
+        return layout
+    m = _margin(layout.canvas)
+    gap = 2 * m
+    total = layout.frame.w + gap + layout.panel.w
+    left = max(m, (layout.canvas.width - total) // 2)
+    dx = left - layout.frame.x
+    frame, content = layout.frame, layout.content
+    return replace(
+        layout,
+        frame=Box(frame.x + dx, frame.y, frame.w, frame.h),
+        content=Box(content.x + dx, content.y, content.w, content.h),
+        panel=Box(left + frame.w + gap, layout.panel.y, layout.panel.w, layout.panel.h),
+    )
+
+
+def _moved(box: Box | None, dy: int) -> Box | None:
+    return None if box is None else Box(box.x, box.y + dy, box.w, box.h)
+
+
+def _group_band(layout: Layout) -> Layout:
+    """With a band below, centre the device, subtitles and band as one group."""
+    if layout.panel_kind != "band" or layout.panel is None:
+        return layout
+    device = layout.frame or layout.content
+    m = _margin(layout.canvas)
+    strip_h = layout.subtitle.h + m // 2 if layout.subtitle else 0
+    total = device.h + strip_h + m + layout.panel.h
+    top = max(m, (layout.canvas.height - total) // 2)
+    dy = top - device.y
+    panel_y = top + device.h + strip_h + m
+    subtitle = layout.subtitle
+    if subtitle is not None:
+        subtitle = Box(subtitle.x, top + device.h + m // 2, subtitle.w, subtitle.h)
+    panel = Box(layout.panel.x, panel_y, layout.panel.w, layout.panel.h)
+    return replace(
+        layout,
+        content=_moved(layout.content, dy) or layout.content,
+        frame=_moved(layout.frame, dy),
+        panel=panel,
+        subtitle=subtitle,
+    )
+
+
+def fit_band(layout: Layout, used: int) -> Layout:
+    """Shrink a points band to the height its text uses and centre the group again."""
+    if layout.panel_kind != "band" or layout.panel is None or used >= layout.panel.h:
+        return layout
+    panel = layout.panel
+    return _group_band(replace(layout, panel=Box(panel.x, panel.y, panel.w, max(2, used))))
 
 
 def _margin(canvas: Size) -> int:
     return even(0.05 * min(canvas.width, canvas.height))
 
 
-def _band(canvas: Size, fmt: str) -> Box:
+def _band(canvas: Size, fmt: str, share: float | None = None) -> Box:
     m = _margin(canvas)
-    height = even(canvas.height * BAND_SHARE.get(fmt, 0.17))
+    height = even(canvas.height * (share or BAND_SHARE.get(fmt, 0.17)))
     return Box(m, canvas.height - m - height, canvas.width - 2 * m, height)
 
 
@@ -155,6 +257,30 @@ def _regions(
     band = _band(canvas, fmt)
     region = Box(m, m, canvas.width - 2 * m, band.y - 2 * m)
     return region, band, "band"
+
+
+def _points_regions(
+    kind: LayoutKind, fmt: str, canvas: Size, subtitles: bool
+) -> tuple[Box, Box, PanelKind, Box | None]:
+    """The device region, the points panel and an optional subtitle strip."""
+    m = _margin(canvas)
+    strip_h = even(canvas.height * SUBTITLE_SHARE) if subtitles else 0
+    side = fmt == "16:9" or (fmt == "1:1" and kind == "phone")
+    if side:
+        width = even(canvas.width * POINTS_SIDE_SHARE)
+        gap = round(1.4 * m)
+        panel = Box(canvas.width - m - width, m, width, canvas.height - 2 * m)
+        region = Box(m, m, canvas.width - 2 * m - gap - width, canvas.height - 2 * m)
+        kind_of: PanelKind = "side"
+    else:
+        panel = _band(canvas, fmt, POINTS_BAND_SHARE.get(fmt, 0.30))
+        region = Box(m, m, canvas.width - 2 * m, panel.y - 2 * m)
+        kind_of = "band"
+    strip = None
+    if subtitles:
+        strip = Box(region.x, region.y + region.h - strip_h, region.w, strip_h)
+        region = Box(region.x, region.y, region.w, region.h - strip_h - m // 2)
+    return region, panel, kind_of, strip
 
 
 def num(value: float) -> str:

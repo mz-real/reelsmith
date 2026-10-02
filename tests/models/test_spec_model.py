@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from reelsmith.errors import ReelsmithError
@@ -155,3 +156,72 @@ def test_voice_vocabulary_defaults_to_empty_and_can_be_filled() -> None:
     assert SpecModel().voice.vocabulary == []
     spec = SpecModel.model_validate({"voice": {"vocabulary": ["reelsmith", "kokoro"]}})
     assert spec.voice.vocabulary == ["reelsmith", "kokoro"]
+
+
+def motion_scene(**changes: Any) -> dict[str, Any]:
+    scene: dict[str, Any] = {"id": "fav", "layout": "browser", "clip": "fav"}
+    scene.update(changes)
+    return scene
+
+
+def test_scene_points_zoom_and_cursor_load_from_yaml() -> None:
+    text = """
+id: fav
+layout: phone
+clip: fav
+eyebrow: Step 3
+title: Save it for *later*
+points:
+  - text: One click adds it to *Favourites*
+    line: fav-1
+  - {text: Saved dishes get a tab, line: fav-2}
+zoom:
+  - box: [0.1, 0.2, 0.4, 0.3]
+    at: e2
+  - {box: [0.5, 0.5, 0.5, 0.5], at: 3.25, hold: 0.5}
+cursor: false
+"""
+    spec = SpecModel.model_validate(base_spec(scenes=[yaml.safe_load(text)]))
+    scene = spec.scenes[0]
+    assert scene.eyebrow == "Step 3"
+    assert scene.title == "Save it for *later*"
+    assert [(p.text, p.line) for p in scene.points][1] == ("Saved dishes get a tab", "fav-2")
+    assert scene.zoom[0].at == "e2" and scene.zoom[0].hold == 1.5
+    assert scene.zoom[1].at == 3.25 and scene.zoom[1].hold == 0.5
+    assert scene.cursor is False
+    assert scene.has_panel
+
+
+def test_motion_fields_default_to_off() -> None:
+    scene = SpecModel.model_validate(base_spec()).scenes[0]
+    assert scene.points == [] and scene.zoom == []
+    assert scene.eyebrow is None and scene.title is None
+    assert scene.cursor is None
+    assert not scene.has_panel
+
+
+@pytest.mark.parametrize(
+    "zoom",
+    [
+        {"box": [0.8, 0.1, 0.4, 0.2], "at": "e1"},  # runs off the right edge
+        {"box": [0.1, 0.1, 0.0, 0.2], "at": "e1"},  # no width
+        {"box": [0.1, 0.1, 0.2, 0.2], "at": -1},  # before the clip
+        {"box": [0.1, 0.1, 0.2, 0.2], "at": "e1", "hold": -0.5},
+        {"box": [0.1, 0.1, 0.2, 0.2]},  # no moment
+    ],
+)
+def test_bad_zooms_are_rejected(zoom: dict[str, Any]) -> None:
+    with pytest.raises(ValidationError):
+        SpecModel.model_validate(base_spec(scenes=[motion_scene(zoom=[zoom])]))
+
+
+def test_points_need_text_and_a_line() -> None:
+    for point in ({"text": "", "line": "l1"}, {"text": "hi"}, {"text": "hi", "line": "l1", "x": 1}):
+        with pytest.raises(ValidationError):
+            SpecModel.model_validate(base_spec(scenes=[motion_scene(points=[point])]))
+
+
+def test_slides_cannot_take_footage_motion() -> None:
+    scene = {"id": "intro", "layout": "slide", "slide": "intro", "title": "Hello"}
+    with pytest.raises(ValidationError, match="only work beside footage"):
+        SpecModel.model_validate(base_spec(scenes=[scene]))

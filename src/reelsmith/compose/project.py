@@ -24,12 +24,13 @@ from reelsmith.compose.master import master_args
 from reelsmith.compose.scene import Look, plan_for_scene
 from reelsmith.compose.timeline import timeline_document, write_timeline
 from reelsmith.compose.transitions import XFADE, boundary_transitions
+from reelsmith.compose.typeface import find_faces
 from reelsmith.errors import ReelsmithError
 from reelsmith.media.ffmpeg import run_ffmpeg
 from reelsmith.models import SpecModel
 from reelsmith.paths import DemoPaths
 
-COMPOSE_VERSION = 2  # bump when the look changes, so cached scenes rebuild
+COMPOSE_VERSION = 3  # bump when the look changes, so cached scenes rebuild
 
 Runner = Callable[[list[str]], None]
 
@@ -135,15 +136,21 @@ def _scene_slide_images(
 def _look(project: ProjectInputs, fmt: str, settings: RenderSettings) -> Look:
     spec, brand = project.spec, project.brand
     fonts = [project.paths.root / name for name in brand.font.files]
+    font = find_font(fonts)
     return Look(
         fmt=fmt,
         canvas=canvas_size(fmt, settings.scale),
         colors=theme_colors(spec.theme, brand),
         dark=spec.theme in ("dark", "studio"),
-        font=find_font(fonts),
+        font=font,
         captions=spec.options.captions in ("burned", "both"),
         highlight_clicks=spec.options.highlight_clicks,
         blur=list(spec.blur),
+        studio=str(spec.theme) == "studio",
+        studio_colors=theme_colors("studio", brand),
+        faces=find_faces(fonts, font),
+        captions_set="captions" in spec.options.model_fields_set,
+        web=spec.footage == "web",
     )
 
 

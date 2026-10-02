@@ -21,6 +21,13 @@ from reelsmith.compose.captions import (
     caption_cues,
     render_caption,
 )
+from reelsmith.compose.footage import (
+    Dressing,
+    dress,
+    footage_layout,
+    has_points,
+    scene_colors,
+)
 from reelsmith.compose.frames import draw_frame
 from reelsmith.compose.graph import (
     AudioPiece,
@@ -32,28 +39,22 @@ from reelsmith.compose.graph import (
 )
 from reelsmith.compose.inputs import SceneSource, slide_clip
 from reelsmith.compose.layouts import (
+    THEMES,
     Box,
     Layout,
     Size,
     ThemeColors,
     even,
-    plan_layout,
 )
-from reelsmith.compose.ripples import (
-    BACK_SECONDS,
-    RING_RADII,
-    RING_STEP_SECONDS,
-    back_cues,
-    draw_back_badge,
-    draw_ring,
-    ripple_cues,
-)
+from reelsmith.compose.ripples import BACK_SECONDS, back_cues, draw_back_badge
+from reelsmith.compose.typeface import Faces
 from reelsmith.models import BlurRegion
 from reelsmith.timing import Placement
 
 SLIDE_ZOOM = 0.05
 CAPTION_BRIDGE = 0.6
 BAND_BACKGROUND = "#000000b3"
+SUBTITLE_BACKGROUND = "#0b0f14cc"
 SIDE_BACKING_OPACITY = 0.92
 SIDE_PADDING = 32  # at 1080p
 
@@ -70,6 +71,11 @@ class Look:
     captions: bool
     highlight_clicks: bool
     blur: list[BlurRegion]
+    studio: bool = False  # the studio theme
+    studio_colors: ThemeColors = THEMES["studio"]
+    faces: Faces | None = None
+    captions_set: bool = False  # options.captions is written in spec.yaml
+    web: bool = True  # web footage, recorded without a pointer
 
 
 def step_times(count: int, placements: Sequence[Placement], duration: float) -> list[float]:
@@ -101,7 +107,11 @@ def plan_for_scene(
     layout = scene_layout(scene, look)
     src = Size(even(clip.width), even(clip.height)) if clip else look.canvas
     stills: list[Still] = []
-    if layout.frame is not None and layout.frame_kind is not None:
+    dressing = Dressing()
+    if clip is not None:
+        dressing = dress(scene, layout, look, work)
+        stills += dressing.frame + dressing.panel
+    elif layout.frame is not None and layout.frame_kind is not None:
         size = Size(layout.frame.w, layout.frame.h)
         path = work / f"frame_{layout.frame_kind}_{size.width}x{size.height}.png"
         image = draw_frame(layout.frame_kind, size, layout.unit, dark=look.dark, dest=path)
@@ -110,8 +120,6 @@ def plan_for_scene(
         stills += caption_stills(scene, layout, look, work)
     source: ClipSource | SlideSource
     if clip is not None and scene.clip_dir is not None:
-        if look.highlight_clicks:
-            stills += ripple_stills(scene, layout, look, work)
         stills += back_stills(scene, layout, look, work)
         source = ClipSource(scene.clip_dir / clip.video, clip.duration, src)
         blur = blur_boxes(look.blur, clip.id, src.width, src.height)
@@ -129,7 +137,7 @@ def plan_for_scene(
     return ScenePlan(
         canvas=look.canvas,
         content=layout.content,
-        background=look.colors.background,
+        background=scene_colors(scene, look).background,
         blurred_background=layout.blurred_background,
         source=source,
         segments=timeline.segments,
@@ -139,6 +147,14 @@ def plan_for_scene(
         audio=audio,
         duration=timeline.duration,
         tail=tail,
+        backdrop=dressing.backdrop,
+        underlays=dressing.underlays,
+        view=dressing.view,
+        overlays=dressing.overlays,
+        mask=dressing.mask,
+        inset=layout.inset if clip is not None else None,
+        pad_color=dressing.pad_color,
+        status_bar=dressing.status_bar,
     )
 
 
@@ -159,13 +175,13 @@ class CaptionSlot:
 
 
 def scene_layout(scene: SceneSource, look: Look) -> Layout:
-    clip = scene.clip
-    src = Size(even(clip.width), even(clip.height)) if clip else look.canvas
-    return plan_layout(scene.spec.layout, look.fmt, look.canvas, src, captions=look.captions)
+    return footage_layout(scene, look)
 
 
 def caption_slots(scene: SceneSource, layout: Layout, look: Look) -> list[CaptionSlot]:
     """Where and when every caption shows. Pure: nothing is drawn here."""
+    if has_points(scene):
+        return _subtitle_slots(scene, layout, look)
     panel = layout.panel
     if panel is None or not look.captions:
         return []
@@ -174,6 +190,23 @@ def caption_slots(scene: SceneSource, layout: Layout, look: Look) -> list[Captio
     if layout.panel_kind == "band":
         return _band_slots(scene, panel, cues, look, layout.unit)
     return _side_slots(scene, panel, cues, look, layout.unit)
+
+
+def _subtitle_slots(scene: SceneSource, layout: Layout, look: Look) -> list[CaptionSlot]:
+    """Spoken subtitles in the strip under the footage of a points scene."""
+    strip = layout.subtitle
+    if strip is None or not look.captions:
+        return []
+    texts = [p.text for p in scene.phrases]
+    cues = caption_cues(texts, scene.timeline.placements, bridge=CAPTION_BRIDGE)
+    style = CaptionStyle(look.font, "#ffffff", SUBTITLE_BACKGROUND)
+    size = round(34 * layout.unit)
+    return [
+        CaptionSlot(
+            f"sub_{n}", cue.text, strip, strip, cue.start, cue.end, style, "center", "middle", size
+        )
+        for n, cue in enumerate(cues)
+    ]
 
 
 def _band_slots(
@@ -259,38 +292,6 @@ def _side_backing(panel: Box, look: Look, unit: float, work: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     image.save(dest)
     return dest
-
-
-def ripple_stills(scene: SceneSource, layout: Layout, look: Look, work: Path) -> list[Still]:
-    assert scene.clip is not None
-    box = layout.content
-    rings = []
-    for step, radius in enumerate(RING_RADII):
-        opacity = 0.95 - 0.2 * step
-        path = work / f"ring_{step}.png"
-        rings.append(
-            (
-                draw_ring(max(4, round(radius * layout.unit)), look.colors.accent, opacity, path),
-                step,
-            )
-        )
-    stills: list[Still] = []
-    for cue in ripple_cues(scene.clip.events, scene.timeline.segments):
-        cx = box.x + cue.x * box.w
-        cy = box.y + cue.y * box.h
-        for image, step in rings:
-            side = _png_side(image)
-            start = cue.t + step * RING_STEP_SECONDS
-            stills.append(
-                Still(
-                    image,
-                    round(cx - side / 2),
-                    round(cy - side / 2),
-                    start,
-                    start + RING_STEP_SECONDS,
-                )
-            )
-    return stills
 
 
 def back_stills(scene: SceneSource, layout: Layout, look: Look, work: Path) -> list[Still]:

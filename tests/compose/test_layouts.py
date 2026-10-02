@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from reelsmith.compose.layouts import (
+    STATUS_BAR_SHARE,
     Box,
     Size,
     canvas_size,
@@ -113,3 +114,24 @@ def test_theme_colors_follow_theme_and_brand_overrides() -> None:
     assert branded.background == "#112233"
     assert branded.text == "#ffffff"
     assert branded.accent == "#ff0000"
+
+
+@pytest.mark.parametrize("fmt", ["16:9", "9:16", "1:1"])
+@pytest.mark.parametrize("points", [False, True])
+def test_phone_status_bar_insets_the_footage_without_stretching(fmt: str, points: bool) -> None:
+    src = Size(390, 844)
+    canvas = canvas_size(fmt, 1.0)
+    layout = plan_layout("phone", fmt, canvas, src, captions=True, points=points, status_bar=True)
+    inset = layout.inset
+    assert inset is not None
+    screen = layout.content
+    assert inset.y >= round(screen.w * STATUS_BAR_SHARE) - 1  # nothing under the island
+    assert inset.x >= 0 and inset.x + inset.w <= screen.w
+    assert inset.y + inset.h <= screen.h
+    assert abs(inset.w / inset.h - src.width / src.height) < 0.01  # letterboxed, not stretched
+    assert inset.w >= screen.w - 4  # the screen is made tall enough, so the sides barely pad
+
+
+def test_no_status_bar_by_default() -> None:
+    layout = plan_layout("phone", "16:9", Size(1920, 1080), Size(390, 844), captions=True)
+    assert layout.inset is None
