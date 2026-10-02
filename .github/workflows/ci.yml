@@ -62,6 +62,10 @@ jobs:
       - name: Check generated instruction files
         run: uv run python scripts/gen_instructions.py --check
 
+      - name: Check version consistency
+        if: runner.os == 'Linux'
+        run: uv run python scripts/check_version.py
+
   integration:
     name: integration / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
