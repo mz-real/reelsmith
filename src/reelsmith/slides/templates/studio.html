@@ -12,5 +12,13 @@
 <section class="body">{{ body }}</section>
 </main>
 {{ footer }}
+<script>
+(function () {
+  if (document.querySelector('.arch')) return;
+  if (window.__reelsmithReady !== undefined) return;
+  window.__reelsmithReady = false;
+  document.fonts.ready.then(function () { window.__reelsmithReady = true; });
+})();
+</script>
 </body>
 </html>
