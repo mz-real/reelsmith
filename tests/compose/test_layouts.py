@@ -33,6 +33,8 @@ def test_canvas_sizes_per_format_and_scale() -> None:
     assert canvas_size("16:9", 1.0) == Size(1920, 1080)
     assert canvas_size("9:16", 1.0) == Size(1080, 1920)
     assert canvas_size("1:1", 2.0) == Size(2160, 2160)
+    assert canvas_size("16:9", 2.0) == Size(3840, 2160)
+    assert canvas_size("9:16", 2.0) == Size(2160, 3840)
     assert canvas_size("16:9", 0.5) == Size(960, 540)
 
 

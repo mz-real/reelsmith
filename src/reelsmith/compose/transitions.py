@@ -11,8 +11,31 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from reelsmith.compose.layouts import num
+from reelsmith.models.spec import TransitionKind
 
 XFADE = 0.4
+
+FFMPEG_TRANSITION: dict[TransitionKind, str] = {
+    "fade": "fade",
+    "slide": "slideleft",
+    "push": "smoothleft",
+    "zoom": "zoomin",
+}
+
+
+def ffmpeg_transition(kind: TransitionKind) -> str:
+    """The xfade transition name ffmpeg expects."""
+    return FFMPEG_TRANSITION[kind]
+
+
+def boundary_transitions(
+    scene_kinds: Sequence[TransitionKind | None],
+    default: TransitionKind,
+) -> list[str]:
+    """One ffmpeg transition per join; scene k sets the fade before it appears."""
+    if len(scene_kinds) < 2:
+        return []
+    return [ffmpeg_transition(scene_kinds[i] or default) for i in range(1, len(scene_kinds))]
 
 
 def scene_starts(durations: Sequence[float]) -> list[float]:
@@ -31,7 +54,12 @@ def padded_lengths(durations: Sequence[float], fade: float) -> list[float]:
     return [d + (fade if i < last else 0.0) for i, d in enumerate(durations)]
 
 
-def xfade_filters(durations: Sequence[float], fade: float, out: str) -> list[str]:
+def xfade_filters(
+    durations: Sequence[float],
+    fade: float,
+    out: str,
+    transitions: Sequence[str] | None = None,
+) -> list[str]:
     """Chain [0:v], [1:v] and so on into [out] with fades at each start."""
     if len(durations) == 1:
         return [f"[0:v]null[{out}]"]
@@ -40,8 +68,9 @@ def xfade_filters(durations: Sequence[float], fade: float, out: str) -> list[str
     current = "0:v"
     for k in range(1, len(durations)):
         target = out if k == len(durations) - 1 else f"x{k}"
+        name = transitions[k - 1] if transitions else "fade"
         chains.append(
-            f"[{current}][{k}:v]xfade=transition=fade:duration={num(fade)}"
+            f"[{current}][{k}:v]xfade=transition={name}:duration={num(fade)}"
             f":offset={num(starts[k])}[{target}]"
         )
         current = target

@@ -17,7 +17,7 @@ from reelsmith.compose.layouts import canvas_size, format_slug, theme_colors
 from reelsmith.compose.master import master_args
 from reelsmith.compose.scene import Look, plan_for_scene
 from reelsmith.compose.timeline import timeline_document, write_timeline
-from reelsmith.compose.transitions import XFADE
+from reelsmith.compose.transitions import XFADE, boundary_transitions
 from reelsmith.errors import ReelsmithError
 from reelsmith.media.ffmpeg import run_ffmpeg
 from reelsmith.models import SpecModel
@@ -172,7 +172,18 @@ def _compose_format(
         _render_to(out, run, partial(scene_args, plan, settings.encode))
         report.rendered.append(scene.spec.id)
     durations = [scene.timeline.duration for scene in project.scenes]
-    _render_to(report.master, run, partial(master_args, files, durations, settings.encode))
+    transitions = boundary_transitions(
+        [scene.spec.transition for scene in project.scenes],
+        project.spec.options.transition,
+    )
+    join = partial(
+        master_args,
+        files,
+        durations,
+        settings.encode,
+        transitions=transitions or None,
+    )
+    _render_to(report.master, run, join)
     report.duration = sum(durations)
     _write_timelines(project, look, settings, first=fmt == project.spec.formats[0])
     return report

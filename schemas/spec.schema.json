@@ -91,6 +91,17 @@
           "default": true,
           "title": "Highlight Clicks",
           "type": "boolean"
+        },
+        "transition": {
+          "default": "fade",
+          "enum": [
+            "fade",
+            "slide",
+            "push",
+            "zoom"
+          ],
+          "title": "Transition",
+          "type": "string"
         }
       },
       "title": "Options",
@@ -137,6 +148,24 @@
           ],
           "default": null,
           "title": "Clip"
+        },
+        "transition": {
+          "anyOf": [
+            {
+              "enum": [
+                "fade",
+                "slide",
+                "push",
+                "zoom"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transition"
         }
       },
       "required": [
