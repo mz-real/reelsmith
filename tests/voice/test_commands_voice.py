@@ -29,15 +29,33 @@ def test_plural_singular_and_plural() -> None:
     assert _plural(0, "line") == "0 lines"
 
 
-def test_result_for_all_ok_has_no_details() -> None:
+def test_result_for_all_ok_always_reports_counts() -> None:
     report = VoiceReport(engine="kokoro", voice="af_heart", lines=[_line()])
 
     result = _result_for(report)
 
     assert result.status == Status.OK
     assert result.message == "Voice generated for 1 line"
-    assert result.details == []
+    assert result.details == [
+        "1 line generated",
+        "0 lines skipped, already up to date",
+        "0 lines regenerated for pace",
+        "0 lines regenerated for dropped words",
+    ]
     assert result.next_step == "reelsmith compose --preview"
+
+
+def test_result_for_does_not_count_a_line_left_out_by_only() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(), _line(line="l2", left_out=True)],
+    )
+
+    result = _result_for(report)
+
+    assert "1 line generated" in result.details
+    assert result.message == "Voice generated for 2 lines"
 
 
 def test_result_for_reports_pace_transcript_and_skip_counts() -> None:

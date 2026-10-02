@@ -78,6 +78,7 @@ class LineReport:
     pace_retried: bool = False
     transcript_retried: bool = False
     pace_checked: bool = True
+    left_out: bool = False
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -292,7 +293,7 @@ def generate(
             if only is not None and key not in only:
                 prior = existing.get(key)
                 if prior is not None:
-                    line_reports.append(prior)
+                    line_reports.append(replace(prior, left_out=True))
                 continue
 
             text = line.spoken_text

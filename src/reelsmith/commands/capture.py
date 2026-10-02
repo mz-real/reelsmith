@@ -37,7 +37,7 @@ def register(app: typer.Typer) -> None:
                         f"video: {paths.clips / clip_id / clip.video}",
                         f"{clip.width}x{clip.height} at {clip.fps:g} fps, {clip.duration:.1f} s",
                     ],
-                    next_step="reelsmith script check",
+                    next_step=f"reelsmith detect --clip {clip_id}",
                 )
             )
         )
