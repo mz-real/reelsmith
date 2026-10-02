@@ -69,7 +69,11 @@ def trim_tail(
 
     keep_samples = int(round(keep_tail * audio.sample_rate))
     cut_at = min(last_loud + 1 + keep_samples, samples.size)
-    return Audio(samples=samples[:cut_at].astype(np.float32), sample_rate=audio.sample_rate)
+    return Audio(
+        samples=samples[:cut_at].astype(np.float32),
+        sample_rate=audio.sample_rate,
+        warning=audio.warning,
+    )
 
 
 def transcript_matches(

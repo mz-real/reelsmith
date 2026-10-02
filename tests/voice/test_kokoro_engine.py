@@ -6,6 +6,8 @@ small speed jitter instead. See _jittered_speed in kokoro_engine.py.
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -96,3 +98,136 @@ def test_good_audio_is_returned(monkeypatch: pytest.MonkeyPatch) -> None:
     audio = KokoroEngine(voice="af_heart").synthesize("Hello.", seed=0)
     assert audio.sample_rate == 24000
     assert np.array_equal(audio.samples, samples)
+
+
+class _RecordingKokoro:
+    """Records every call to create, instead of actually synthesizing."""
+
+    def __init__(self, samples: np.ndarray, sample_rate: int = 24000) -> None:
+        self.samples = samples
+        self.sample_rate = sample_rate
+        self.calls: list[dict[str, object]] = []
+
+    def create(self, text: str, **kwargs: object) -> tuple[np.ndarray, int]:
+        self.calls.append({"text": text, **kwargs})
+        return self.samples, self.sample_rate
+
+
+class _FakeTokenizer:
+    """Returns canned phonemes for known text, as espeak would."""
+
+    def __init__(self, mapping: dict[str, str]) -> None:
+        self.mapping = mapping
+
+    def phonemize(self, text: str, lang: str) -> str:
+        return self.mapping[text]
+
+
+def _samples() -> np.ndarray:
+    return np.linspace(-0.1, 0.1, 2400, dtype=np.float32)
+
+
+def test_pronounce_replaces_the_word_phonemes_on_boundaries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kokoro = _RecordingKokoro(_samples())
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: kokoro)
+    tokenizer = _FakeTokenizer(
+        {
+            "Made with reelsmith.": "mˈeɪd wɪð ɹˈiːlsmɪθ.",
+            "reelsmith": "ɹˈiːlsmɪθ",
+        }
+    )
+    monkeypatch.setattr(kokoro_engine, "_load_tokenizer", lambda: tokenizer)
+    engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+
+    audio = engine.synthesize("Made with reelsmith.", seed=0)
+
+    call = kokoro.calls[0]
+    assert call["is_phonemes"] is True
+    assert call["text"] == "mˈeɪd wɪð ɹˈiːl smɪθ."
+    assert audio.warning is None
+
+
+def test_pronounce_does_not_touch_a_longer_word_sharing_the_same_phonemes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # "reelsmithy" embeds the same phonemes as "reelsmith" without a
+    # boundary around them, so they must not be replaced.
+    kokoro = _RecordingKokoro(_samples())
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: kokoro)
+    tokenizer = _FakeTokenizer(
+        {
+            "Say reelsmith here.": "sˈeɪ ɹˈiːlsmɪθ hˈɪɹ.",
+            "reelsmith": "ɹˈiːlsmɪθ",
+        }
+    )
+    monkeypatch.setattr(kokoro_engine, "_load_tokenizer", lambda: tokenizer)
+    engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+
+    engine.synthesize("Say reelsmith here.", seed=0)
+
+    call = kokoro.calls[0]
+    assert call["text"] == "sˈeɪ ɹˈiːl smɪθ hˈɪɹ."
+
+
+def test_pronounce_is_case_insensitive_on_the_word(monkeypatch: pytest.MonkeyPatch) -> None:
+    kokoro = _RecordingKokoro(_samples())
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: kokoro)
+    tokenizer = _FakeTokenizer(
+        {
+            "Made with Reelsmith.": "mˈeɪd wɪð ɹˈiːlsmɪθ.",
+            "reelsmith": "ɹˈiːlsmɪθ",
+        }
+    )
+    monkeypatch.setattr(kokoro_engine, "_load_tokenizer", lambda: tokenizer)
+    engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+
+    engine.synthesize("Made with Reelsmith.", seed=0)
+
+    assert kokoro.calls[0]["text"] == "mˈeɪd wɪð ɹˈiːl smɪθ."
+
+
+def test_pronounce_falls_back_to_plain_text_when_context_changes_the_phonemes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kokoro = _RecordingKokoro(_samples())
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: kokoro)
+    # espeak phonemizes "reelsmith" differently in this sentence than it
+    # does alone, so the expected substring is not found in the line.
+    tokenizer = _FakeTokenizer(
+        {
+            "Made with reelsmith.": "mˈeɪd wɪð ɹˈiːlsmɪθz.",
+            "reelsmith": "ɹˈiːlsmɪθ",
+        }
+    )
+    monkeypatch.setattr(kokoro_engine, "_load_tokenizer", lambda: tokenizer)
+    engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+
+    audio = engine.synthesize("Made with reelsmith.", seed=0)
+
+    call = kokoro.calls[0]
+    assert call["is_phonemes"] is False
+    assert call["text"] == "Made with reelsmith."
+    assert audio.warning is not None
+    assert "reelsmith" in audio.warning
+
+
+def test_pronounce_leaves_a_line_without_the_word_untouched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kokoro = _RecordingKokoro(_samples())
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: kokoro)
+
+    def _boom(*args: object, **kwargs: object) -> Any:
+        raise AssertionError("should not phonemize a line without a mapped word")
+
+    monkeypatch.setattr(kokoro_engine, "_load_tokenizer", _boom)
+    engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+
+    audio = engine.synthesize("Hello there.", seed=0)
+
+    call = kokoro.calls[0]
+    assert call["is_phonemes"] is False
+    assert call["text"] == "Hello there."
+    assert audio.warning is None

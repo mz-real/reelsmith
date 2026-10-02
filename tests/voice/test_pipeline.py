@@ -473,6 +473,104 @@ def test_a_line_without_say_keeps_its_old_hash() -> None:
     assert _line_hash(line, "fake", "af_heart", 1.0) == old
 
 
+def test_the_line_hash_includes_applicable_pronounce_entries(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "Made with reelsmith."
+    script = _script({"l1": text})
+    transcriber = FakeTranscriber(results=[_words_for(text)])
+
+    plain_engine = FakeEngine(durations=[0.8])
+    plain_engine.name = "kokoro"
+    first = generate(
+        paths,
+        _spec(),
+        script,
+        None,
+        engine=plain_engine,
+        transcribe_fn=transcriber,
+    )
+
+    mapped_spec = SpecModel(
+        voice=VoiceSettings(
+            engine="kokoro", kokoro_voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"}
+        )
+    )
+    mapped_engine = FakeEngine(durations=[0.8])
+    mapped_engine.name = "kokoro"
+    second = generate(
+        paths,
+        mapped_spec,
+        script,
+        None,
+        engine=mapped_engine,
+        transcribe_fn=transcriber,
+    )
+
+    assert second.lines[0].skipped is False
+    assert second.lines[0].hash != first.lines[0].hash
+    assert len(mapped_engine.calls) == 1
+
+
+def test_the_line_hash_is_unaffected_by_pronounce_for_a_line_without_the_word(
+    tmp_path: Path,
+) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "Hello there."
+    script = _script({"l1": text})
+    transcriber = FakeTranscriber(results=[_words_for(text)])
+
+    plain_engine = FakeEngine(durations=[0.8])
+    plain_engine.name = "kokoro"
+    first = generate(
+        paths,
+        _spec(),
+        script,
+        None,
+        engine=plain_engine,
+        transcribe_fn=transcriber,
+    )
+
+    mapped_spec = SpecModel(
+        voice=VoiceSettings(
+            engine="kokoro", kokoro_voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"}
+        )
+    )
+    mapped_engine = FakeEngine(durations=[0.8])
+    mapped_engine.name = "kokoro"
+    second = generate(
+        paths,
+        mapped_spec,
+        script,
+        None,
+        engine=mapped_engine,
+        transcribe_fn=transcriber,
+    )
+
+    assert second.lines[0].skipped is True
+    assert second.lines[0].hash == first.lines[0].hash
+    assert len(mapped_engine.calls) == 0
+
+
+def test_generate_carries_a_kokoro_warning_into_the_line_report(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "Made with reelsmith."
+    script = _script({"l1": text})
+    transcriber = FakeTranscriber(results=[_words_for(text)])
+
+    class WarningEngine(FakeEngine):
+        def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
+            audio = super().synthesize(text, seed, speed)
+            audio.warning = "WARN: could not place the pronunciation for 'reelsmith'"
+            return audio
+
+    engine = WarningEngine(durations=[0.8])
+    engine.name = "kokoro"
+
+    report = generate(paths, _spec(), script, None, engine=engine, transcribe_fn=transcriber)
+
+    assert report.lines[0].warnings == ["WARN: could not place the pronunciation for 'reelsmith'"]
+
+
 def test_generate_passes_the_vocabulary_hints_to_the_default_transcriber(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

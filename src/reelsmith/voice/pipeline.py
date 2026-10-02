@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Sequence
+import re
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from functools import partial
 from pathlib import Path
@@ -79,6 +80,7 @@ class LineReport:
     transcript_retried: bool = False
     pace_checked: bool = True
     left_out: bool = False
+    warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -104,15 +106,36 @@ class VoiceReport:
     rerecorded_on_request: int = 0
 
 
-def _line_hash(line: Line, engine_name: str, voice: str, speed: float) -> str:
+def _applicable_pronunciations(text: str, pronounce: Mapping[str, str]) -> list[tuple[str, str]]:
+    """The pronounce entries (lower cased word, phonemes) whose word is in text."""
+    applicable = [
+        (word.lower(), phonemes)
+        for word, phonemes in pronounce.items()
+        if re.search(rf"\b{re.escape(word)}\b", text, re.IGNORECASE)
+    ]
+    return sorted(applicable)
+
+
+def _line_hash(
+    line: Line,
+    engine_name: str,
+    voice: str,
+    speed: float,
+    pronounce: Mapping[str, str] | None = None,
+) -> str:
     # The engine name is part of the hash so switching engines, for example
     # from Kokoro to Chatterbox, regenerates every line instead of being
     # mistaken for a line that has not changed. What the voice reads is
     # added only when a phrase has say, so lines without it keep the hash
-    # they had before say existed and are not voiced again.
+    # they had before say existed and are not voiced again. Only the
+    # pronounce entries that actually apply to this line are hashed, so
+    # changing an unrelated word in voice.pronounce does not regenerate it.
     raw = f"{line.text}|{engine_name}|{voice}|{speed}"
     if line.has_say:
         raw += f"|say={line.spoken_text}"
+    applicable = _applicable_pronunciations(line.spoken_text, pronounce or {})
+    if applicable:
+        raw += "|pronounce=" + ",".join(f"{word}={phonemes}" for word, phonemes in applicable)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -320,7 +343,12 @@ def generate(
                 continue
 
             text = line.spoken_text
-            line_hash = _line_hash(line, active_engine.name, voice_id, spec.voice.speed)
+            # Only Kokoro ever reads voice.pronounce, so only its lines are
+            # regenerated when the map changes.
+            engine_pronounce = spec.voice.pronounce if active_engine.name == "kokoro" else None
+            line_hash = _line_hash(
+                line, active_engine.name, voice_id, spec.voice.speed, engine_pronounce
+            )
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
             forced = only is not None and key in only
 
@@ -370,6 +398,7 @@ def generate(
                     pace_retried=pace_retried,
                     transcript_retried=transcript_retried,
                     pace_checked=pace_checked,
+                    warnings=[audio.warning] if audio.warning else [],
                 )
             )
 

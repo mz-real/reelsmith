@@ -305,6 +305,13 @@
           },
           "title": "Vocabulary",
           "type": "array"
+        },
+        "pronounce": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Pronounce",
+          "type": "object"
         }
       },
       "title": "VoiceSettings",

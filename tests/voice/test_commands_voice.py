@@ -131,6 +131,33 @@ def test_result_for_never_ok_when_a_line_still_fails() -> None:
     assert "s/l1 still fails: pace and dropped words" in result.details
 
 
+def test_result_for_warns_on_a_pronunciation_fallback() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(warnings=["WARN: could not place the pronunciation for 'reelsmith'"])],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.WARN
+    assert any("reelsmith" in detail for detail in result.details)
+    assert result.next_step == "reelsmith compose --preview"
+
+
+def test_result_for_ignores_pronunciation_warnings_on_a_skipped_line() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(skipped=True, warnings=["WARN: stale, should not be reported"])],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.OK
+    assert not any("stale" in detail for detail in result.details)
+
+
 def test_result_for_repeats_only_for_each_failing_line() -> None:
     report = VoiceReport(
         engine="kokoro",

@@ -27,11 +27,23 @@ class VoiceSettings(StrictModel):
     consent: Literal["own", "permission"] | None = None
     # Product names and other rare words, passed to the speech model as hints.
     vocabulary: list[str] = Field(default_factory=list)
+    # A word (case insensitive, whole word) to the Kokoro or espeak phonemes
+    # it should be read as, for words Kokoro reads wrong from plain text.
+    pronounce: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _clone_needs_consent(self) -> Self:
         if self.engine == "chatterbox" and (not self.sample or self.consent is None):
             raise ValueError(CLONE_CONSENT_MESSAGE)
+        return self
+
+    @model_validator(mode="after")
+    def _pronounce_keys_are_single_words(self) -> Self:
+        for word in self.pronounce:
+            if not word.strip() or len(word.split()) != 1:
+                raise ValueError(
+                    f"voice.pronounce key {word!r} must be a single word, not a phrase"
+                )
         return self
 
 
