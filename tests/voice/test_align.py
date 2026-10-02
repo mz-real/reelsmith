@@ -34,7 +34,7 @@ def test_phrase_bounds_splits_words_by_phrase_word_count() -> None:
 
     assert len(bounds) == 2
     assert bounds[0][0] == 0.0
-    assert bounds[1][1] == 1.9
+    assert bounds[1][1] == 2.0  # the last phrase runs to the end of the audio
 
 
 def test_phrase_bounds_moves_the_cut_to_the_quiet_gap() -> None:
@@ -55,7 +55,7 @@ def test_phrase_bounds_single_phrase_returns_full_span() -> None:
 
     bounds = phrase_bounds(["Hello"], words, audio)
 
-    assert bounds == [(0.0, 0.5)]
+    assert bounds == [(0.0, 2.0)]  # a one phrase line keeps the whole audio
 
 
 def test_phrase_bounds_empty_phrases_returns_empty_list() -> None:
@@ -73,3 +73,31 @@ def test_phrase_bounds_tolerates_fewer_words_than_expected() -> None:
     assert len(bounds) == 2
     assert bounds[0] == (0.0, 0.2)
     assert bounds[1] == (0.0, 0.0)
+
+
+def test_line_edges_keep_the_whole_audio_so_no_sound_is_clipped() -> None:
+    # Whisper's first start can be late and its last end early. Cutting there
+    # clips the first sound and the last syllable ("marker" heard as "mark").
+    sample_rate = 24000
+    audio = Audio(
+        samples=np.full(int(3.8 * sample_rate), 0.1, dtype=np.float32), sample_rate=sample_rate
+    )
+    words = [
+        Word(text="Saved", start=0.12, end=0.6),
+        Word(text="with", start=0.6, end=0.9),
+        Word(text="a", start=0.9, end=1.0),
+        Word(text="marker.", start=1.0, end=3.5),
+    ]
+
+    bounds = phrase_bounds(["Saved with a marker."], words, audio)
+
+    assert bounds == [(0.0, 3.8)]
+
+
+def test_inner_cuts_stay_between_words_while_edges_cover_the_line() -> None:
+    audio = _audio_with_quiet_gap()
+    bounds = phrase_bounds(["Type fast.", "Results update."], _words(), audio)
+
+    assert bounds[0][0] == 0.0
+    assert bounds[-1][1] == len(audio.samples) / audio.sample_rate
+    assert 0.85 <= bounds[0][1] <= 1.1
