@@ -235,3 +235,36 @@ def test_compare_cli_without_consent_is_an_error(demo: DemoPaths) -> None:
     code = run(app, ["voice", "compare", "--refs", "low.wav", str(demo.root)])
     assert code == 1
     assert not (demo.voice / "compare").exists()
+
+
+def test_compare_reads_say_where_a_phrase_has_one(demo: DemoPaths) -> None:
+    script = ScriptModel(
+        scenes=[
+            ScriptScene(
+                id="a",
+                lines=[Line(id="l1", phrases=[Phrase(text="Run qa.", say="Run Q A.")])],
+            )
+        ]
+    )
+    engines: list[ToneEngine] = []
+
+    def factory(spec: SpecModel, ref: Path) -> VoiceEngine:
+        engine = ToneEngine(LOW, seconds_per_word=0.35)
+        engines.append(engine)
+        return engine
+
+    def heard(audio: Audio) -> list[Word]:
+        return [Word(text=w, start=0.0, end=0.1) for w in "run q a".split()]
+
+    report = compare_references(
+        demo,
+        _spec(),
+        script,
+        [demo.root / "low.wav"],
+        lines=1,
+        engine_factory=factory,
+        transcribe_fn=heard,
+    )
+
+    assert engines[0].texts == ["Run Q A."]
+    assert report.recommended.transcript_ok_lines == 1

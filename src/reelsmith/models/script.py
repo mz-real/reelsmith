@@ -12,8 +12,14 @@ PhraseText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=
 
 
 class Phrase(StrictModel):
-    text: PhraseText
+    text: PhraseText  # what the captions and the srt show
+    say: PhraseText | None = None  # what the voice reads, when it differs from text
     pin: Identifier | None = None  # an event id in this scene's clip
+
+    @property
+    def spoken(self) -> str:
+        """The words the voice reads: say when given, otherwise text."""
+        return self.say if self.say is not None else self.text
 
 
 class Line(StrictModel):
@@ -22,8 +28,17 @@ class Line(StrictModel):
 
     @property
     def text(self) -> str:
-        """The whole line as one string, as the voice engine reads it."""
+        """The whole line as one string, as the captions show it."""
         return " ".join(phrase.text for phrase in self.phrases)
+
+    @property
+    def spoken_text(self) -> str:
+        """The whole line as one string, as the voice engine reads it."""
+        return " ".join(phrase.spoken for phrase in self.phrases)
+
+    @property
+    def has_say(self) -> bool:
+        return any(phrase.say is not None for phrase in self.phrases)
 
 
 class ScriptScene(StrictModel):

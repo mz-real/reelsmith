@@ -14,6 +14,7 @@ from reelsmith.errors import ReelsmithError
 from reelsmith.models import ClipModel, ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
+from reelsmith.text import say_differs_much
 
 ClipLoader = Callable[[str], ClipModel | None]
 
@@ -41,6 +42,12 @@ def check_script(spec: SpecModel, script: ScriptModel, load_clip: ClipLoader) ->
             clip = load_clip(spec_scene.clip)
         for line in scene.lines:
             for number, phrase in enumerate(line.phrases, start=1):
+                if phrase.say is not None and say_differs_much(phrase.text, phrase.say):
+                    report.warnings.append(
+                        f"Scene '{scene.id}', line '{line.id}', phrase {number}: say reads"
+                        " quite differently from text. The captions show text and the voice"
+                        " reads say, so check they mean the same thing."
+                    )
                 if phrase.pin is None:
                     continue
                 report.pins += 1

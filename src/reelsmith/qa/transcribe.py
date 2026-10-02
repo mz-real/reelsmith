@@ -7,6 +7,7 @@ check can work on file paths and tests can inject a fake.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -39,11 +40,20 @@ def load_audio(path: Path) -> Audio:
     return Audio(samples=samples, sample_rate=int(rate))
 
 
-def get_transcriber() -> Transcriber:
-    """Return a transcriber that takes a wav path."""
+def get_transcriber(vocabulary: Sequence[str] = ()) -> Transcriber:
+    """Return a transcriber that takes a wav path.
+
+    vocabulary is passed on as speech model hints, the same ones the
+    voice step uses (see voice/transcribe.py).
+    """
+    hints = list(vocabulary)
 
     def _transcribe(audio_path: Path) -> list[Word]:
-        words = voice_transcribe.transcribe(load_audio(audio_path))
+        audio = load_audio(audio_path)
+        if hints:
+            words = voice_transcribe.transcribe(audio, vocabulary=hints)
+        else:
+            words = voice_transcribe.transcribe(audio)
         return [Word(text=w.text, start=w.start, end=w.end) for w in words]
 
     return _transcribe

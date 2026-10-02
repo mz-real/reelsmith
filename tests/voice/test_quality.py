@@ -136,3 +136,42 @@ def test_transcript_matches_tolerates_british_american_spelling() -> None:
 
     assert ok is True
     assert missing == []
+
+
+def _heard(text: str) -> list[Word]:
+    return [Word(text=t, start=i * 0.1, end=i * 0.1 + 0.09) for i, t in enumerate(text.split())]
+
+
+def test_transcript_matches_accepts_digits_abbreviations_and_joins() -> None:
+    ok, missing = transcript_matches(
+        "It runs nine checks. Script check and doctor print the plugin.",
+        _heard("it runs 9 checks scriptcheck and dr print the plug in"),
+    )
+
+    assert ok is True
+    assert missing == []
+
+
+def test_transcript_matches_accepts_a_homophone_of_a_vocabulary_word() -> None:
+    ok, missing = transcript_matches(
+        "Made with reelsmith.", _heard("made with realsmith"), vocabulary=["reelsmith"]
+    )
+
+    assert ok is True
+    assert missing == []
+
+
+def test_transcript_matches_rejects_a_homophone_outside_the_vocabulary() -> None:
+    ok, missing = transcript_matches("Save the recipe.", _heard("safe the recipe"))
+
+    assert ok is False
+    assert missing == ["save"]
+
+
+def test_transcript_matches_still_reports_a_really_missing_vocabulary_word() -> None:
+    ok, missing = transcript_matches(
+        "Made with reelsmith today.", _heard("made with today"), vocabulary=["reelsmith"]
+    )
+
+    assert ok is False
+    assert missing == ["reelsmith"]

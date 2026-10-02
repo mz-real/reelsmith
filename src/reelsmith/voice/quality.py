@@ -2,37 +2,13 @@
 
 from __future__ import annotations
 
-import re
+from collections.abc import Sequence
 
 import numpy as np
 
-from reelsmith.text import normalise_word
+from reelsmith.text import reconcile_joins, sounds_alike, tokens, vocabulary_tokens
 from reelsmith.voice.base import Audio
 from reelsmith.voice.transcribe import Word
-
-_ONES = [
-    "zero",
-    "one",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-    "nine",
-    "ten",
-    "eleven",
-    "twelve",
-    "thirteen",
-    "fourteen",
-    "fifteen",
-    "sixteen",
-    "seventeen",
-    "eighteen",
-    "nineteen",
-]
-_TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 
 
 def words_per_minute(text: str, seconds: float) -> float:
@@ -96,48 +72,27 @@ def trim_tail(
     return Audio(samples=samples[:cut_at].astype(np.float32), sample_rate=audio.sample_rate)
 
 
-def _number_to_words(value: int) -> str:
-    if value < 0:
-        return f"minus {_number_to_words(-value)}"
-    if value < 20:
-        return _ONES[value]
-    if value < 100:
-        tens, rest = divmod(value, 10)
-        return _TENS[tens] if rest == 0 else f"{_TENS[tens]} {_ONES[rest]}"
-    if value < 1000:
-        hundreds, rest = divmod(value, 100)
-        prefix = f"{_ONES[hundreds]} hundred"
-        return prefix if rest == 0 else f"{prefix} {_number_to_words(rest)}"
-    return str(value)
-
-
-def _normalise_tokens(text: str) -> list[str]:
-    """Lower case, drop punctuation, spell out small numbers, and fold
-    British/American spelling variants to the same form."""
-    tokens: list[str] = []
-    for raw in text.split():
-        cleaned = re.sub(r"[^\w]", "", raw.lower())
-        if not cleaned:
-            continue
-        if cleaned.isdigit():
-            tokens.extend(_number_to_words(int(cleaned)).split())
-        else:
-            tokens.append(normalise_word(cleaned))
-    return tokens
-
-
-def transcript_matches(expected: str, words: list[Word]) -> tuple[bool, list[str]]:
+def transcript_matches(
+    expected: str, words: list[Word], vocabulary: Sequence[str] = ()
+) -> tuple[bool, list[str]]:
     """Check a transcript against the expected line text.
 
-    Case, punctuation and small numbers are normalised on both sides
-    first, and spelling variants such as "favourites" and "Favorites"
-    are treated as the same word. Returns whether every expected word
-    was heard, and the list of words that were not.
+    Both sides go through reelsmith.text first, so case, punctuation,
+    small numbers, a few abbreviations, British/American spelling and
+    words heard joined or split all match. A vocabulary word heard as a
+    word with the same sound (realsmith for reelsmith) counts as heard.
+    Returns whether every expected word was heard, and the list of words
+    that were not.
     """
-    expected_tokens = _normalise_tokens(expected)
-    heard: set[str] = set()
-    for word in words:
-        heard.update(_normalise_tokens(word.text))
+    vocab = vocabulary_tokens(vocabulary)
+    expected_tokens = tokens(expected)
+    heard_tokens = reconcile_joins(expected_tokens, tokens(" ".join(w.text for w in words)), vocab)
+    heard = set(heard_tokens)
 
-    missing = [token for token in expected_tokens if token not in heard]
+    def was_heard(token: str) -> bool:
+        if token in heard:
+            return True
+        return token in vocab and any(sounds_alike(token, other) for other in heard)
+
+    missing = [token for token in expected_tokens if not was_heard(token)]
     return (len(missing) == 0, missing)

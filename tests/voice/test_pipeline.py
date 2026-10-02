@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from reelsmith.models import Line, Phrase, ScriptModel, ScriptScene, SpecModel, VoiceSettings
 from reelsmith.paths import DemoPaths
@@ -369,3 +370,90 @@ def test_generate_reruns_a_line_when_the_cloned_voice_changed(tmp_path: Path) ->
 
     assert report.lines[0].skipped is False
     assert len(second.calls) == 1
+
+
+def _say_script(text: str, say: str | None) -> ScriptModel:
+    return ScriptModel(
+        scenes=[ScriptScene(id="s", lines=[Line(id="l1", phrases=[Phrase(text=text, say=say)])])]
+    )
+
+
+def test_generate_reads_say_and_checks_the_transcript_against_it(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    engine = FakeEngine(durations=[0.8])
+    transcriber = FakeTranscriber(results=[_words_for("run reelsmith q a")])
+
+    report = generate(
+        paths,
+        _spec(),
+        _say_script("Run reelsmith qa.", "Run reelsmith Q A."),
+        None,
+        engine=engine,
+        transcribe_fn=transcriber,
+    )
+
+    assert engine.calls[0][0] == "Run reelsmith Q A."
+    assert report.lines[0].transcript_ok is True
+    assert report.lines[0].attempts == 1
+
+
+def test_the_line_hash_includes_say(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    transcriber = FakeTranscriber(results=[_words_for("run reelsmith q a")])
+    first = generate(
+        paths,
+        _spec(),
+        _say_script("Run reelsmith qa.", None),
+        None,
+        engine=FakeEngine(durations=[0.8]),
+        transcribe_fn=transcriber,
+    )
+
+    second = generate(
+        paths,
+        _spec(),
+        _say_script("Run reelsmith qa.", "Run reelsmith Q A."),
+        None,
+        engine=FakeEngine(durations=[0.8]),
+        transcribe_fn=transcriber,
+    )
+
+    assert second.lines[0].skipped is False
+    assert second.lines[0].hash != first.lines[0].hash
+
+
+def test_a_line_without_say_keeps_its_old_hash() -> None:
+    import hashlib
+
+    from reelsmith.voice.pipeline import _line_hash
+
+    line = Line(id="l1", phrases=[Phrase(text="hello world")])
+    old = hashlib.sha256(b"hello world|fake|af_heart|1.0").hexdigest()
+
+    assert _line_hash(line, "fake", "af_heart", 1.0) == old
+
+
+def test_generate_passes_the_vocabulary_hints_to_the_default_transcriber(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from reelsmith.voice import pipeline
+
+    seen: list[list[str]] = []
+
+    def fake_transcribe(audio: Audio, vocabulary: list[str] | None = None) -> list[Word]:
+        seen.append(list(vocabulary or []))
+        return _words_for("made with realsmith")
+
+    monkeypatch.setattr(pipeline, "default_transcribe", fake_transcribe)
+    spec = SpecModel(voice=VoiceSettings(vocabulary=["reelsmith"]))
+
+    report = generate(
+        DemoPaths.at(tmp_path),
+        spec,
+        _script({"l1": "Made with reelsmith."}),
+        None,
+        engine=FakeEngine(durations=[0.8]),
+    )
+
+    assert seen[0] == ["reelsmith"]
+    assert report.lines[0].transcript_ok is True

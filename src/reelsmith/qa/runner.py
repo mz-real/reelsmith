@@ -17,6 +17,7 @@ from reelsmith.qa.timeline import load_timeline
 from reelsmith.qa.timings import load_timings
 from reelsmith.qa.transcribe import Transcriber, get_transcriber
 from reelsmith.result import Result, Status
+from reelsmith.voice.transcribe import vocabulary_hints
 
 
 def run_qa(
@@ -66,7 +67,9 @@ def run_qa(
     backup_existing(sheets_dir)
     sheets_dir.mkdir(parents=True, exist_ok=True)
 
-    active_transcriber = transcriber if transcriber is not None else get_transcriber()
+    active_transcriber = transcriber
+    if active_transcriber is None:
+        active_transcriber = get_transcriber(vocabulary_hints(spec, script))
 
     with tempfile.TemporaryDirectory(dir=paths.qa) as raw_work_dir:
         ctx = QAContext(
