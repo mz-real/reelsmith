@@ -23,9 +23,10 @@ from reelsmith.models import ClipModel, Event, save_model
 FlowFn = Callable[[Page, CaptureLog], Awaitable[None]]
 TARGET_FPS = 30.0
 _BLANK_PAGE = "data:text/html,<body style='margin:0;background:#ffffff'></body>"
-_MARKER_SHOW_MS = 1000
+_MARKER_SHOW_MS = 1500
+_MARKER_WARMUP_MS = 500
 _SCAN_WIDTH = 160
-_SCAN_SECONDS = 5.0
+_SCAN_SECONDS = 10.0
 _MAGENTA_RGB = (255, 0, 255)
 _MAGENTA_MAX_DIST = 80
 _MAGENTA_MIN_FRACTION = 0.60
@@ -123,20 +124,20 @@ async def _run_sync_marker(page: Page, wall_elapsed: Callable[[], float]) -> flo
     """Flash magenta so we can line up event times with video frames."""
     await page.goto(_BLANK_PAGE, wait_until="commit")
     await page.evaluate(
-        """() => {
-          return new Promise((resolve) => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
+        f"""() => {{
+          return new Promise((resolve) => {{
+            requestAnimationFrame(() => {{
+              setTimeout(() => {{
                 const el = document.createElement('div');
                 el.id = 'reelsmith-sync-marker';
                 el.style.cssText =
                   'position:fixed;inset:0;background:#ff00ff;z-index:2147483647';
                 document.body.appendChild(el);
                 resolve();
-              });
-            });
-          });
-        }"""
+              }}, {_MARKER_WARMUP_MS});
+            }});
+          }});
+        }}"""
     )
     marker_t = wall_elapsed()
     await page.wait_for_timeout(_MARKER_SHOW_MS)

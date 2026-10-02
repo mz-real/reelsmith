@@ -349,22 +349,11 @@ def test_renders_are_deterministic(tmp_path: Path) -> None:
     second = tmp_path / "second"
     render_slides_to_dir(slides, theme, first, width=480, height=270, clips=False)
     render_slides_to_dir(slides, theme, second, width=480, height=270, clips=False)
-    pairs = (
-        ("t.png", False),
-        ("a.png", True),
-        ("s.png", False),
-        ("a_step1.png", True),
-    )
-    for name, arch_tolerance in pairs:
-        assert_render_pair_equal(
-            first / name,
-            second / name,
-            name=name,
-            arch_tolerance=arch_tolerance,
-        )
+    for name in ("t.png", "a.png", "s.png", "a_step1.png"):
+        assert_render_pair_equal(first / name, second / name, name=name)
 
 
-def test_architecture_pixel_tolerance_catches_moved_nodes(tmp_path: Path) -> None:
+def test_architecture_layout_change_differs_from_baseline(tmp_path: Path) -> None:
     theme = _theme(tmp_path)
     baseline = SlidesModel.model_validate({"slides": [{"id": "a", **ARCH}]})
     shifted_layout = [["you", "ai"], ["cli"], ["engine"]]
@@ -375,13 +364,8 @@ def test_architecture_pixel_tolerance_catches_moved_nodes(tmp_path: Path) -> Non
     shift_dir = tmp_path / "shift"
     render_slides_to_dir(baseline, theme, base_dir, width=480, height=270, clips=False)
     render_slides_to_dir(shifted, theme, shift_dir, width=480, height=270, clips=False)
-    with pytest.raises(AssertionError, match="outside architecture pixel tolerance"):
-        assert_render_pair_equal(
-            base_dir / "a.png",
-            shift_dir / "a.png",
-            name="a.png",
-            arch_tolerance=True,
-        )
+    with pytest.raises(AssertionError, match="bytes differ"):
+        assert_render_pair_equal(base_dir / "a.png", shift_dir / "a.png", name="a.png")
 
 
 def test_gallery_names_a_missing_image(tmp_path: Path) -> None:
