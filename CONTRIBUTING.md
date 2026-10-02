@@ -64,7 +64,7 @@ Docs, CLI messages, issue text and comments should read like a person wrote them
 
 1. Add a module under `src/reelsmith/commands/`, for example `src/reelsmith/commands/foo.py`.
 2. Implement `def register(app: typer.Typer) -> None:` and attach your subcommand with `@app.command(...)`.
-3. Add the module name (without `.py`) to the `COMMANDS` list in `src/reelsmith/cli.py`.
+3. That is all for registration. `reelsmith.cli` finds every module in `reelsmith.commands` on start.
 4. Add tests under `tests/` mirroring the module layout.
 5. End the command with the shared result block from `reelsmith.result` (see existing commands).
 
