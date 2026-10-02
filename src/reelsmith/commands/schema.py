@@ -10,7 +10,7 @@ import typer
 from pydantic import BaseModel
 
 from reelsmith.fsutil import backup_existing
-from reelsmith.models import BrandModel, ClipModel, ScriptModel, SpecModel
+from reelsmith.models import BrandModel, ClipModel, ScriptModel, SlidesModel, SpecModel
 from reelsmith.result import Result, Status, emit
 
 SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -20,6 +20,7 @@ SCHEMA_MODELS: dict[str, type[BaseModel]] = {
     "brand": BrandModel,
     "clip": ClipModel,
     "script": ScriptModel,
+    "slides": SlidesModel,
 }
 
 
@@ -57,7 +58,7 @@ def register(app: typer.Typer) -> None:
             "schemas"
         ),
     ) -> int:
-        """Write spec, brand, clip and script schemas as JSON files."""
+        """Write spec, brand, clip, script and slides schemas as JSON files."""
         written, unchanged = export_schemas(out)
         return emit(
             Result(
