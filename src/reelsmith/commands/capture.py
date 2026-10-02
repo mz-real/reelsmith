@@ -10,6 +10,7 @@ import typer
 from reelsmith.capture.importer import import_recording
 from reelsmith.capture.mobile import run_mobile_flow
 from reelsmith.capture.web import run_web_flow
+from reelsmith.commands._common import DemoDirArgument, DemoDirOption, demo_dir
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
 
@@ -21,13 +22,11 @@ def register(app: typer.Typer) -> None:
     def import_cmd(
         source: Annotated[Path, typer.Argument(help="Video file to import.")],
         clip_id: Annotated[str, typer.Option("--id", help="Clip id for this recording.")],
-        directory: Annotated[
-            Path,
-            typer.Option("--demo", help="Demo folder that owns capture/clips."),
-        ] = Path("."),
+        directory: DemoDirArgument = None,
+        demo_option: DemoDirOption = None,
     ) -> None:
         """Normalise a recording into capture/clips/<id>/."""
-        paths = DemoPaths.at(directory)
+        paths = DemoPaths.at(demo_dir(directory, demo_option))
         clip = import_recording(source, clip_id, paths.clips)
         raise typer.Exit(
             emit(
@@ -55,13 +54,11 @@ def register(app: typer.Typer) -> None:
             str,
             typer.Option("--size", help="Viewport size, WIDTHxHEIGHT."),
         ] = "1280x720",
-        directory: Annotated[
-            Path,
-            typer.Option("--demo", help="Demo folder that owns capture/clips."),
-        ] = Path("."),
+        directory: DemoDirArgument = None,
+        demo_option: DemoDirOption = None,
     ) -> None:
         """Record a Playwright flow into capture/clips/<id>/."""
-        paths = DemoPaths.at(directory)
+        paths = DemoPaths.at(demo_dir(directory, demo_option))
         clip = run_web_flow(
             flow,
             clip_id,
@@ -94,13 +91,11 @@ def register(app: typer.Typer) -> None:
             str | None,
             typer.Option("--device", help="adb device serial for Android."),
         ] = None,
-        directory: Annotated[
-            Path,
-            typer.Option("--demo", help="Demo folder that owns capture/clips."),
-        ] = Path("."),
+        directory: DemoDirArgument = None,
+        demo_option: DemoDirOption = None,
     ) -> None:
         """Record a Maestro flow into capture/clips/<id>/."""
-        paths = DemoPaths.at(directory)
+        paths = DemoPaths.at(demo_dir(directory, demo_option))
         result = run_mobile_flow(
             flow,
             clip_id,

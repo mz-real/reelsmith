@@ -5,10 +5,10 @@ A ready made reelsmith demo for the Recipe Box sample app. Inputs live here; cap
 Record the four browser clips. 1280x720 keeps the app large in the frame; compose scales it up.
 
 ```bash
-uv run reelsmith capture web examples/recipe-box/flows/search.py --demo examples/recipe-box --id search --size 1280x720
-uv run reelsmith capture web examples/recipe-box/flows/open.py --demo examples/recipe-box --id open --size 1280x720
-uv run reelsmith capture web examples/recipe-box/flows/favourite.py --demo examples/recipe-box --id favourite --size 1280x720
-uv run reelsmith capture web examples/recipe-box/flows/create.py --demo examples/recipe-box --id create --size 1280x720
+uv run reelsmith capture web examples/recipe-box/flows/search.py examples/recipe-box --id search --size 1280x720
+uv run reelsmith capture web examples/recipe-box/flows/open.py examples/recipe-box --id open --size 1280x720
+uv run reelsmith capture web examples/recipe-box/flows/favourite.py examples/recipe-box --id favourite --size 1280x720
+uv run reelsmith capture web examples/recipe-box/flows/create.py examples/recipe-box --id create --size 1280x720
 ```
 
 Check the script against clips:

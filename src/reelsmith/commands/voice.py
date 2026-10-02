@@ -8,6 +8,7 @@ from typing import Annotated
 import soundfile as sf
 import typer
 
+from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
 from reelsmith.fsutil import backup_existing
 from reelsmith.models import ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
@@ -79,7 +80,7 @@ def _result_for(report: VoiceReport) -> Result:
 
 @app.command("generate")
 def generate_command(
-    directory: Annotated[Path, typer.Argument(help="The demo folder.")] = Path("."),
+    directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
     only: list[str] | None = typer.Option(
         None,
         "--only",
@@ -87,7 +88,7 @@ def generate_command(
     ),
 ) -> None:
     """Synthesize narration for every line in script.yaml."""
-    paths = DemoPaths.at(directory)
+    paths = DemoPaths.at(demo_dir(directory, None))
     spec = load_model(paths.spec, SpecModel)
     script = load_model(paths.script, ScriptModel)
     only_set = set(only) if only else None
@@ -98,7 +99,7 @@ def generate_command(
 
 @app.command("preview")
 def preview_command(
-    directory: Annotated[Path, typer.Argument(help="The demo folder.")] = Path("."),
+    directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
     text: str = typer.Option(..., "--text", help="The line to read."),
     voices: str = typer.Option(
         "af_heart,bf_emma,am_michael",
@@ -107,7 +108,7 @@ def preview_command(
     ),
 ) -> None:
     """Read one line in a few voices, written to voice/preview/<voice>.wav."""
-    paths = DemoPaths.at(directory)
+    paths = DemoPaths.at(demo_dir(directory, None))
     preview_dir = paths.voice / "preview"
     preview_dir.mkdir(parents=True, exist_ok=True)
 

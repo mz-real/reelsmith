@@ -7,6 +7,7 @@ from typing import Annotated
 
 import typer
 
+from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import BrandModel, SpecModel, load_model
 from reelsmith.models.slides import SlidesModel
@@ -49,7 +50,7 @@ def run_slides(root: Path) -> Result:
 def register(app: typer.Typer) -> None:
     @app.command("slides")
     def slides_cmd(
-        directory: Annotated[Path, typer.Argument(help="The demo folder.")] = Path("."),
+        directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
     ) -> int:
         """Render slides from slides.yaml using the spec format and brand file."""
-        return emit(run_slides(directory))
+        return emit(run_slides(demo_dir(directory, None)))
