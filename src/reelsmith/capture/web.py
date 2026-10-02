@@ -23,9 +23,13 @@ from reelsmith.models import ClipModel, Event, save_model
 FlowFn = Callable[[Page, CaptureLog], Awaitable[None]]
 TARGET_FPS = 30.0
 _BLANK_PAGE = "data:text/html,<body style='margin:0;background:#ffffff'></body>"
-_MARKER_SHOW_MS = 300
-_SAMPLE_FPS = 30.0
+_MARKER_SHOW_MS = 1000
 _SCAN_WIDTH = 160
+_SCAN_SECONDS = 5.0
+_MAGENTA_RGB = (255, 0, 255)
+_MAGENTA_MAX_DIST = 80
+_MAGENTA_MIN_FRACTION = 0.60
+_MARKER_FIND_ATTEMPTS = 2
 
 
 def _is_flow(value: object) -> TypeGuard[FlowFn]:
@@ -118,19 +122,38 @@ def _convert_webm(webm_path: Path, mp4_path: Path) -> None:
 async def _run_sync_marker(page: Page, wall_elapsed: Callable[[], float]) -> float:
     """Flash magenta so we can line up event times with video frames."""
     await page.goto(_BLANK_PAGE, wait_until="commit")
-    marker_t = wall_elapsed()
     await page.evaluate(
         """() => {
-          const el = document.createElement('div');
-          el.id = 'reelsmith-sync-marker';
-          el.style.cssText =
-            'position:fixed;inset:0;background:#ff00ff;z-index:2147483647';
-          document.body.appendChild(el);
+          return new Promise((resolve) => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const el = document.createElement('div');
+                el.id = 'reelsmith-sync-marker';
+                el.style.cssText =
+                  'position:fixed;inset:0;background:#ff00ff;z-index:2147483647';
+                document.body.appendChild(el);
+                resolve();
+              });
+            });
+          });
         }"""
     )
+    marker_t = wall_elapsed()
     await page.wait_for_timeout(_MARKER_SHOW_MS)
     await page.evaluate("() => document.getElementById('reelsmith-sync-marker')?.remove()")
     return marker_t
+
+
+def magenta_match_fraction(frame: np.ndarray) -> float:
+    """Share of pixels close to sync marker magenta (255, 0, 255)."""
+    target = np.array(_MAGENTA_RGB, dtype=np.float64)
+    diff = frame.astype(np.float64) - target
+    dist = np.linalg.norm(diff, axis=-1)
+    return float(np.mean(dist <= _MAGENTA_MAX_DIST))
+
+
+def frame_has_sync_marker(frame: np.ndarray) -> bool:
+    return magenta_match_fraction(frame) >= _MAGENTA_MIN_FRACTION
 
 
 def _decode_scan_frames(video: Path) -> np.ndarray:
@@ -144,10 +167,12 @@ def _decode_scan_frames(video: Path) -> np.ndarray:
         "-hide_banner",
         "-loglevel",
         "error",
+        "-t",
+        f"{_SCAN_SECONDS:.3f}",
         "-i",
         str(video),
         "-vf",
-        f"fps={_SAMPLE_FPS:g},scale={_SCAN_WIDTH}:{scan_h}",
+        f"scale={_SCAN_WIDTH}:{scan_h}",
         "-f",
         "rawvideo",
         "-pix_fmt",
@@ -167,22 +192,27 @@ def _decode_scan_frames(video: Path) -> np.ndarray:
     return data[: frame_count * frame_bytes].reshape(frame_count, scan_h, _SCAN_WIDTH, 3)
 
 
-def _frame_is_magenta(frame: np.ndarray) -> bool:
-    h, w, _ = frame.shape
-    patch = frame[h // 2, w // 2]
-    return is_magenta_rgb(int(patch[0]), int(patch[1]), int(patch[2]))
-
-
 def _find_magenta_range(video: Path) -> tuple[float, float]:
+    info = probe(video)
+    fps = info.fps if info.fps > 0 else TARGET_FPS
     frames = _decode_scan_frames(video)
-    indices = [index for index, frame in enumerate(frames) if _frame_is_magenta(frame)]
+    indices: list[int] = []
+    best_fraction = 0.0
+    for index, frame in enumerate(frames):
+        fraction = magenta_match_fraction(frame)
+        if fraction > best_fraction:
+            best_fraction = fraction
+        if frame_has_sync_marker(frame):
+            indices.append(index)
     if not indices:
+        pct = best_fraction * 100.0
         raise ReelsmithError(
-            "Could not find the sync marker in the web capture video.",
+            "Could not find the sync marker in the web capture video. "
+            f"Scanned {len(frames)} frames, best match {pct:.1f}%.",
             fix="Retry capture web or update Playwright Chromium",
         )
-    start = indices[0] / _SAMPLE_FPS
-    end = (indices[-1] + 1) / _SAMPLE_FPS
+    start = indices[0] / fps
+    end = (indices[-1] + 1) / fps
     return start, end
 
 
@@ -273,28 +303,27 @@ def centre_rgb_at_time(video: Path, t: float) -> tuple[int, int, int]:
     return int(pixel[0]), int(pixel[1]), int(pixel[2])
 
 
-async def _record_flow(
-    flow_path: Path,
-    clip_id: str,
-    clips_root: Path,
+async def _record_once(
+    clip_dir: Path,
+    record_dir: Path,
     *,
+    flow: FlowFn,
     headed: bool,
-    size: str,
-) -> ClipModel:
-    width, height = parse_size(size)
-    flow = _load_flow(flow_path)
-    clip_dir = clips_root / clip_id
-    clip_dir.mkdir(parents=True, exist_ok=True)
-    record_dir = clip_dir / ".record"
-    record_dir.mkdir(parents=True, exist_ok=True)
-
-    video_path = clip_dir / "video.mp4"
+    width: int,
+    height: int,
+    chromium_args: list[str],
+) -> tuple[float, CaptureLog, Path]:
+    """Record one webm, convert to raw mp4, return marker time and paths."""
     raw_path = clip_dir / "video.raw.mp4"
     webm_path: Path | None = None
     marker_t = 0.0
+    log: CaptureLog | None = None
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=not headed)
+        browser = await playwright.chromium.launch(
+            headless=not headed,
+            args=chromium_args,
+        )
         context = await browser.new_context(
             record_video_dir=str(record_dir),
             record_video_size={"width": width, "height": height},
@@ -316,6 +345,8 @@ async def _record_flow(
 
     if webm_path is None or not webm_path.is_file():
         raise ReelsmithError("Playwright did not write a recording.")
+    if log is None:
+        raise ReelsmithError("Capture log was not initialized.")
 
     _convert_webm(webm_path, raw_path)
     webm_path.unlink(missing_ok=True)
@@ -323,7 +354,56 @@ async def _record_flow(
         leftover.unlink(missing_ok=True)
     record_dir.rmdir()
 
-    marker_start, marker_end = _find_magenta_range(raw_path)
+    return marker_t, log, raw_path
+
+
+async def _record_flow(
+    flow_path: Path,
+    clip_id: str,
+    clips_root: Path,
+    *,
+    headed: bool,
+    size: str,
+    chromium_args: list[str] | None = None,
+) -> ClipModel:
+    width, height = parse_size(size)
+    flow = _load_flow(flow_path)
+    clip_dir = clips_root / clip_id
+    clip_dir.mkdir(parents=True, exist_ok=True)
+    record_dir = clip_dir / ".record"
+    record_dir.mkdir(parents=True, exist_ok=True)
+
+    video_path = clip_dir / "video.mp4"
+    launch_args = list(chromium_args or [])
+    marker_t = 0.0
+    log: CaptureLog | None = None
+    raw_path: Path | None = None
+    marker_start = 0.0
+    marker_end = 0.0
+
+    for attempt in range(_MARKER_FIND_ATTEMPTS):
+        record_dir.mkdir(parents=True, exist_ok=True)
+        marker_t, log, raw_path = await _record_once(
+            clip_dir,
+            record_dir,
+            flow=flow,
+            headed=headed,
+            width=width,
+            height=height,
+            chromium_args=launch_args,
+        )
+        try:
+            marker_start, marker_end = _find_magenta_range(raw_path)
+            break
+        except ReelsmithError:
+            if raw_path.is_file():
+                raw_path.unlink(missing_ok=True)
+            if attempt + 1 >= _MARKER_FIND_ATTEMPTS:
+                raise
+
+    if log is None or raw_path is None:
+        raise ReelsmithError("Web capture failed.")
+
     _trim_video_start(raw_path, video_path, marker_end)
     raw_path.unlink(missing_ok=True)
 
@@ -355,6 +435,7 @@ def run_web_flow(
     *,
     headed: bool = False,
     size: str = "1280x720",
+    chromium_args: list[str] | None = None,
 ) -> ClipModel:
     """Run a flow file and write clips/<id>/video.mp4 and clip.json."""
     return asyncio.run(
@@ -364,5 +445,6 @@ def run_web_flow(
             clips_root,
             headed=headed,
             size=size,
+            chromium_args=chromium_args,
         )
     )
