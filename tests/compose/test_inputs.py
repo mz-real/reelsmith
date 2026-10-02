@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from reelsmith.compose.inputs import load_project, read_timings, slide_images
+from reelsmith.compose.inputs import load_project, read_timings, resolve_slide_images, slide_images
 from reelsmith.errors import ReelsmithError
 from reelsmith.paths import DemoPaths
 
@@ -94,3 +94,29 @@ def test_slide_images_prefer_numbered_steps(tmp_path: Path) -> None:
     (tmp_path / "solo.png").write_bytes(b"png")
     assert [p.name for p in slide_images(tmp_path, "solo")] == ["solo.png"]
     assert slide_images(tmp_path, "missing") == []
+
+
+def _fake_png_header(width: int, height: int) -> bytes:
+    return b"\x89PNG\r\n\x1a\n" + b"\x00" * 8 + width.to_bytes(4, "big") + height.to_bytes(4, "big")
+
+
+def test_resolve_slide_images_prefers_format_subdirectory(tmp_path: Path) -> None:
+    flat = tmp_path / "intro.png"
+    flat.write_bytes(_fake_png_header(1920, 1080))
+    per_format = tmp_path / "9x16" / "intro.png"
+    per_format.parent.mkdir()
+    per_format.write_bytes(_fake_png_header(1080, 1920))
+    paths, warnings = resolve_slide_images(tmp_path, "intro", "9:16")
+    assert warnings == []
+    assert paths == [per_format]
+
+
+def test_resolve_slide_images_warns_on_flat_fallback_with_wrong_aspect(tmp_path: Path) -> None:
+    flat = tmp_path / "intro.png"
+    flat.write_bytes(_fake_png_header(1920, 1080))
+    paths, warnings = resolve_slide_images(tmp_path, "intro", "9:16")
+    assert paths == [flat]
+    assert len(warnings) == 1
+    assert "intro" in warnings[0]
+    assert "reelsmith slides" in warnings[0]
+    assert "9x16" in warnings[0]

@@ -75,6 +75,8 @@ slides:
 
 Only use numbers in a chart that the user gave you or that come from the app. Never make up figures.
 
+`reelsmith slides` writes PNGs under `slides/<format>/` (for example `slides/9x16/intro.png`) at the size compose uses for that format. The first format in spec.yaml is also copied to `slides/<id>.png`.
+
 **Check the script** against spec.yaml and the clips:
 
 ```

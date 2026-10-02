@@ -12,7 +12,7 @@ from reelsmith import __version__
 from reelsmith.compose.cache import is_cached, scene_key, scene_path
 from reelsmith.compose.captions import find_font
 from reelsmith.compose.graph import Encode, scene_args
-from reelsmith.compose.inputs import ProjectInputs, SceneSource, load_project, slide_images
+from reelsmith.compose.inputs import ProjectInputs, SceneSource, load_project, resolve_slide_images
 from reelsmith.compose.layouts import canvas_size, format_slug, theme_colors
 from reelsmith.compose.master import master_args
 from reelsmith.compose.scene import Look, plan_for_scene
@@ -71,9 +71,16 @@ def compose_project(
     project = load_project(paths)
     if not project.scenes:
         raise ReelsmithError("spec.yaml has no scenes", fix=f"Add scenes to {paths.spec}")
-    slides = {s.spec.id: _check_sources(paths, s) for s in project.scenes}
-    reports = [_compose_format(project, fmt, settings, slides, run) for fmt in project.spec.formats]
-    return ComposeReport(reports, conflict_lines(project))
+    slide_warnings: list[str] = []
+    reports: list[FormatReport] = []
+    for fmt in project.spec.formats:
+        slides = {}
+        for scene in project.scenes:
+            images, warnings = _scene_slide_images(paths, scene, fmt)
+            slides[scene.spec.id] = images
+            slide_warnings.extend(warnings)
+        reports.append(_compose_format(project, fmt, settings, slides, run))
+    return ComposeReport(reports, conflict_lines(project) + slide_warnings)
 
 
 def conflict_lines(project: ProjectInputs) -> list[str]:
@@ -89,7 +96,9 @@ def conflict_lines(project: ProjectInputs) -> list[str]:
     return lines
 
 
-def _check_sources(paths: DemoPaths, scene: SceneSource) -> list[Path]:
+def _scene_slide_images(
+    paths: DemoPaths, scene: SceneSource, fmt: str
+) -> tuple[list[Path], list[str]]:
     """Make sure every file the scene needs is there. Returns its slide images."""
     for phrase in scene.phrases:
         if phrase.wav is not None and not phrase.wav.is_file():
@@ -101,14 +110,15 @@ def _check_sources(paths: DemoPaths, scene: SceneSource) -> list[Path]:
                 f"Scene '{scene.spec.id}' needs {video}, which is missing",
                 fix=f"Record clip '{scene.clip.id}' again with reelsmith capture",
             )
-        return []
-    images = slide_images(paths.slides, scene.spec.slide or scene.spec.id)
+        return [], []
+    slide_id = scene.spec.slide or scene.spec.id
+    images, warnings = resolve_slide_images(paths.slides, slide_id, fmt)
     if not images:
         raise ReelsmithError(
-            f"Scene '{scene.spec.id}' needs slides/{scene.spec.slide}.png, which is missing",
+            f"Scene '{scene.spec.id}' needs slides/{slide_id}.png, which is missing",
             fix="reelsmith slides",
         )
-    return images
+    return images, warnings
 
 
 def _look(project: ProjectInputs, fmt: str, settings: RenderSettings) -> Look:

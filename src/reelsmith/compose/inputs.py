@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from reelsmith.compose.layouts import FORMAT_SIZES, format_slug
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import (
     BrandModel,
@@ -251,7 +252,22 @@ def _pin_time(scene_id: str, line_id: str, pin: str | None, clip: ClipModel | No
 _STEP = re.compile(r"_step(\d+)\.png$")
 
 
-def slide_images(slides_dir: Path, slide_id: str) -> list[Path]:
+def _png_pixel_size(path: Path) -> tuple[int, int]:
+    data = path.read_bytes()
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        return (0, 0)
+    width = int.from_bytes(data[16:20], "big")
+    height = int.from_bytes(data[20:24], "big")
+    return width, height
+
+
+def _aspect_matches(a: tuple[int, int], b: tuple[int, int]) -> bool:
+    if a[0] <= 0 or a[1] <= 0 or b[0] <= 0 or b[1] <= 0:
+        return True
+    return abs((a[0] / a[1]) - (b[0] / b[1])) < 0.02
+
+
+def _slide_images_in_dir(slides_dir: Path, slide_id: str) -> list[Path]:
     """The build step images of a slide in order, or the single slide image."""
     steps = []
     for path in slides_dir.glob(f"{slide_id}_step*.png"):
@@ -262,3 +278,28 @@ def slide_images(slides_dir: Path, slide_id: str) -> list[Path]:
         return [path for _, path in sorted(steps)]
     single = slides_dir / f"{slide_id}.png"
     return [single] if single.is_file() else []
+
+
+def slide_images(slides_dir: Path, slide_id: str) -> list[Path]:
+    """Slide PNGs under slides_dir (legacy flat layout)."""
+    return _slide_images_in_dir(slides_dir, slide_id)
+
+
+def resolve_slide_images(slides_dir: Path, slide_id: str, fmt: str) -> tuple[list[Path], list[str]]:
+    """Prefer slides/<format_slug>/, then fall back to the flat slides/ folder."""
+    warnings: list[str] = []
+    slug = format_slug(fmt)
+    per_format = _slide_images_in_dir(slides_dir / slug, slide_id)
+    if per_format:
+        return per_format, warnings
+    flat = _slide_images_in_dir(slides_dir, slide_id)
+    if not flat:
+        return [], warnings
+    expected = FORMAT_SIZES[fmt]
+    width, height = _png_pixel_size(flat[0])
+    if not _aspect_matches((width, height), expected):
+        warnings.append(
+            f"Slide '{slide_id}' for {fmt} uses slides/{slide_id}.png at {width}x{height}."
+            f" Run reelsmith slides to render slides/{slug}/"
+        )
+    return flat, warnings

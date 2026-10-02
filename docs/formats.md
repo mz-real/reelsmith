@@ -22,7 +22,7 @@ demo/
   voice/             one wav per line, plus timings.json
     preview/         voice preview files
     compare/         voice compare output
-  slides/            rendered slide images, <id>.png
+  slides/            rendered slide images: slides/<id>.png and slides/<format>/<id>.png
   build/             working files and master_<format>.mp4, safe to delete
   qa/                report.md and contact sheets
   out/               final videos, narration and .srt
@@ -147,7 +147,7 @@ slides:
       - Save recipes to Favourites
 ```
 
-`reelsmith slides` renders them to `slides/<id>.png` using the theme from spec.yaml and the colours, logo and font from brand.yaml.
+`reelsmith slides` renders each slide once per format in spec.yaml. Images go under `slides/16x9/`, `slides/9x16/` and `slides/1x1/` at that format's pixel size. The first format is also copied to `slides/<id>.png` for older demos. Theme comes from spec.yaml, colours, logo and font from brand.yaml.
 
 ## brand.yaml
 
