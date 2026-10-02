@@ -297,6 +297,7 @@ async def _record_flow(
         browser = await playwright.chromium.launch(headless=not headed)
         context = await browser.new_context(
             record_video_dir=str(record_dir),
+            record_video_size={"width": width, "height": height},
             viewport={"width": width, "height": height},
         )
         page = await context.new_page()

@@ -72,3 +72,15 @@ def test_web_capture_event_times_match_video_frames(flow_file: Path, tmp_path: P
 
     assert not is_red_rgb(*before), f"frame before click should not be red: {before}"
     assert is_red_rgb(*after), f"frame after click should be red: {after}"
+
+
+def test_web_capture_records_at_the_requested_size(flow_file: Path, tmp_path: Path) -> None:
+    # Playwright scales recordings down to fit 800x800 unless told the size.
+    clips = tmp_path / "clips"
+    run_web_flow(flow_file, "big", clips, size="1280x720")
+
+    clip = load_model(clips / "big" / "clip.json", ClipModel)
+    info = probe(clips / "big" / "video.mp4")
+
+    assert (info.width, info.height) == (1280, 720)
+    assert (clip.width, clip.height) == (1280, 720)
