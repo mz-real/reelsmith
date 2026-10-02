@@ -20,7 +20,7 @@ from reelsmith.models.slides import (
 )
 from reelsmith.slides.animate import SlidePage, slide_page
 from reelsmith.slides.markup import ACCENT_CLASS, markup_html, plain_text
-from reelsmith.slides.studio import step_count, studio_values
+from reelsmith.slides.page import step_count, studio_values
 from reelsmith.slides.themes import SlideTheme, theme_styles
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -331,7 +331,8 @@ def render_slide_html(
     """
     last = step_count(slide) - 1
     active = last if build_index is None else max(0, min(build_index, last))
-    if theme.style == "studio":
+    classic_kind = isinstance(slide, TitleSlide | FlowSlide | ChartSlide | BulletsSlide)
+    if theme.style == "studio" or not classic_kind:  # newer kinds only come in the Studio look
         values = studio_values(slide, theme, active=active, width=width, height=height)
         return apply_template(_load_template("studio"), values)
     return _classic_html(slide, theme, active, width, height)

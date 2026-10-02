@@ -1,0 +1,5 @@
+version: 1
+mode: produce
+goal: Narrated demo videos, made on your machine
+theme: studio
+formats: ["16:9"]

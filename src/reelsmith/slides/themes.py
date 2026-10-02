@@ -31,6 +31,7 @@ class SlideTheme:
     style: ThemeStyle = "classic"
     brand_name: str = ""
     footer_title: str = ""
+    asset_root: Path | None = None  # the demo folder, where slide images live
 
 
 _BASE_THEMES: dict[str, dict[str, str]] = {
@@ -133,6 +134,7 @@ def resolve_theme(spec: SpecModel, brand: BrandModel, demo_root: Path) -> SlideT
         style="studio" if studio else "classic",
         brand_name=(brand.name or "").strip(),
         footer_title=(spec.goal or brand.tagline or "").strip(),
+        asset_root=demo_root,
     )
 
 

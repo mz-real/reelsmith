@@ -93,15 +93,6 @@ def mix(a: str, b: str, amount: float) -> str:
     return "#" + "".join(f"{p:02x}" for p in parts)
 
 
-def step_count(slide: SlideItem) -> int:
-    """How many build states a slide has. Each one gets a clip and a still."""
-    if isinstance(slide, FlowSlide):
-        return len(slide.steps)
-    if isinstance(slide, BulletsSlide):
-        return len(slide.items)
-    return 1
-
-
 # Shared page ---------------------------------------------------------------
 
 
@@ -225,7 +216,7 @@ html, body {{
   opacity: 0; pointer-events: none;
 }}
 .card > * {{ position: relative; }}
-.card.is-active::before {{ opacity: 1; }}
+.card.is-active::before, .card.is-accent:not(.is-future)::before {{ opacity: 1; }}
 .card.is-future.dim {{ opacity: {DIM_OPACITY}; }}
 .card.is-future.reveal, .is-future.reveal {{ visibility: hidden; }}
 .num {{
@@ -236,7 +227,7 @@ html, body {{
   color: var(--accent); background-color: {rgba(accent, 0.12)};
   border: 1px solid {rgba(accent, 0.3)};
 }}
-.card.is-active .num {{
+.card.is-active .num, .card.is-accent:not(.is-future) .num {{
   color: {theme.background}; background-color: var(--accent); border-color: var(--accent);
 }}
 """
@@ -350,12 +341,17 @@ def _state(index: int, active: int) -> str:
     return "is-future"
 
 
-def _card_motion(index: int, active: int, intro: bool, style: str) -> tuple[str, str]:
-    """Inline animation styles for a card cell and the card itself."""
+def _card_motion(
+    index: int, active: int, intro: bool, style: str, accent: bool = False
+) -> tuple[str, str]:
+    """Animation classes for a card cell and the card itself.
+
+    An accent card keeps its light when the next card becomes active.
+    """
     if intro:
         return "", ""
     if index == active - 1:
-        return "", "from-active"
+        return "", "" if accent else "from-active"
     if index != active:
         return "", ""
     if style == "reveal":
@@ -363,7 +359,21 @@ def _card_motion(index: int, active: int, intro: bool, style: str) -> tuple[str,
     return "", "to-active lift"
 
 
-def _cards_css(frame: Frame, count: int, intro: bool) -> str:
+def item_classes(
+    index: int, active: int, style: str, *, accent: bool = False, base: str = "card"
+) -> tuple[str, str]:
+    """Classes for a stepped item: its cell (which moves) and its card (which lights up)."""
+    cell_motion, card_motion = _card_motion(index, active, active == 0, style, accent)
+    state = _state(index, active)
+    mark = "is-accent" if accent else ""
+    card = " ".join(c for c in (base, state, style, mark, card_motion) if c)
+    cell = " ".join(c for c in ("cell", cell_motion) if c)
+    if state == "is-future" and style == "reveal":
+        cell += " is-future reveal"
+    return cell, card
+
+
+def cards_css(frame: Frame, count: int, intro: bool) -> str:
     p = frame.px
     css = [
         f".card.to-active::before {{ animation: rs-fade 380ms {EASE_OUT} 170ms both; }}",
@@ -432,9 +442,10 @@ def _flow_parts(slide: FlowSlide, theme: SlideTheme, frame: Frame, active: int) 
     style = slide.step_style
     cells: list[str] = []
     for index, item in enumerate(items):
-        cell_motion, card_motion = _card_motion(index, active, intro, style)
+        cell_motion, card_motion = _card_motion(index, active, intro, style, item.accent)
         state = _state(index, active)
-        card_classes = " ".join(c for c in ("card", state, style, card_motion) if c)
+        accent = "is-accent" if item.accent else ""
+        card_classes = " ".join(c for c in ("card", state, style, accent, card_motion) if c)
         cell_classes = " ".join(c for c in ("cell", cell_motion) if c)
         if state == "is-future" and style == "reveal":
             cell_classes += " is-future reveal"
@@ -453,7 +464,7 @@ def _flow_parts(slide: FlowSlide, theme: SlideTheme, frame: Frame, active: int) 
     layout = "wide" if wide else "tall"
     body = f'<div class="flow {layout}">{"".join(cells)}</div>{exits}'
     css = _flow_css(theme, frame, total, any(i.detail for i in items))
-    return Parts(head, body, css + _cards_css(frame, total, intro), "flow")
+    return Parts(head, body, css + cards_css(frame, total, intro), "flow")
 
 
 def _flow_css(theme: SlideTheme, frame: Frame, total: int, details: bool) -> str:
@@ -463,8 +474,8 @@ def _flow_css(theme: SlideTheme, frame: Frame, total: int, details: bool) -> str
         scale = 1.0 if total <= 4 else max(0.7, 4.5 / total)
         if frame.squat:
             scale *= 0.8
-    title_px = (32 if frame.wide else 30) * scale
-    detail_px = (22 if frame.wide else 21) * scale
+    title_px = (36 if frame.wide else 30) * scale
+    detail_px = (24 if frame.wide else 21) * scale
     link_w = 64 * scale
     common = f"""
 .flow {{ display: flex; width: 100%; }}
@@ -551,16 +562,55 @@ def _bullets_parts(slide: BulletsSlide, theme: SlideTheme, frame: Frame, active:
   box-shadow: 0 0 0 {p(6)} {rgba(accent, 0.18)}; }}
 .row.is-done .mark {{ background: {rgba(accent, 0.7)}; border-color: transparent; }}
 """
-    return Parts(head, body, css + _cards_css(frame, total, intro), "bullets")
+    return Parts(head, body, css + cards_css(frame, total, intro), "bullets")
 
 
 # Title ---------------------------------------------------------------------
 
 
-def _title_parts(slide: TitleSlide, frame: Frame) -> Parts:
-    head = _head(_eyebrow(slide), slide.title, slide.subtitle, "title hero")
+def _coming_up(slide: TitleSlide) -> str:
+    if not slide.coming_up:
+        return ""
+    chips = "".join(
+        f'<span class="up" data-u="{index}"><span class="upn">{index + 1:02d}</span>'
+        f"<span>{markup_html(text)}</span></span>"
+        for index, text in enumerate(slide.coming_up)
+    )
+    return (
+        f'<div class="coming"><div class="coming-label">Coming up</div>'
+        f'<div class="coming-chips">{chips}</div></div>'
+    )
+
+
+def _outline_filter(color: str, width: float) -> str:
+    """An SVG filter that draws a line around the whole numeral.
+
+    A CSS text stroke follows every contour of a glyph, so the overlapping
+    parts of a "2" or a "4" show stray lines inside it. This filter grows the
+    filled shape and keeps only the outer ring, so the outline is clean.
+    """
+    return (
+        '<svg width="0" height="0" aria-hidden="true" style="position: absolute">'
+        '<filter id="rs-outline" x="-5%" y="-5%" width="110%" height="110%">'
+        '<feComponentTransfer in="SourceAlpha" result="solid">'
+        '<feFuncA type="linear" slope="80" intercept="0"/></feComponentTransfer>'
+        f'<feMorphology in="solid" operator="dilate" radius="{width:.2f}" result="fat"/>'
+        '<feComposite in="fat" in2="solid" operator="out" result="ring"/>'
+        f'<feFlood flood-color="{color}" flood-opacity="0.3"/>'
+        '<feComposite in2="ring" operator="in" result="line"/>'
+        '<feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="line"/></feMerge>'
+        "</filter></svg>"
+    )
+
+
+def _title_parts(slide: TitleSlide, theme: SlideTheme, frame: Frame) -> Parts:
+    head = _head(_eyebrow(slide), slide.title, slide.subtitle, "title hero") + _coming_up(slide)
     p = frame.px
-    css = f"""
+    accent = theme.accent
+    head += _outline_filter(accent, max(2 * frame.unit, 1.5))
+    numeral = 700 if frame.wide else (560 if frame.squat else 600)
+    css = [
+        f"""
 .kind-title .stage {{ justify-content: center; padding-bottom: {p(30)}; }}
 .kind-title .body {{ display: none; }}
 .title.hero {{ font-size: {p(124 if frame.wide else 104)}; letter-spacing: -0.035em;
@@ -568,8 +618,45 @@ def _title_parts(slide: TitleSlide, frame: Frame) -> Parts:
 .kind-title .subtitle {{ margin-top: {p(36)}; font-size: {p(34)};
   max-width: {"62%" if frame.wide else "100%"}; }}
 .kind-title .eyebrow {{ margin-bottom: {p(30)}; font-size: {p(22)}; }}
+.kind-title .chapter {{
+  font-size: {p(numeral)}; letter-spacing: -0.06em; line-height: 1;
+  color: transparent; filter: url(#rs-outline);
+  background: linear-gradient(180deg, {rgba(accent, 0.22)} 0%, {rgba(accent, 0.04)} 70%,
+    {rgba(accent, 0.02)} 100%);
+  -webkit-background-clip: text; background-clip: text;
+}}
+.coming {{ margin-top: {p(64 if frame.wide else 56)}; }}
+.coming-label {{ font-size: {p(17)}; font-weight: 650; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--faint); margin-bottom: {p(18)}; }}
+.coming-chips {{ display: flex; flex-wrap: wrap; gap: {p(14)};
+  max-width: {"70%" if frame.wide else "100%"}; }}
+.up {{ display: inline-flex; align-items: center; gap: {p(12)};
+  padding: {p(11)} {p(22)} {p(11)} {p(12)}; border-radius: 999px;
+  font-size: {p(22)}; font-weight: 550; color: {rgba(theme.text, 0.86)};
+  background: {rgba(theme.text, 0.04)}; border: 1px solid {rgba(theme.text, 0.12)}; }}
+.upn {{ display: inline-grid; place-items: center; min-width: {p(34)}; height: {p(34)};
+  padding: 0 {p(6)}; border-radius: 999px; font-size: {p(14)}; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--accent);
+  background: {rgba(accent, 0.12)}; border: 1px solid {rgba(accent, 0.3)}; }}
 """
-    return Parts(head, "", css, "title")
+    ]
+    if frame.wide:
+        css.append(
+            f".kind-title .chapter {{ top: 50%; margin-top: {p(-numeral * 0.56)}; "
+            f"right: {frame.width * 0.05:.1f}px; }}\n"
+            ".kind-title .chapter ~ .stage .title.hero { max-width: 66%; }\n"
+            ".kind-title .chapter ~ .stage .subtitle { max-width: 56%; }"
+        )
+    else:
+        css.append(f".kind-title .chapter {{ top: {frame.height * 0.06:.1f}px; }}")
+    for index in range(len(slide.coming_up)):
+        delay = _intro_delay(index, len(slide.coming_up), 280, 320)
+        css.append(
+            f'.intro .up[data-u="{index}"] {{ animation: rs-rise 320ms {EASE_OUT} '
+            f"{delay}ms both; }}"
+        )
+    css.append(".intro .coming-label { animation: rs-fade 300ms ease-out 240ms both; }")
+    return Parts(head, "", "\n".join(css), "title")
 
 
 # Chart ---------------------------------------------------------------------
@@ -688,33 +775,3 @@ def _chart_css(theme: SlideTheme, frame: Frame, count: int) -> str:
             f"{min(140 + index * 520 // max(count, 1), INTRO_END_MS - 300)}ms both; }}"
         )
     return "\n".join(css)
-
-
-# Page ----------------------------------------------------------------------
-
-
-def _parts(slide: SlideItem, theme: SlideTheme, frame: Frame, active: int) -> Parts:
-    if isinstance(slide, TitleSlide):
-        return _title_parts(slide, frame)
-    if isinstance(slide, FlowSlide):
-        return _flow_parts(slide, theme, frame, active)
-    if isinstance(slide, BulletsSlide):
-        return _bullets_parts(slide, theme, frame, active)
-    return _chart_parts(slide, theme, frame)
-
-
-def studio_values(
-    slide: SlideItem, theme: SlideTheme, *, active: int, width: int, height: int
-) -> dict[str, str]:
-    """Template values for one build state of a slide, with that state's intro."""
-    frame = Frame(width, height)
-    parts = _parts(slide, theme, frame, active)
-    body_class = f"kind-{parts.kind}" + (" intro" if active == 0 else "")
-    return {
-        "styles": _base_css(theme, frame) + parts.css + _motion_css(theme, frame),
-        "body_class": body_class,
-        "chapter": _chapter(slide),
-        "head": parts.head,
-        "body": parts.body,
-        "footer": _footer(theme),
-    }
