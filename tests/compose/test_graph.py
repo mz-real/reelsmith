@@ -97,7 +97,7 @@ def test_no_narration_gives_silence_of_the_right_length() -> None:
 def test_clip_scene_args() -> None:
     args = scene_args(clip_plan(), Encode("medium", 18), Path("build/scenes/search-abc.mp4"))
     graph = graph_of(args)
-    assert args[:2] == ["-i", "clips/my clip é/video.mp4"]
+    assert args[:2] == ["-i", str(Path("clips/my clip é/video.mp4"))]
     # stills are single images read literally, never as a numbered pattern
     assert ["-f", "image2", "-pattern_type", "none", "-i", "frame.png"] == args[2:8]
     assert "[0:v]fps=30,scale=1172:2532,setsar=1,format=yuv420p[raw]" in graph
@@ -111,7 +111,7 @@ def test_clip_scene_args() -> None:
     assert "tpad=stop_mode=clone:stop_duration=5.9,trim=duration=5.9" in graph
     assert args[args.index("-preset") + 1] == "medium"
     assert args[args.index("-crf") + 1] == "18"
-    assert args[-1] == "build/scenes/search-abc.mp4"
+    assert args[-1] == str(Path("build/scenes/search-abc.mp4"))
     assert ["-map", "[vout]", "-map", "[aout]"] == args[args.index("-map") : args.index("-map") + 4]
 
 

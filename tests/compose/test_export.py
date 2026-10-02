@@ -64,14 +64,14 @@ def test_export_args() -> None:
     master = Path("build/master_16x9.mp4")
     assert voiced_args(master, Path("out/a.mp4")) == [
         "-i",
-        "build/master_16x9.mp4",
+        str(Path("build/master_16x9.mp4")),
         "-map",
         "0",
         "-c",
         "copy",
         "-movflags",
         "+faststart",
-        "out/a.mp4",
+        str(Path("out/a.mp4")),
     ]
     silent = silent_args(master, Path("out/a_silent.mp4"))
     assert "-an" in silent and silent[silent.index("-c:v") + 1] == "copy"

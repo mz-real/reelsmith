@@ -22,11 +22,11 @@ def test_scenes_join_with_xfade_and_narration_keeps_its_place() -> None:
     graph = graph_of(args)
     assert args[:6] == [
         "-i",
-        "build/scenes/a-1.mp4",
+        str(Path("build/scenes/a-1.mp4")),
         "-i",
-        "build/scenes/b-2.mp4",
+        str(Path("build/scenes/b-2.mp4")),
         "-i",
-        "build/scenes/c-3.mp4",
+        str(Path("build/scenes/c-3.mp4")),
     ]
     assert "xfade=transition=fade:duration=0.4:offset=3[x1]" in graph
     assert "xfade=transition=fade:duration=0.4:offset=7.5[vout]" in graph
@@ -38,7 +38,7 @@ def test_scenes_join_with_xfade_and_narration_keeps_its_place() -> None:
     assert LOUDNORM == "loudnorm=I=-16:TP=-1.5:LRA=11"
     assert graph.endswith("atrim=duration=9.5[aout]")
     assert args[args.index("-t") + 1] == "9.5"
-    assert args[-1] == "build/master_16x9.mp4"
+    assert args[-1] == str(Path("build/master_16x9.mp4"))
 
 
 def test_one_scene_master_only_normalises_loudness() -> None:
