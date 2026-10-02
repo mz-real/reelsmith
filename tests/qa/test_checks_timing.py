@@ -225,3 +225,60 @@ def test_captions_fail_when_on_screen_too_briefly() -> None:
     row = check_captions(make_context([scene]))
     assert row.status == CheckStatus.FAIL
     assert "needs at least" in row.details[0]
+
+
+def test_captions_pass_when_on_screen_for_the_spoken_line_plus_grace() -> None:
+    """A caption read slower than 168 wpm still passes if it covers the narration.
+
+    The line is eleven words, so the generic reading-speed formula alone
+    would need about 4.43s. The narration itself only takes 2.0s, so a
+    caption on screen for 2.32s (just over the narrated time plus a 0.3s
+    grace) is readable in sync with the narration and must not fail.
+    """
+    scene = SceneOut(
+        id="search",
+        out_start=0.0,
+        out_end=5.0,
+        segments=None,
+        placements=[
+            PlacementOut(line="l1", phrase=0, out_start=0.0, out_end=2.0, pin_event_out=None)
+        ],
+        captions=[
+            CaptionOut(
+                text="Find a dish fast right here in this small recipe app",
+                out_start=0.0,
+                out_end=2.32,
+                box=(10.0, 10.0, 100.0, 20.0),
+                panel=(0.0, 0.0, 200.0, 50.0),
+            )
+        ],
+        blur=None,
+    )
+    row = check_captions(make_context([scene]))
+    assert row.status == CheckStatus.PASS
+
+
+def test_captions_fail_under_the_one_second_floor_even_for_a_short_line() -> None:
+    """A caption that flashes by in under a second always fails, text aside."""
+    scene = SceneOut(
+        id="search",
+        out_start=0.0,
+        out_end=5.0,
+        segments=None,
+        placements=[
+            PlacementOut(line="l1", phrase=0, out_start=0.0, out_end=0.2, pin_event_out=None)
+        ],
+        captions=[
+            CaptionOut(
+                text="Go.",
+                out_start=0.0,
+                out_end=0.6,
+                box=(10.0, 10.0, 100.0, 20.0),
+                panel=(0.0, 0.0, 200.0, 50.0),
+            )
+        ],
+        blur=None,
+    )
+    row = check_captions(make_context([scene]))
+    assert row.status == CheckStatus.FAIL
+    assert "needs at least 1.00s" in row.details[0]

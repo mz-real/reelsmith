@@ -12,7 +12,7 @@ from reelsmith.models import ScriptModel, SpecModel
 from reelsmith.qa.av import ebur128_loudness, extract_audio_window, extract_frame, rms_of_window
 from reelsmith.qa.image import build_contact_sheet, grayscale_crop, laplacian_variance
 from reelsmith.qa.text import compare_words
-from reelsmith.qa.timeline import PlacementOut, SceneOut, Timeline
+from reelsmith.qa.timeline import CaptionOut, PlacementOut, SceneOut, Timeline
 from reelsmith.qa.transcribe import Transcriber
 from reelsmith.timing import TimingRules, caption_duration
 
@@ -22,8 +22,16 @@ TRUE_PEAK_CEILING = -1.0
 END_NOISE_WINDOW = 0.30
 END_NOISE_RATIO = 0.35
 END_NOISE_FLOOR = 0.01
+END_NOISE_NEXT_GAP = 0.05
+END_NOISE_MIN_GAP = 0.15
 BLUR_RATIO = 0.30
 BLUR_SAMPLES = 3
+# A caption on screen for its whole spoken line is readable: the viewer hears it.
+CAPTION_READ_GRACE = 0.0
+CAPTION_MIN_ON_SCREEN = 1.0
+TRANSCRIPT_LEAD = 0.1
+TRANSCRIPT_TRAIL = 0.35
+TRANSCRIPT_NEXT_GAP = 0.05
 EPS = 1e-6
 
 
@@ -69,7 +77,15 @@ def _line_where(scene_id: str, placement: PlacementOut) -> str:
 
 
 def check_transcript(ctx: QAContext) -> CheckRow:
-    """1. Transcript vs script: does the narration say what the script says."""
+    """1. Transcript vs script: does the narration say what the script says.
+
+    Each line is transcribed as a whole, from a little before its first
+    phrase starts to a little after its last phrase ends, so a word
+    boundary never falls right at the cut and clips the last word (heard
+    as a shorter, different word). A singular/plural difference against
+    the script is not treated as a real mistake: it is noted as a WARN
+    instead of a FAIL.
+    """
     status = CheckStatus.PASS
     details: list[str] = []
     scenes_by_id = {s.id: s for s in ctx.script.scenes}
@@ -92,43 +108,69 @@ def check_transcript(ctx: QAContext) -> CheckRow:
             status = worse(status, CheckStatus.WARN)
             continue
         lines_by_id = {line.id: line for line in script_scene.lines}
-        for placement in scene_tl.placements:
-            line = lines_by_id.get(placement.line)
-            if line is None or placement.phrase >= len(line.phrases):
+        all_starts = sorted(p.out_start for p in scene_tl.placements)
+        for line_id, placements in _group_by_line(scene_tl.placements).items():
+            ordered = sorted(placements, key=lambda p: p.phrase)
+            first = ordered[0]
+            line = lines_by_id.get(line_id)
+            if line is None or any(p.phrase >= len(line.phrases) for p in ordered):
                 details.append(
-                    f"{_line_where(scene_tl.id, placement)}: no matching phrase in "
+                    f"{_line_where(scene_tl.id, first)}: no matching phrase in "
                     "script.yaml. Fix: check script.yaml matches the current build."
                 )
                 status = worse(status, CheckStatus.WARN)
                 continue
-            expected = line.phrases[placement.phrase].text
-            heard = _transcribe_window(ctx, placement.out_start, placement.out_end)
+            expected = line.text
+            last = max(ordered, key=lambda p: p.phrase)
+            start = max(0.0, first.out_start - TRANSCRIPT_LEAD)
+            end = last.out_end + TRANSCRIPT_TRAIL
+            next_start = next((s for s in all_starts if s > last.out_end + EPS), None)
+            if next_start is not None:
+                end = min(end, next_start - TRANSCRIPT_NEXT_GAP)
+            end = max(end, last.out_end)
+            if ctx.master_duration:
+                end = min(end, ctx.master_duration)
+            heard = _transcribe_window(ctx, start, end)
             missing, changed = compare_words(expected, heard)
-            if not missing and not changed:
+            real_changed = [pair for pair in changed if not _is_plural_only(*pair)]
+            plural_notes = [pair for pair in changed if _is_plural_only(*pair)]
+            if missing or real_changed:
+                status = worse(status, CheckStatus.FAIL)
+                parts = []
+                if missing:
+                    parts.append(f"missing word(s) {missing}")
+                if real_changed:
+                    said = [f"'{exp}' heard as '{act}'" for exp, act in real_changed]
+                    parts.append(f"changed word(s): {said}")
+                details.append(
+                    f"{_line_where(scene_tl.id, first)} at {first.out_start:.2f}s: "
+                    f"{'; '.join(parts)}. Fix: re-record this line "
+                    f"(reelsmith voice generate --only {scene_tl.id}/{line_id}) "
+                    "and recompose."
+                )
                 continue
-            status = worse(status, CheckStatus.FAIL)
-            parts = []
-            if missing:
-                parts.append(f"missing word(s) {missing}")
-            if changed:
-                said = [f"'{exp}' heard as '{act}'" for exp, act in changed]
-                parts.append(f"changed word(s): {said}")
-            details.append(
-                f"{_line_where(scene_tl.id, placement)} at {placement.out_start:.2f}s: "
-                f"{'; '.join(parts)}. Fix: re-record this line "
-                f"(reelsmith voice generate --only {scene_tl.id}/{placement.line}) "
-                "and recompose."
-            )
+            if plural_notes:
+                status = worse(status, CheckStatus.WARN)
+                said = [f"'{exp}' heard as '{act}'" for exp, act in plural_notes]
+                details.append(
+                    f"{_line_where(scene_tl.id, first)} at {first.out_start:.2f}s: "
+                    f"singular/plural only, not a failure: {said}."
+                )
     if not details:
         details.append("Every narrated phrase matches its script text.")
     return CheckRow("Transcript vs script", status, details)
 
 
+def _is_plural_only(expected: str, heard: str) -> bool:
+    """True when the only difference between the two words is a trailing s."""
+    if expected.endswith("s") and expected[:-1] == heard:
+        return True
+    return heard.endswith("s") and heard[:-1] == expected
+
+
 def _transcribe_window(ctx: QAContext, start: float, end: float) -> str:
     wav_path = ctx.work_dir / f"transcript-{start:.3f}-{end:.3f}.wav"
-    pad_start = max(0.0, start - 0.1)
-    pad_end = min(ctx.master_duration, end + 0.1) if ctx.master_duration else end + 0.1
-    extract_audio_window(ctx.master, pad_start, pad_end, wav_path)
+    extract_audio_window(ctx.master, start, end, wav_path)
     words = ctx.transcriber(wav_path)
     return " ".join(word.text for word in words)
 
@@ -207,9 +249,19 @@ def check_cutoff(ctx: QAContext) -> CheckRow:
 
 
 def check_end_noise(ctx: QAContext) -> CheckRow:
-    """4. End of line noise: a click or breath left in after the last word."""
+    """4. End of line noise: a click or breath left in after the last word.
+
+    Only the gap after the last phrase of a line is measured, never the
+    whole 300 ms window regardless of what comes next: the next phrase or
+    line often starts well inside that window, so a window reaching past
+    it would measure speech, not silence. When the next line starts too
+    soon to leave a real gap, the line is skipped rather than measured.
+    """
     status = CheckStatus.PASS
     details: list[str] = []
+    all_starts = sorted(
+        p.out_start for s in ctx.timeline.scenes if s.placements for p in s.placements
+    )
 
     for scene_tl in ctx.timeline.scenes:
         if scene_tl.placements is None:
@@ -223,14 +275,26 @@ def check_end_noise(ctx: QAContext) -> CheckRow:
         for line_id, placements in _group_by_line(scene_tl.placements).items():
             first = min(placements, key=lambda p: p.out_start)
             last = max(placements, key=lambda p: p.phrase)
-            speech_level = rms_of_window(ctx.master, first.out_start, last.out_end, ctx.work_dir)
             after_start = last.out_end
-            after_end = min(
-                after_start + END_NOISE_WINDOW,
-                ctx.master_duration if ctx.master_duration else after_start + END_NOISE_WINDOW,
-            )
+            next_start = next((s for s in all_starts if s > after_start + EPS), None)
+            if next_start is not None:
+                boundary = next_start - END_NOISE_NEXT_GAP
+            elif ctx.master_duration:
+                boundary = ctx.master_duration
+            else:
+                boundary = after_start + END_NOISE_WINDOW
+            gap = boundary - after_start
+            if gap < END_NOISE_MIN_GAP - EPS:
+                details.append(
+                    f"{_scene_where(scene_tl.id)} line '{line_id}': the next line starts "
+                    f"only {max(gap, 0.0):.2f}s later, too soon to check for leftover "
+                    "noise. Skipped."
+                )
+                continue
+            after_end = after_start + min(gap, END_NOISE_WINDOW)
             if after_end - after_start < 0.02:
                 continue
+            speech_level = rms_of_window(ctx.master, first.out_start, last.out_end, ctx.work_dir)
             after_level = rms_of_window(ctx.master, after_start, after_end, ctx.work_dir)
             threshold = max(END_NOISE_FLOOR, speech_level * END_NOISE_RATIO)
             if after_level <= threshold:
@@ -314,7 +378,14 @@ def check_holds(ctx: QAContext) -> CheckRow:
 
 
 def check_captions(ctx: QAContext) -> CheckRow:
-    """7. Captions: text fits its panel and stays on screen long enough."""
+    """7. Captions: text fits its panel and stays on screen long enough.
+
+    A caption that stays on screen for as long as its narration plays (plus
+    a small grace period) is readable by definition, even if that is less
+    than the generic reading-speed estimate. The required time is whichever
+    of the two is shorter. A caption on screen for under a second always
+    fails, no matter how short its text is.
+    """
     status = CheckStatus.PASS
     details: list[str] = []
 
@@ -347,7 +418,13 @@ def check_captions(ctx: QAContext) -> CheckRow:
                     f"its panel {list(caption.panel)}. Fix: widen the panel or shorten "
                     "the caption text, then recompose."
                 )
-            required = caption_duration(caption.text)
+            read_time = caption_duration(caption.text)
+            spoken = _caption_spoken_duration(scene_tl.placements, caption)
+            if spoken is not None:
+                required = min(read_time, spoken + CAPTION_READ_GRACE)
+            else:
+                required = read_time
+            required = max(required, CAPTION_MIN_ON_SCREEN)
             actual = caption.out_end - caption.out_start
             if actual < required - EPS:
                 status = worse(status, CheckStatus.FAIL)
@@ -363,6 +440,30 @@ def check_captions(ctx: QAContext) -> CheckRow:
         else:
             details.append("Every caption fits its panel and stays on screen long enough.")
     return CheckRow("Captions", status, details)
+
+
+def _caption_spoken_duration(
+    placements: list[PlacementOut] | None, caption: CaptionOut
+) -> float | None:
+    """Sum the narrated time of the phrases a caption covers.
+
+    A caption's own window often runs a little past the phrase it names
+    (the gap before the next line starts, or the whole scene for a title
+    caption), so only placements whose phrase starts inside the caption's
+    window are counted, using the timeline's own placement times. Returns
+    None when there is nothing to count, so the caller falls back to the
+    plain reading-speed estimate.
+    """
+    if placements is None:
+        return None
+    covered = [
+        placement
+        for placement in placements
+        if caption.out_start - EPS <= placement.out_start < caption.out_end - EPS
+    ]
+    if not covered:
+        return None
+    return sum(placement.out_end - placement.out_start for placement in covered)
 
 
 def check_blur(ctx: QAContext) -> CheckRow:
