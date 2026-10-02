@@ -143,7 +143,7 @@ A line is voiced as one piece of audio. Pinned phrases are placed so they start 
 
 ## slides.yaml
 
-Slides for Produce mode. There are four kinds:
+Slides for Produce mode. There are eleven kinds. The first four:
 
 ```yaml
 version: 1
@@ -180,7 +180,108 @@ slides:
       - Save recipes to Favourites
 ```
 
-Every kind takes the optional `eyebrow`, `subtitle`, `chapter` and `step_style` fields shown on the flow. In a flow without an `eyebrow`, the label counts the steps ("Step 2 of 4").
+Every kind takes the optional `eyebrow`, `subtitle`, `chapter` and `step_style` fields shown on the flow. In a flow without an `eyebrow`, the label counts the steps ("Step 2 of 4"). A flow step can take `accent: true` to stay lit in the accent once it is reached, for example the steps where you approve.
+
+A title can list what comes next as chips, and with a `chapter` it shows the number large beside the title:
+
+```yaml
+  - id: ch1
+    kind: title
+    chapter: 1
+    eyebrow: Chapter 1
+    title: How it *works*
+    coming_up: [The pieces, The result block]   # up to 6 chips
+```
+
+The other seven kinds are drawn in the Studio look, even with an older theme. Each one builds in step by step. Steps count from 1, the way the narration does.
+
+**cards**: 2 to 6 cards in a grid, one card per step. `icon` is a name from the built in set (for example `lock`, `chat`, `terminal`, `shield`, `mic`, `phone`, `browser`; the schema lists them all). `number` is filled in as 01, 02 and so on when left out.
+
+```yaml
+  - id: overview
+    kind: cards
+    title: Demo videos, made *on your machine*
+    cards:
+      - icon: lock
+        title: Runs locally
+        detail: Nothing is uploaded.        # optional
+        chips: [Kokoro, Whisper]            # optional
+        accent: true                        # optional, stays lit
+      - icon: chat
+        title: Your AI tool drives it
+```
+
+**architecture**: boxes in columns joined by arrows. `layout` lists the columns, left to right (top to bottom in 9:16 and 1:1). Each node is one step, in layout order, and an arrow draws in when both of its ends are in. `chips` puts a group of parts inside a node.
+
+```yaml
+  - id: how
+    kind: architecture
+    nodes:
+      - {id: you, icon: user, label: You, detail: Ask for a demo}
+      - {id: cli, icon: terminal, label: reelsmith CLI}
+      - {id: engine, icon: gear, label: The engine, chips: [Capture, Voice, QA]}
+    layout: [[you], [cli], [engine]]
+    edges:
+      - {from: you, to: cli, label: asks}   # label is optional
+      - {from: cli, to: engine}
+```
+
+**code**: a terminal or file card. `file` is the title bar label; a `.yaml` or `.json` name picks that highlighting, `terminal` picks the shell one, which colours `[OK]`, `[WARN]`, `[ERROR]` and `Next:` lines. Set `language` (`yaml`, `json`, `shell` or `text`) to choose it yourself. `highlight` lists `[step, [line numbers]]`: those lines brighten and the others dim. The slide has as many steps as the highest step named.
+
+```yaml
+  - id: result
+    kind: code
+    file: terminal
+    code: |
+      $ reelsmith slides
+      [OK] Rendered 4 slide(s) in 1 format
+      Next: reelsmith compose --preview
+    highlight:
+      - [1, [2]]
+      - [2, [3]]
+```
+
+**timeline**: a track in seconds. `markers` are the clicks, `phrases` are bars on a lane above, `holds` are hatched blocks on the track and `conflicts` are red markers. A phrase with `pin` (a marker `id` or `label`) snaps onto that marker. Steps: the track, then the phrases slide in, then the holds, then the conflicts. `duration` is the track length; left out, it fits the content.
+
+```yaml
+  - id: timing
+    kind: timeline
+    duration: 12
+    markers: [{id: e1, t: 1.5, label: Search box}]
+    phrases: [{start: 1.5, end: 3.3, label: "Tap the search box,", pin: e1}]
+    holds: [{at: 6.8, seconds: 1.2}]
+    conflicts: [{at: 10.6, label: "0.8 s over"}]
+```
+
+**compare**: rows of `before` and `now`, with a cross and a tick, one row per step. `before_label` and `now_label` change the column names (Before and Now).
+
+```yaml
+  - id: fixed
+    kind: compare
+    rows:
+      - {before: The voice runs ahead of the click, now: Every phrase lands on its click}
+```
+
+**stats**: a hero number that counts up as the slide comes in, then metric cards one per step, then chips in one step. A metric `bar` is a fill from 0 to 1, or a band `[from, to]`.
+
+```yaml
+  - id: qa
+    kind: stats
+    hero: {value: 9, label: checks on the finished video}   # also of: and suffix:
+    metrics:
+      - {label: Pace, value: 130 to 210 words a minute, bar: [0.5, 0.81]}
+    chips: [Sync, Loudness, Captions]
+```
+
+**gallery**: 2 or 3 images side by side in device frames, one image per step. Paths are relative to the demo folder. The frame follows the image shape (a phone for tall, a browser for wide); set `frame` to `phone`, `browser` or `plain` to choose.
+
+```yaml
+  - id: formats
+    kind: gallery
+    images:
+      - {image: images/wide.png, label: "16:9 wide"}
+      - {image: images/tall.png, label: "9:16 vertical"}
+```
 
 `reelsmith slides` renders each slide once per format in spec.yaml, under `slides/16x9/`, `slides/9x16/` and `slides/1x1/` at that format's pixel size. Each build step gets a still, `<id>_step<n>.png`, and its intro animation, `<id>_step<n>.mp4` (0.7 s). Step 0 is the slide's entrance. `<id>.png` is the finished slide. Compose plays each clip when its phrase starts, then holds the still. The first format's images are also copied to `slides/` for older demos. Theme comes from spec.yaml, colours, logo and font from brand.yaml.
 

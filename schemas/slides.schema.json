@@ -1,6 +1,237 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "ArchEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "minLength": 1,
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "minLength": 1,
+          "title": "To",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "ArchEdge",
+      "type": "object"
+    },
+    "ArchNode": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "enum": [
+                "bell",
+                "bolt",
+                "browser",
+                "chat",
+                "check",
+                "chip",
+                "clock",
+                "cross",
+                "cursor",
+                "eye",
+                "file",
+                "film",
+                "flow",
+                "folder",
+                "gear",
+                "git-branch",
+                "globe",
+                "image",
+                "layers",
+                "lock",
+                "mic",
+                "pause",
+                "phone",
+                "play",
+                "plug",
+                "ruler",
+                "scissors",
+                "shield",
+                "sparkle",
+                "terminal",
+                "user",
+                "waveform"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
+        },
+        "chips": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "title": "Chips",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "ArchNode",
+      "type": "object"
+    },
+    "ArchitectureSlide": {
+      "additionalProperties": false,
+      "description": "Boxes in columns joined by arrows. Each node is one build step, in layout order.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "architecture",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/ArchNode"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Nodes",
+          "type": "array"
+        },
+        "layout": {
+          "items": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Layout",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/ArchEdge"
+          },
+          "title": "Edges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "nodes",
+        "layout"
+      ],
+      "title": "ArchitectureSlide",
+      "type": "object"
+    },
     "BulletsSlide": {
       "additionalProperties": false,
       "properties": {
@@ -88,6 +319,194 @@
         "items"
       ],
       "title": "BulletsSlide",
+      "type": "object"
+    },
+    "Card": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "enum": [
+                "bell",
+                "bolt",
+                "browser",
+                "chat",
+                "check",
+                "chip",
+                "clock",
+                "cross",
+                "cursor",
+                "eye",
+                "file",
+                "film",
+                "flow",
+                "folder",
+                "gear",
+                "git-branch",
+                "globe",
+                "image",
+                "layers",
+                "lock",
+                "mic",
+                "pause",
+                "phone",
+                "play",
+                "plug",
+                "ruler",
+                "scissors",
+                "shield",
+                "sparkle",
+                "terminal",
+                "user",
+                "waveform"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icon"
+        },
+        "number": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Number"
+        },
+        "chips": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Chips",
+          "type": "array"
+        },
+        "accent": {
+          "default": false,
+          "title": "Accent",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "Card",
+      "type": "object"
+    },
+    "CardsSlide": {
+      "additionalProperties": false,
+      "description": "2 to 6 cards in a grid, one card per build step.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "cards",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "cards": {
+          "items": {
+            "$ref": "#/$defs/Card"
+          },
+          "maxItems": 6,
+          "minItems": 2,
+          "title": "Cards",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "cards"
+      ],
+      "title": "CardsSlide",
       "type": "object"
     },
     "ChartSlide": {
@@ -195,6 +614,250 @@
         "values"
       ],
       "title": "ChartSlide",
+      "type": "object"
+    },
+    "CodeSlide": {
+      "additionalProperties": false,
+      "description": "A terminal or file card. ``highlight`` brightens lines per build step.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "code",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "file": {
+          "default": "terminal",
+          "title": "File",
+          "type": "string"
+        },
+        "language": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "yaml",
+            "json",
+            "shell",
+            "text"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "highlight": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Highlight",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "code"
+      ],
+      "title": "CodeSlide",
+      "type": "object"
+    },
+    "CompareRow": {
+      "additionalProperties": false,
+      "properties": {
+        "before": {
+          "title": "Before",
+          "type": "string"
+        },
+        "now": {
+          "title": "Now",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before",
+        "now"
+      ],
+      "title": "CompareRow",
+      "type": "object"
+    },
+    "CompareSlide": {
+      "additionalProperties": false,
+      "description": "Before and now rows, one row per build step.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "compare",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "before_label": {
+          "default": "Before",
+          "title": "Before Label",
+          "type": "string"
+        },
+        "now_label": {
+          "default": "Now",
+          "title": "Now Label",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/CompareRow"
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "rows"
+      ],
+      "title": "CompareSlide",
       "type": "object"
     },
     "FlowSlide": {
@@ -318,12 +981,559 @@
           ],
           "default": null,
           "title": "Detail"
+        },
+        "accent": {
+          "default": false,
+          "title": "Accent",
+          "type": "boolean"
         }
       },
       "required": [
         "title"
       ],
       "title": "FlowStep",
+      "type": "object"
+    },
+    "GalleryImage": {
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "title": "Image",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "frame": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "phone",
+            "browser",
+            "plain"
+          ],
+          "title": "Frame",
+          "type": "string"
+        }
+      },
+      "required": [
+        "image",
+        "label"
+      ],
+      "title": "GalleryImage",
+      "type": "object"
+    },
+    "GallerySlide": {
+      "additionalProperties": false,
+      "description": "2 or 3 images in device frames, side by side. Each image is one build step.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "gallery",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "images": {
+          "items": {
+            "$ref": "#/$defs/GalleryImage"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "title": "Images",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "images"
+      ],
+      "title": "GallerySlide",
+      "type": "object"
+    },
+    "StatsHero": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "of": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Of"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "suffix": {
+          "default": "",
+          "title": "Suffix",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "label"
+      ],
+      "title": "StatsHero",
+      "type": "object"
+    },
+    "StatsMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        },
+        "bar": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "maximum": 1.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bar"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "title": "StatsMetric",
+      "type": "object"
+    },
+    "StatsSlide": {
+      "additionalProperties": false,
+      "description": "A hero number that counts up, then metric cards one per step, then chips.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "stats",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "hero": {
+          "$ref": "#/$defs/StatsHero"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/StatsMetric"
+          },
+          "maxItems": 4,
+          "title": "Metrics",
+          "type": "array"
+        },
+        "chips": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12,
+          "title": "Chips",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "hero"
+      ],
+      "title": "StatsSlide",
+      "type": "object"
+    },
+    "TimelineConflict": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "minimum": 0.0,
+          "title": "At",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "at",
+        "label"
+      ],
+      "title": "TimelineConflict",
+      "type": "object"
+    },
+    "TimelineHold": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "minimum": 0.0,
+          "title": "At",
+          "type": "number"
+        },
+        "seconds": {
+          "exclusiveMinimum": 0.0,
+          "title": "Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "at",
+        "seconds"
+      ],
+      "title": "TimelineHold",
+      "type": "object"
+    },
+    "TimelineMarker": {
+      "additionalProperties": false,
+      "properties": {
+        "t": {
+          "minimum": 0.0,
+          "title": "T",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        }
+      },
+      "required": [
+        "t",
+        "label"
+      ],
+      "title": "TimelineMarker",
+      "type": "object"
+    },
+    "TimelinePhrase": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "exclusiveMinimum": 0.0,
+          "title": "End",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "pin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pin"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "label"
+      ],
+      "title": "TimelinePhrase",
+      "type": "object"
+    },
+    "TimelineSlide": {
+      "additionalProperties": false,
+      "description": "A track in seconds: clicks, phrases snapping onto them, holds and conflicts.\n\nSteps: the track first, then the phrases, then the holds, then the conflicts.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subtitle"
+        },
+        "chapter": {
+          "anyOf": [
+            {
+              "maximum": 99,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chapter"
+        },
+        "step_style": {
+          "default": "dim",
+          "enum": [
+            "dim",
+            "reveal"
+          ],
+          "title": "Step Style",
+          "type": "string"
+        },
+        "kind": {
+          "const": "timeline",
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "markers": {
+          "items": {
+            "$ref": "#/$defs/TimelineMarker"
+          },
+          "title": "Markers",
+          "type": "array"
+        },
+        "phrases": {
+          "items": {
+            "$ref": "#/$defs/TimelinePhrase"
+          },
+          "title": "Phrases",
+          "type": "array"
+        },
+        "holds": {
+          "items": {
+            "$ref": "#/$defs/TimelineHold"
+          },
+          "title": "Holds",
+          "type": "array"
+        },
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/TimelineConflict"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "TimelineSlide",
       "type": "object"
     },
     "TitleSlide": {
@@ -389,6 +1599,14 @@
         "title": {
           "title": "Title",
           "type": "string"
+        },
+        "coming_up": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 6,
+          "title": "Coming Up",
+          "type": "array"
         }
       },
       "required": [
@@ -412,9 +1630,16 @@
       "items": {
         "discriminator": {
           "mapping": {
+            "architecture": "#/$defs/ArchitectureSlide",
             "bullets": "#/$defs/BulletsSlide",
+            "cards": "#/$defs/CardsSlide",
             "chart": "#/$defs/ChartSlide",
+            "code": "#/$defs/CodeSlide",
+            "compare": "#/$defs/CompareSlide",
             "flow": "#/$defs/FlowSlide",
+            "gallery": "#/$defs/GallerySlide",
+            "stats": "#/$defs/StatsSlide",
+            "timeline": "#/$defs/TimelineSlide",
             "title": "#/$defs/TitleSlide"
           },
           "propertyName": "kind"
@@ -431,6 +1656,27 @@
           },
           {
             "$ref": "#/$defs/BulletsSlide"
+          },
+          {
+            "$ref": "#/$defs/CardsSlide"
+          },
+          {
+            "$ref": "#/$defs/ArchitectureSlide"
+          },
+          {
+            "$ref": "#/$defs/CodeSlide"
+          },
+          {
+            "$ref": "#/$defs/TimelineSlide"
+          },
+          {
+            "$ref": "#/$defs/CompareSlide"
+          },
+          {
+            "$ref": "#/$defs/StatsSlide"
+          },
+          {
+            "$ref": "#/$defs/GallerySlide"
           }
         ]
       },

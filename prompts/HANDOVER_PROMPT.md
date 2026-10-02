@@ -637,7 +637,7 @@ scenes:
 
 - `caption` is the short side caption for the scene. Keep it under about eight words.
 - Line ids must be unique inside a scene. Phrases in one line are voiced together, so keep a line to one or two sentences.
-- Slide scenes cannot have pins. Their build steps (flow steps, bullet items) appear one per phrase: step 1 at the start, step 2 with phrase 2, and so on. So write one phrase per step.
+- Slide scenes cannot have pins. Their build steps (flow steps, bullet items, cards and so on) appear one per phrase: step 1 at the start, step 2 with phrase 2, and so on. So write one phrase per step.
 
 **Points, zoom and cursor for footage scenes.** In spec.yaml, a phone, browser or full scene can show curated points beside the footage instead of the spoken words:
 
@@ -714,9 +714,23 @@ slides:
     items: [Search by ingredient, Favourites tab, New recipe form]
 ```
 
-Every slide can also take `eyebrow` (a small label above the title), `subtitle`, `chapter` (a number shown large and faded) and `step_style` (`dim` shows future steps faded, `reveal` hides them). In any text, `*words*` are drawn in the accent colour; write `\*` for a plain star. A flow step is either a short string or a card with `title` and an optional one line `detail`. Flow and bullets build in one step per phrase.
+Every slide can also take `eyebrow` (a small label above the title), `subtitle`, `chapter` (a number shown large and faded) and `step_style` (`dim` shows future steps faded, `reveal` hides them). In any text, `*words*` are drawn in the accent colour; write `\*` for a plain star. A flow step is either a short string or a card with `title`, an optional one line `detail` and `accent: true` to keep it lit. A title can take `coming_up: [..]` chips for a chapter card.
 
-Only use numbers in a chart that the user gave you or that come from the app. Never make up figures.
+More kinds, each with build steps (full examples in docs/formats.md):
+
+- `cards`: 2 to 6 cards with `icon`, `title`, `detail`, `chips` and `accent`. One card per step.
+- `architecture`: `nodes` (`id`, `label`, `icon`, `detail`, `chips`), `layout: [[ids], ...]` as columns, and `edges: [{from, to, label}]`. One node per step; arrows draw in.
+- `code`: a `file` name or `terminal`, the `code`, and `highlight: [[step, [lines]]]`. Steps go up to the highest step named.
+- `timeline`: `markers: [{t, label}]`, `phrases: [{start, end, label, pin}]`, `holds: [{at, seconds}]`, `conflicts: [{at, label}]`. Steps: track, phrases, holds, conflicts.
+- `compare`: `rows: [{before, now}]`, one row per step.
+- `stats`: `hero: {value, label}` that counts up, `metrics: [{label, value, bar}]` one per step, then `chips` in one step.
+- `gallery`: 2 or 3 `images: [{image, label}]` from the demo folder, one per step.
+
+Icons are names from the built in set, such as `lock`, `chat`, `terminal`, `shield`, `mic`, `phone`, `browser`, `user` and `gear`. A wrong name fails with the full list.
+
+Every kind builds in one step per phrase. Write one phrase per step.
+
+Only use numbers in a chart or stats slide that the user gave you or that come from the app. Never make up figures.
 
 `reelsmith slides` writes, under `slides/<format>/`, a still and a short intro clip for each build step (`intro_step0.png`, `intro_step0.mp4`) and the finished slide (`intro.png`), at the size compose uses for that format. The first format's images are also copied to `slides/`.
 

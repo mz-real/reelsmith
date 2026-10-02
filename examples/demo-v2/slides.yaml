@@ -1,0 +1,401 @@
+version: 1
+slides:
+  # Open
+  - id: overview
+    kind: cards
+    eyebrow: What reelsmith is
+    title: Demo videos, made *on your machine*
+    cards:
+      - icon: lock
+        title: Runs locally
+        detail: Open models on your own machine. Nothing is uploaded.
+      - icon: chat
+        title: Your AI tool drives it
+        detail: Claude Code, Codex, Cursor, Gemini CLI or Copilot.
+      - icon: check
+        title: You approve twice
+        detail: The plan, then the words, before anything is voiced.
+      - icon: shield
+        title: Checked before you share
+        detail: Nine checks run on every finished video.
+
+  # Chapter 1. How it works
+  - id: ch1
+    kind: title
+    chapter: 1
+    eyebrow: Chapter 1
+    title: How it *works*
+    subtitle: One set of instructions, one command line tool.
+    coming_up: [The pieces, The result block, The engine]
+  - id: architecture
+    kind: architecture
+    chapter: 1
+    eyebrow: How it works
+    title: From one request to a *finished video*
+    nodes:
+      - id: you
+        icon: user
+        label: You
+        detail: Ask for a demo of your app
+      - id: ai
+        icon: chat
+        label: Your AI tool
+        detail: Claude Code, Codex, Cursor, Gemini CLI or Copilot
+      - id: skill
+        icon: file
+        label: reelsmith skill
+        detail: Short instructions, a guide per step
+      - id: cli
+        icon: terminal
+        label: reelsmith CLI
+        detail: One command per step
+      - id: engine
+        icon: gear
+        label: The engine
+        detail: Any step runs again on its own
+        chips: [Capture, Voice, Slides, Compose, QA]
+    layout: [[you], [ai], [skill, cli], [engine]]
+    edges:
+      - {from: you, to: ai, label: asks}
+      - {from: ai, to: skill, label: loads}
+      - {from: ai, to: cli, label: calls}
+      - {from: cli, to: engine, label: runs}
+  - id: result-block
+    kind: code
+    chapter: 1
+    eyebrow: How it works
+    title: Every command ends *the same way*
+    subtitle: OK, WARN or ERROR, then the next step.
+    file: terminal
+    code: |
+      $ reelsmith script check
+      [WARN] Script checked: 6 scenes, 18 lines, 9 pins
+        - Scene 'outro' has no narration
+      Next: reelsmith voice generate
+
+      $ reelsmith slides
+      [OK] Rendered 27 slide(s) in 1 format
+      Next: reelsmith compose --preview
+    highlight:
+      - [1, [2, 3, 7]]
+      - [2, [4, 8]]
+
+  # Chapter 2. The interview
+  - id: ch2
+    kind: title
+    chapter: 2
+    eyebrow: Chapter 2
+    title: The *interview*
+    subtitle: One question at a time, with suggested answers.
+    coming_up: [Mode first, What to show, Voice and formats, spec.yaml]
+  - id: interview
+    kind: cards
+    chapter: 2
+    eyebrow: The interview
+    title: One question *at a time*
+    subtitle: Your answers become *spec.yaml*, the plan.
+    cards:
+      - icon: flow
+        title: Mode
+        chips: [Narrate, Produce]
+      - icon: eye
+        title: What to show
+        chips: [One feature, Full tour]
+      - icon: user
+        title: Who and how long
+        chips: [Team, Customers, 90 s]
+      - icon: mic
+        title: Which voice
+        chips: [Kokoro, Your own, Silent]
+      - icon: layers
+        title: Formats
+        chips: ["16:9", "9:16", "1:1"]
+
+  # Chapter 3. Two approvals
+  - id: ch3
+    kind: title
+    chapter: 3
+    eyebrow: Chapter 3
+    title: Two *approvals*
+    subtitle: Nothing is voiced or rendered before you agree to the words.
+    coming_up: [Approve the plan, Approve the script]
+  - id: approvals
+    kind: flow
+    chapter: 3
+    title: Two *approval* points, always there
+    steps:
+      - title: Plan
+        detail: spec.yaml from the interview
+      - title: You approve
+        detail: The plan
+        accent: true
+      - title: Script
+        detail: Written against the real recording
+      - title: You approve
+        detail: The words
+        accent: true
+      - title: Render
+        detail: Voice, slides, compose and QA
+
+  # Chapter 4. Capture
+  - id: ch4
+    kind: title
+    chapter: 4
+    eyebrow: Chapter 4
+    title: Capture
+    subtitle: Real footage, with every click logged.
+    coming_up: [Web, Mobile, Your own recording]
+  - id: clip-json
+    kind: code
+    chapter: 4
+    eyebrow: Capture
+    title: Every click, with its *time and position*
+    subtitle: These events are what the narration pins to.
+    file: capture/clips/search/clip.json
+    code: |
+      {
+        "id": "search",
+        "video": "video.mp4",
+        "width": 1280, "height": 800, "fps": 30, "duration": 9.4,
+        "events": [
+          {"id": "e1", "t": 1.84, "type": "click",
+           "x": 0.42, "y": 0.18, "label": "Search box"},
+          {"id": "e2", "t": 4.1, "type": "click",
+           "x": 0.71, "y": 0.52, "label": "Add to favourites"}
+        ]
+      }
+    highlight:
+      - [1, [6, 7]]
+      - [2, [8, 9]]
+  - id: capture-modes
+    kind: cards
+    chapter: 4
+    eyebrow: Capture
+    title: Three ways to get *footage*
+    cards:
+      - icon: browser
+        title: Web
+        detail: A Playwright flow per scene, run in a real browser. Every click is logged.
+        chips: [Playwright]
+      - icon: phone
+        title: Mobile
+        detail: Maestro taps through the app on a simulator or a device. reelsmith records the screen.
+        chips: [Maestro, iOS, Android]
+      - icon: film
+        title: Your own recording
+        detail: detect finds the changes on screen, down to a single button.
+        chips: [capture import, detect]
+
+  # Chapter 5. Words that land on clicks
+  - id: ch5
+    kind: title
+    chapter: 5
+    eyebrow: Chapter 5
+    title: Words that land on *clicks*
+    subtitle: The timing engine keeps the voice with the screen.
+    coming_up: [Pinned phrases, Holds, Conflicts]
+  - id: timeline
+    kind: timeline
+    chapter: 5
+    eyebrow: Timing
+    title: Each phrase starts *on its click*
+    step_style: reveal
+    duration: 12
+    markers:
+      - {id: e1, t: 1.5, label: Search box}
+      - {id: e2, t: 4.2, label: Open recipe}
+      - {id: e3, t: 8.0, label: Add to favourites}
+    phrases:
+      - {start: 1.5, end: 3.3, label: "Tap the search box,", pin: e1}
+      - {start: 4.2, end: 7.8, label: "open the first recipe and read the steps,", pin: e2}
+      - {start: 8.0, end: 9.4, label: "and save it.", pin: e3}
+    holds:
+      - {at: 6.8, seconds: 1.2}
+    conflicts:
+      - {at: 10.6, label: "0.8 s over, reported"}
+  - id: before-now-timing
+    kind: compare
+    chapter: 5
+    eyebrow: Timing
+    title: No more *drift*
+    rows:
+      - before: The voice runs ahead of the click
+        now: Every phrase lands on its click
+      - before: A long line slowly drifts out of sync
+        now: A hold of up to 3 s, or a reported conflict
+
+  # Chapter 6. The voice
+  - id: ch6
+    kind: title
+    chapter: 6
+    eyebrow: Chapter 6
+    title: The *voice*
+    subtitle: A small open model that runs on a laptop.
+    coming_up: [Kokoro, Line checks, Spoken forms, Your own voice]
+  - id: voice-checks
+    kind: stats
+    chapter: 6
+    eyebrow: The voice
+    title: Every line is *checked* as it is made
+    hero:
+      value: 2
+      label: checks on every line, before it reaches the video
+    metrics:
+      - label: Pace
+        value: 130 to 210 words a minute
+        bar: [0.5, 0.81]
+      - label: Transcript
+        value: Read back by Whisper, word by word
+        bar: 1
+  - id: say
+    kind: code
+    chapter: 6
+    eyebrow: The voice
+    title: Written one way, *said* another
+    subtitle: The caption shows text. The voice reads say.
+    file: script.yaml
+    code: |
+      - id: plan-4
+        phrases:
+          - text: Your answers become spec.yaml.
+            say: Your answers become spec dot yaml.
+    highlight:
+      - [1, [3]]
+      - [2, [4]]
+  - id: own-voice
+    kind: cards
+    chapter: 6
+    eyebrow: The voice
+    title: Your own voice, *only with consent*
+    cards:
+      - icon: mic
+        title: Clone your voice
+        detail: Chatterbox, from a short sample, on your machine.
+        chips: [Chatterbox]
+      - icon: shield
+        title: Consent first
+        detail: Your own voice, or one you have permission to use.
+        accent: true
+      - icon: lock
+        title: Watermark always on
+        detail: reelsmith will not run a build without it.
+
+  # Chapter 7. Compose and formats
+  - id: ch7
+    kind: title
+    chapter: 7
+    eyebrow: Chapter 7
+    title: Compose and *formats*
+    subtitle: One script, every shape you need.
+    coming_up: [Frames and captions, Steady loudness, Three formats]
+  - id: formats
+    kind: gallery
+    chapter: 7
+    eyebrow: Compose
+    title: One script, *three* formats
+    subtitle: Plus a silent version, the narration track and a captions file.
+    images:
+      - {image: images/format-16x9.png, label: "16:9 wide"}
+      - {image: images/format-9x16.png, label: "9:16 vertical"}
+      - {image: images/format-1x1.png, label: "1:1 square"}
+
+  # Chapter 8. Quality checks
+  - id: ch8
+    kind: title
+    chapter: 8
+    eyebrow: Chapter 8
+    title: Quality *checks*
+    subtitle: Before you share it, the finished video is checked.
+    coming_up: [Nine checks, Real bugs, The report]
+  - id: nine-checks
+    kind: stats
+    chapter: 8
+    eyebrow: Quality checks
+    title: Nine checks on the *finished video*
+    hero:
+      value: 9
+      label: checks, and a report that says how to fix each failure
+    chips:
+      - Transcript vs script
+      - Sync
+      - Cut off lines
+      - End of line noise
+      - Loudness
+      - Hold limits
+      - Captions
+      - Blur
+      - Contact sheets
+  - id: real-bugs
+    kind: compare
+    chapter: 8
+    eyebrow: Found while building reelsmith
+    title: Real bugs, *caught and fixed*
+    rows:
+      - before: A click pinned 1.4 s late
+        now: Found to the exact frame, and tested
+      - before: "Last syllables cut: marker played as mark"
+        now: The whole line is kept, and tested
+
+  # Chapter 9. Every AI tool
+  - id: ch9
+    kind: title
+    chapter: 9
+    eyebrow: Chapter 9
+    title: Every *AI tool*
+    subtitle: The same instructions, in the format each tool reads.
+    coming_up: [Claude Code plugin, agent install, One source]
+  - id: every-tool
+    kind: cards
+    chapter: 9
+    eyebrow: Every AI tool
+    title: Works in the tool *you already use*
+    cards:
+      - icon: plug
+        title: Claude Code
+        detail: A plugin. Add the marketplace and install it.
+        chips: [plugin]
+      - icon: terminal
+        title: Codex
+        detail: reelsmith agent install codex
+        chips: [AGENTS.md]
+      - icon: cursor
+        title: Cursor
+        detail: reelsmith agent install cursor
+        chips: [.cursor/rules]
+      - icon: sparkle
+        title: Gemini CLI
+        detail: reelsmith agent install gemini
+        chips: [GEMINI.md]
+      - icon: git-branch
+        title: GitHub Copilot
+        detail: reelsmith agent install copilot
+        chips: [copilot-instructions.md]
+      - icon: chat
+        title: Any other tool
+        detail: One prompt to paste into the chat.
+        chips: [HANDOVER_PROMPT.md]
+  - id: one-source
+    kind: flow
+    chapter: 9
+    eyebrow: Every AI tool
+    title: One source, *every format*
+    steps:
+      - title: instructions/
+        detail: The workflow, the rules and each step guide
+      - title: Generated
+        detail: Written into every tool's own format
+      - title: Checked in CI
+        detail: The build fails when a file is out of date
+
+  # Close
+  - id: get-started
+    kind: code
+    eyebrow: Open source, MIT
+    title: Get *started*
+    subtitle: github.com/mz-real/reelsmith
+    file: Claude Code
+    language: shell
+    code: |
+      > /plugin marketplace add mz-real/reelsmith
+      > /plugin install reelsmith@reelsmith
+      # then ask: make a demo of my app
