@@ -63,6 +63,9 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests/qa"]
+addopts = ["-m", "not integration and not models", "--import-mode=importlib"]
 markers = [
+    "integration: full pipeline test with ffmpeg and optional Playwright",
     "models: real Kokoro and Whisper model test, needs REELSMITH_TEST_MODELS=1 and downloads models",
 ]
