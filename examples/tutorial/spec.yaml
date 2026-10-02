@@ -1,0 +1,56 @@
+version: 1
+mode: produce
+goal: Show a developer how to go from "make a demo of my app" to a finished, checked video with reelsmith
+audience: developers who use an AI coding tool
+target_seconds: 210
+formats: ["16:9"]
+quality: 1080p
+theme: dark
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  sample: null
+  consent: null
+  vocabulary: [reelsmith]
+options:
+  allow_holds: true
+  speed_up_waits: true
+  captions: burned
+  highlight_clicks: true
+scenes:
+  - id: hook
+    layout: full
+    clip: result-hook
+  - id: what
+    layout: slide
+    slide: what
+  - id: install
+    layout: full
+    clip: terminal-install
+  - id: interview
+    layout: full
+    clip: terminal-interview
+  - id: plan
+    layout: slide
+    slide: approvals
+  - id: capture
+    layout: full
+    clip: terminal-capture
+  - id: pipeline
+    layout: slide
+    slide: pipeline
+  - id: qa
+    layout: full
+    clip: terminal-qa
+  - id: result
+    layout: full
+    clip: result-main
+  - id: voices
+    layout: slide
+    slide: voices
+  - id: outro
+    layout: slide
+    slide: outro
+blur: []
