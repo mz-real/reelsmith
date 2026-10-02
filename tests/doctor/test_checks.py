@@ -11,14 +11,18 @@ from reelsmith.doctor.checks import (
     check_adb,
     check_ffmpeg,
     check_java,
+    check_kokoro_model,
     check_maestro,
     check_playwright_chromium,
     check_plugin_version,
     check_python,
     check_simctl,
+    check_whisper_model,
     run_all_checks,
 )
 from reelsmith.result import Status
+from reelsmith.voice.models_dl import KOKORO_INT8, KOKORO_VOICES
+from reelsmith.voice.transcribe import whisper_model_cache_dir
 
 
 def test_check_python_ok() -> None:
@@ -107,7 +111,64 @@ def test_check_java_warn_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("platform.system", lambda: "Darwin")
     check = check_java()
     assert check.status == Status.WARN
-    assert "temurin" in (check.fix or "").lower()
+    assert check.fix == "brew install openjdk@17"
+
+
+@pytest.mark.parametrize(
+    ("system", "which_map", "expected_fragment"),
+    [
+        ("Darwin", {}, "brew install openjdk@17"),
+        ("Windows", {}, "winget install EclipseAdoptium.Temurin.17.JDK"),
+        ("Linux", {"dnf": "/usr/bin/dnf"}, "dnf install java-17-openjdk"),
+        ("Linux", {}, "apt install openjdk-17-jdk"),
+    ],
+)
+def test_check_java_fix_per_os(
+    monkeypatch: pytest.MonkeyPatch,
+    system: str,
+    which_map: dict[str, str],
+    expected_fragment: str,
+) -> None:
+    def which(name: str) -> str | None:
+        if name == "java":
+            return None
+        return which_map.get(name)
+
+    monkeypatch.setattr("shutil.which", which)
+    monkeypatch.setattr("platform.system", lambda: system)
+    check = check_java()
+    assert expected_fragment in (check.fix or "")
+
+
+def test_voice_model_checks_ok_when_cache_paths_exist(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import reelsmith.doctor.checks as checks_mod
+    import reelsmith.voice.models_dl as models_dl_mod
+    import reelsmith.voice.transcribe as transcribe_mod
+
+    root = tmp_path / "cache"
+    model_root = root / "models"
+
+    def fake_models_dir() -> Path:
+        return model_root
+
+    monkeypatch.setattr(models_dl_mod, "models_dir", fake_models_dir)
+    monkeypatch.setattr(transcribe_mod, "models_dir", fake_models_dir)
+    monkeypatch.setattr(checks_mod, "models_dir", fake_models_dir)
+
+    model_root.mkdir(parents=True)
+    (model_root / KOKORO_INT8.filename).write_bytes(b"x")
+    (model_root / KOKORO_VOICES.filename).write_bytes(b"y")
+    whisper_model_cache_dir().mkdir()
+
+    kokoro = check_kokoro_model()
+    whisper = check_whisper_model()
+    assert kokoro.status == Status.OK
+    assert whisper.status == Status.OK
+    assert "cached" in kokoro.found
+    assert "cached" in whisper.found
 
 
 def test_check_maestro_warn(monkeypatch: pytest.MonkeyPatch) -> None:
