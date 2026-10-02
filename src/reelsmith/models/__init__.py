@@ -6,6 +6,14 @@ from reelsmith.models.brand import BrandColors, BrandFont, BrandModel
 from reelsmith.models.clip import ClipModel, Event
 from reelsmith.models.io import load_model, save_model
 from reelsmith.models.script import Line, Phrase, ScriptModel, ScriptScene
+from reelsmith.models.slides import (
+    BulletsSlide,
+    ChartSlide,
+    FlowSlide,
+    SlideItem,
+    SlidesModel,
+    TitleSlide,
+)
 from reelsmith.models.spec import (
     CLONE_CONSENT_MESSAGE,
     BlurRegion,
@@ -29,7 +37,13 @@ __all__ = [
     "SceneSpec",
     "ScriptModel",
     "ScriptScene",
+    "SlideItem",
+    "SlidesModel",
     "SpecModel",
+    "TitleSlide",
+    "FlowSlide",
+    "ChartSlide",
+    "BulletsSlide",
     "VoiceSettings",
     "load_model",
     "save_model",

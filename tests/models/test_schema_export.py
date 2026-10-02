@@ -19,8 +19,9 @@ def test_every_format_has_a_schema() -> None:
         "brand.schema.json",
         "clip.schema.json",
         "script.schema.json",
+        "slides.schema.json",
     }
-    assert set(SCHEMA_MODELS) == {"spec", "brand", "clip", "script"}
+    assert set(SCHEMA_MODELS) == {"spec", "brand", "clip", "script", "slides"}
 
 
 @pytest.mark.parametrize("name", sorted(build_schemas()))
@@ -62,4 +63,4 @@ def test_export_backs_up_a_changed_file_and_skips_same_ones(
     out = capsys.readouterr().out
     backups = list(out_dir.glob("spec.schema.json.bak-*"))
     assert len(backups) == 1
-    assert "1 written, 3 unchanged" in out
+    assert "1 written, 4 unchanged" in out
