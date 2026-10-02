@@ -8,7 +8,7 @@ scenes:
           - text: Recipe Box is a small kitchen app in your browser.
       - id: intro-2
         phrases:
-          - text: In the next minute you will search, save and add a recipe of your own.
+          - text: In this short video you will search, save and add a recipe of your own.
   - id: why
     caption: How it works
     lines:
