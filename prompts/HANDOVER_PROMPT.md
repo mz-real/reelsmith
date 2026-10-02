@@ -15,7 +15,7 @@ Help the user get a finished, narrated demo video of their app that they are hap
 
 ## Before you start
 
-1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install reelsmith` (or `uv tool install "reelsmith[clone]"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
+1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install git+https://github.com/mz-real/reelsmith` (or `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
 2. Run `reelsmith doctor` with the expected version set, so it warns if the CLI and these instructions do not match:
    - macOS and Linux: `REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor`
    - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="0.1.0"; reelsmith doctor`
@@ -136,7 +136,7 @@ Before you ask, look at the project: read the README, the routes or screens, and
 
 - Own voice: set `consent: own`. Permission: set `consent: permission`.
 - Neither, or no clear answer: do not clone. Offer a Kokoro voice instead. No consent, no cloning.
-- Cloning also needs the optional install: `uv tool install "reelsmith[clone]"` (Python 3.11 or 3.12).
+- Cloning also needs the optional install: `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` (Python 3.11 or 3.12).
 
 ## Commands
 
@@ -845,7 +845,7 @@ This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line 
 
 After you rename or split a line in script.yaml, run `reelsmith voice generate` for every line, or `--only` once per new scene/line id. Entries for ids that are no longer in the script are dropped from timings.json and their wav files are set aside as backups.
 
-Own voice (needs `uv tool install "reelsmith[clone]"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
+Own voice (needs `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
 
 ```
 reelsmith voice pick-reference long-recording.wav --out ref.wav
@@ -908,7 +908,7 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | Problem | Fix |
 |---|---|
 | `Could not download ...` | The machine is offline or the download failed. The `Next:` line has the retry command and a manual download link. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
 | `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
@@ -1065,8 +1065,8 @@ On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="
 Install or update reelsmith:
 
 ```
-uv tool install reelsmith
-uv tool install "reelsmith[clone]"        # with own voice cloning, Python 3.11 or 3.12
+uv tool install git+https://github.com/mz-real/reelsmith
+uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"        # with own voice cloning, Python 3.11 or 3.12
 uv tool upgrade reelsmith
 ```
 
@@ -1088,7 +1088,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 
 | Problem | Fix |
 |---|---|
-| `reelsmith: command not found` | `uv tool install reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
+| `reelsmith: command not found` | `uv tool install git+https://github.com/mz-real/reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
 | doctor warns the plugin version does not match | Upgrade the CLI with `uv tool upgrade reelsmith`, or update the plugin or instruction files to match. |
 | ffmpeg missing or older than 6 | macOS `brew install ffmpeg`, Windows `winget install ffmpeg`, Debian or Ubuntu `sudo apt install ffmpeg`, Fedora `sudo dnf install ffmpeg`. |
 | Chromium missing | `reelsmith setup browser` |
@@ -1099,7 +1099,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 | `... not found` with `Next: reelsmith init` | You are not in the demo folder. `cd` into it or pass the folder to the command. |
 | `... is not empty. Use --force to init anyway.` | Use a new folder for the demo. |
 | `Could not download ...` | Check the network and retry. The `Next:` line has a manual download link. Models are cached after the first download. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"` with Python 3.11 or 3.12, or use a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` with Python 3.11 or 3.12, or use a Kokoro voice. |
 | compose says `slides/<id>.png, which is missing` | `reelsmith slides` |
 | compose says a wav is missing | `reelsmith voice generate` |
 | compose `[WARN]` with lines some seconds over | Shorten those lines, then `reelsmith voice generate` and `reelsmith compose`. |

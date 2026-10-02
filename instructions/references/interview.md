@@ -50,7 +50,7 @@ Before you ask, look at the project: read the README, the routes or screens, and
 
 - Own voice: set `consent: own`. Permission: set `consent: permission`.
 - Neither, or no clear answer: do not clone. Offer a Kokoro voice instead. No consent, no cloning.
-- Cloning also needs the optional install: `uv tool install "reelsmith[clone]"` (Python 3.11 or 3.12).
+- Cloning also needs the optional install: `{{install_clone}}` (Python 3.11 or 3.12).
 
 ## Commands
 

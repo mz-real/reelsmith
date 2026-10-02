@@ -11,7 +11,7 @@ The release workflow will not work until both are in place. See the comment at t
 
 ## Release steps
 
-1. **Bump the version** in `pyproject.toml` (Semantic Versioning).
+1. **Bump the version** in `pyproject.toml` (Semantic Versioning). For the first PyPI release, also set `published = true` under `[tool.reelsmith]`, so the generated instructions offer `uv tool install reelsmith` instead of the Git URL.
 
 2. **Regenerate instruction files** so the plugin, marketplace manifest and every AI guide carry the same version:
 
