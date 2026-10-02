@@ -123,3 +123,16 @@ def test_transcript_matches_normalises_numbers_to_words() -> None:
 
     assert ok is True
     assert missing == []
+
+
+def test_transcript_matches_tolerates_british_american_spelling() -> None:
+    words = [
+        Word(text="Browse", start=0.0, end=0.3),
+        Word(text="your", start=0.3, end=0.5),
+        Word(text="Favorites.", start=0.5, end=1.0),
+    ]
+
+    ok, missing = transcript_matches("Browse your favourites.", words)
+
+    assert ok is True
+    assert missing == []

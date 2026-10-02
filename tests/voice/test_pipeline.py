@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -9,7 +10,8 @@ import numpy as np
 from reelsmith.models import Line, Phrase, ScriptModel, ScriptScene, SpecModel, VoiceSettings
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.base import Audio
-from reelsmith.voice.pipeline import generate
+from reelsmith.voice.pipeline import TranscribeFn, generate
+from reelsmith.voice.quality import pace_ok
 from reelsmith.voice.transcribe import Word
 
 
@@ -20,14 +22,55 @@ class FakeEngine:
         self.durations = durations
         self.sample_rate = sample_rate
         self.name = "fake"
-        self.calls: list[tuple[str, int]] = []
+        self.calls: list[tuple[str, int, float | None]] = []
 
-    def synthesize(self, text: str, seed: int) -> Audio:
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
         index = len(self.calls)
-        self.calls.append((text, seed))
+        self.calls.append((text, seed, speed))
         duration = self.durations[min(index, len(self.durations) - 1)]
         samples = np.full(max(1, int(duration * self.sample_rate)), 0.5, dtype=np.float32)
         return Audio(samples=samples, sample_rate=self.sample_rate)
+
+
+class ScalingFakeEngine:
+    """A fake engine whose measured words a minute scales with speed.
+
+    Doubling speed halves the audio's duration and so doubles the words a
+    minute that a first-to-last-word measurement would find, the same
+    direction a real engine moves in.
+    """
+
+    def __init__(self, text: str, wpm_at_speed_one: float, sample_rate: int = 1000) -> None:
+        self.text = text
+        self.wpm_at_speed_one = wpm_at_speed_one
+        self.sample_rate = sample_rate
+        self.name = "fake"
+        self.calls: list[tuple[str, int, float | None]] = []
+
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
+        used_speed = speed if speed is not None else 1.0
+        self.calls.append((text, seed, speed))
+        wpm = self.wpm_at_speed_one * used_speed
+        seconds = (len(text.split()) / wpm) * 60.0
+        samples = np.full(max(1, int(seconds * self.sample_rate)), 0.5, dtype=np.float32)
+        return Audio(samples=samples, sample_rate=self.sample_rate)
+
+
+def _matching_transcriber(text: str) -> TranscribeFn:
+    """A fake transcriber whose word timestamps span the whole given audio.
+
+    Used with ScalingFakeEngine so that a wpm measurement taken from word
+    timestamps (first word's start to last word's end) matches the pace
+    the engine was asked to read at, whatever that attempt's duration was.
+    """
+    tokens = text.split()
+
+    def transcribe(audio: Audio) -> list[Word]:
+        duration = audio.samples.size / audio.sample_rate
+        step = duration / len(tokens)
+        return [Word(text=t, start=i * step, end=(i + 1) * step) for i, t in enumerate(tokens)]
+
+    return transcribe
 
 
 class _BoomEngine:
@@ -35,7 +78,7 @@ class _BoomEngine:
     # engine, text, voice and speed are all unchanged from the last run.
     name = "fake"
 
-    def synthesize(self, text: str, seed: int) -> Audio:
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
         raise AssertionError("should not resynthesize a skipped line")
 
 
@@ -97,32 +140,52 @@ def test_generate_writes_wav_and_timings(tmp_path: Path) -> None:
     assert line.attempts == 1
     assert line.transcript_ok is True
     assert line.skipped is False
+    assert line.pace_checked is False  # "hello world" is four words or fewer
     assert (paths.voice / "s__l1.wav").exists()
-    assert (paths.voice / "timings.json").exists()
+    timings_path = paths.voice / "timings.json"
+    assert timings_path.exists()
+    payload = json.loads(timings_path.read_text(encoding="utf-8"))
+    assert payload["lines"][0]["pace_checked"] is False
 
 
-def test_generate_retries_for_pace_then_for_transcript(tmp_path: Path) -> None:
+def test_generate_corrects_pace_by_scaling_speed_within_two_attempts(tmp_path: Path) -> None:
     paths = DemoPaths.at(tmp_path)
-    text = "one two three four five six seven eight nine ten"
+    text = "one two three four five six seven eight nine ten"  # ten words, pace is checked
     spec = _spec()
     script = _script({"l1": text})
 
-    # seed 0: 10s of audio for 10 words is 60 wpm, too slow.
-    # seed 1 (first pace retry): 3s is 200 wpm, inside the window.
-    # the transcript check on that audio is made to fail once, then pass.
-    engine = FakeEngine(durations=[10.0, 3.0, 3.0])
-    incomplete = [Word(text="one", start=0.0, end=0.1)]
-    complete = _words_for(text)
-    transcriber = FakeTranscriber(results=[incomplete, complete])
+    # At speed 1.0 this fake engine reads at 220 wpm, too fast for the 130
+    # to 210 window. Scaling speed directly towards the 175 wpm target,
+    # instead of jittering it by a few percent, lands inside the window
+    # on the very first retry.
+    engine = ScalingFakeEngine(text, wpm_at_speed_one=220.0)
+    transcriber = _matching_transcriber(text)
 
     report = generate(paths, spec, script, None, engine=engine, transcribe_fn=transcriber)
 
     line = report.lines[0]
-    assert line.attempts == 3
+    assert line.pace_checked is True
     assert line.pace_retried is True
-    assert line.transcript_retried is True
+    assert line.attempts <= 2
+    assert pace_ok(line.wpm)
     assert line.transcript_ok is True
-    assert line.missing_words == []
+
+
+def test_generate_skips_the_pace_check_on_a_short_line(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "go"  # one word, far outside any pace window by duration alone
+    spec = _spec()
+    script = _script({"l1": text})
+
+    engine = FakeEngine(durations=[5.0])  # 1 word in 5 seconds is 12 wpm
+    transcriber = FakeTranscriber(results=[_words_for(text)])
+
+    report = generate(paths, spec, script, None, engine=engine, transcribe_fn=transcriber)
+
+    line = report.lines[0]
+    assert line.pace_checked is False
+    assert line.pace_retried is False
+    assert line.attempts == 1
 
 
 def test_generate_gives_up_after_three_retries_but_reports_missing_words(

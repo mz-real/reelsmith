@@ -48,6 +48,40 @@ def test_qa_help_registers_the_command(capsys: pytest.CaptureFixture[str]) -> No
     assert "qa" in out.lower()
 
 
+def test_qa_preview_option_is_registered(capsys: pytest.CaptureFixture[str]) -> None:
+    code = run(app, ["qa", "--help"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "preview" in out.lower()
+
+
+def test_qa_preview_checks_the_preview_master(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "build").mkdir()
+    (tmp_path / "spec.yaml").write_text(yaml.safe_dump(SPEC), encoding="utf-8")
+    (tmp_path / "script.yaml").write_text(yaml.safe_dump(SCRIPT), encoding="utf-8")
+    (tmp_path / "build" / "timeline_16x9_preview.json").write_text(
+        json.dumps(TIMELINE), encoding="utf-8"
+    )
+    build_video(
+        tmp_path / "build" / "master_16x9_preview.mp4",
+        [
+            "sine=frequency=440:duration=1.0,loudnorm=I=-16:TP=-1.0:LRA=11",
+            "anullsrc=channel_layout=mono:sample_rate=44100:duration=1.0",
+        ],
+        duration=2.0,
+    )
+
+    code = run(app, ["qa", str(tmp_path), "--preview"])
+
+    out = capsys.readouterr().out
+    assert "Traceback" not in out
+    assert code in (0, 1)
+    report = (tmp_path / "qa" / "report.md").read_text(encoding="utf-8")
+    assert "preview check" in report
+
+
 def test_qa_missing_demo_is_an_error_block_not_a_traceback(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

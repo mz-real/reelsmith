@@ -18,6 +18,10 @@ def register(app: typer.Typer) -> None:
         format: Annotated[
             str, typer.Option("--format", help="The build format, such as 16x9.")
         ] = "16x9",
+        preview: Annotated[
+            bool,
+            typer.Option("--preview", help="Check the preview build instead of the final one."),
+        ] = False,
     ) -> int:
         """Check a composed master against its script, timing and loudness."""
-        return emit(run_qa(directory, format))
+        return emit(run_qa(directory, format, preview=preview))

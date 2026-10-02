@@ -58,7 +58,7 @@ strict = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["kokoro_onnx.*", "faster_whisper.*", "soundfile.*"]
+module = ["kokoro_onnx.*", "faster_whisper.*", "onnxruntime.*", "soundfile.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

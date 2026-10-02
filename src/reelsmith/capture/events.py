@@ -55,10 +55,12 @@ class CaptureLog:
             )
         )
 
-    async def type(self, locator: Locator, text: str, label: str) -> None:
+    async def type(self, locator: Locator, text: str, label: str, delay_ms: int = 55) -> None:
+        """Type text one key at a time, so the viewer sees it being typed."""
         x, y = await self._centre(locator)
         t = self.elapsed()
-        await locator.fill(text)
+        await locator.click()
+        await locator.press_sequentially(text, delay=delay_ms)
         self.events.append(
             Event(
                 id=self._next_id(),

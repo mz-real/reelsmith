@@ -4,9 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from reelsmith.capture.web import centre_rgb_at_time, is_red_rgb, run_web_flow
+from reelsmith.capture.web import (
+    centre_rgb_at_time,
+    frame_has_sync_marker,
+    is_red_rgb,
+    magenta_match_fraction,
+    run_web_flow,
+)
 from reelsmith.media.ffmpeg import probe
 from reelsmith.models import ClipModel, load_model
 
@@ -40,6 +47,30 @@ async def flow(page, log):
     return flow
 
 
+def _solid_frame(r: int, g: int, b: int, *, height: int = 90, width: int = 160) -> np.ndarray:
+    pixel = np.array([r, g, b], dtype=np.uint8)
+    return np.broadcast_to(pixel, (height, width, 3)).copy()
+
+
+def test_sync_marker_detector_on_synthetic_frames() -> None:
+    full = _solid_frame(255, 0, 255)
+    assert magenta_match_fraction(full) == pytest.approx(1.0)
+    assert frame_has_sync_marker(full)
+
+    half = _solid_frame(255, 255, 255)
+    half[:, 80:, :] = np.array([255, 0, 255], dtype=np.uint8)
+    assert magenta_match_fraction(half) == pytest.approx(0.5, abs=0.01)
+    assert not frame_has_sync_marker(half)
+
+    border = _solid_frame(255, 255, 255)
+    border[:2, :, :] = np.array([255, 0, 255], dtype=np.uint8)
+    border[-2:, :, :] = np.array([255, 0, 255], dtype=np.uint8)
+    border[:, :2, :] = np.array([255, 0, 255], dtype=np.uint8)
+    border[:, -2:, :] = np.array([255, 0, 255], dtype=np.uint8)
+    assert magenta_match_fraction(border) < 0.60
+    assert not frame_has_sync_marker(border)
+
+
 def test_web_capture_records_events_in_video_duration(flow_file: Path, tmp_path: Path) -> None:
     clips = tmp_path / "clips"
     run_web_flow(flow_file, "demo", clips, size="640x480")
@@ -59,7 +90,13 @@ def test_web_capture_records_events_in_video_duration(flow_file: Path, tmp_path:
 
 def test_web_capture_event_times_match_video_frames(flow_file: Path, tmp_path: Path) -> None:
     clips = tmp_path / "clips"
-    run_web_flow(flow_file, "sync", clips, size="640x480")
+    run_web_flow(
+        flow_file,
+        "sync",
+        clips,
+        size="640x480",
+        chromium_args=["--disable-gpu"],
+    )
 
     clip = load_model(clips / "sync" / "clip.json", ClipModel)
     video = clips / "sync" / "video.mp4"
@@ -84,3 +121,22 @@ def test_web_capture_records_at_the_requested_size(flow_file: Path, tmp_path: Pa
 
     assert (info.width, info.height) == (1280, 720)
     assert (clip.width, clip.height) == (1280, 720)
+
+
+def test_log_type_types_visibly_one_key_at_a_time(tmp_path: Path) -> None:
+    flow = tmp_path / "typing.py"
+    flow.write_text(
+        "async def flow(page, log):\n"
+        "    await page.set_content('<input id=box>')\n"
+        "    await log.type(page.locator('#box'), 'hello world', 'type greeting')\n"
+        "    await log.screen('typed')\n"
+        "    assert await page.locator('#box').input_value() == 'hello world'\n",
+        encoding="utf-8",
+    )
+    clips = tmp_path / "clips"
+    run_web_flow(flow, "typing", clips, size="640x480")
+
+    clip = load_model(clips / "typing" / "clip.json", ClipModel)
+    typed, done = clip.events[0], clip.events[1]
+    # 11 keys at 55 ms each: the typing itself is on screen for over half a second.
+    assert done.t - typed.t >= 0.5

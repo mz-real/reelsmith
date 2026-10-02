@@ -19,8 +19,14 @@ from reelsmith.qa.transcribe import Transcriber, get_transcriber
 from reelsmith.result import Result, Status
 
 
-def run_qa(root: Path, format: str, transcriber: Transcriber | None = None) -> Result:
+def run_qa(
+    root: Path, format: str, transcriber: Transcriber | None = None, *, preview: bool = False
+) -> Result:
     """Run the nine QA checks and write qa/report.md.
+
+    With preview, checks the fast draft that `reelsmith compose --preview`
+    writes (build/master_<format>_preview.mp4 and its matching timeline)
+    instead of the final build, and says so in the report header.
 
     Returns a Result whose status is ERROR if any check FAILs, WARN if any
     check WARNs (and none FAIL), OK otherwise.
@@ -30,11 +36,14 @@ def run_qa(root: Path, format: str, transcriber: Transcriber | None = None) -> R
         if not path.is_file():
             raise ReelsmithError(f"{path} not found", fix=fix)
 
-    master_path = paths.build / f"master_{format}.mp4"
+    suffix = "_preview" if preview else ""
+    compose_fix = f"reelsmith compose --format {format}" + (" --preview" if preview else "")
+    master_path = paths.build / f"master_{format}{suffix}.mp4"
     if not master_path.is_file():
-        raise ReelsmithError(f"{master_path} not found", fix=f"reelsmith compose --format {format}")
+        raise ReelsmithError(f"{master_path} not found", fix=compose_fix)
 
-    timeline = load_timeline(paths.build / "timeline.json")
+    timeline_filename = f"timeline_{format}{suffix}.json" if preview else "timeline.json"
+    timeline = load_timeline(paths.build / timeline_filename)
     spec = load_model(paths.spec, SpecModel)
     script = load_model(paths.script, ScriptModel)
 
@@ -82,6 +91,7 @@ def run_qa(root: Path, format: str, transcriber: Transcriber | None = None) -> R
         engine=engine,
         voice=voice,
         notes=notes,
+        preview=preview,
     )
     report_md = render_report(meta, rows, sheet_paths)
     report_path = paths.qa / "report.md"
@@ -95,19 +105,21 @@ def run_qa(root: Path, format: str, transcriber: Transcriber | None = None) -> R
     details = [f"{row.name}: {row.status.value}" for row in rows]
     report_rel = _relative(report_path, paths.root)
 
+    qa_fix = f"reelsmith qa --format {format}" + (" --preview" if preview else "")
     if fail_count:
         status = Status.ERROR
-        next_step = f"Fix the FAILs in {report_rel}, then run: reelsmith qa --format {format}"
+        next_step = f"Fix the FAILs in {report_rel}, then run: {qa_fix}"
     elif warn_count:
         status = Status.WARN
         next_step = f"Review the WARNs in {report_rel}"
     else:
         status = Status.OK
-        next_step = "reelsmith export"
+        next_step = "Watch the preview, then run: reelsmith run" if preview else "reelsmith export"
 
+    kind = "preview" if preview else "format"
     return Result(
         status=status,
-        message=f"QA checked format {format}: {counts}",
+        message=f"QA checked {kind} {format}: {counts}",
         details=details,
         next_step=next_step,
     )

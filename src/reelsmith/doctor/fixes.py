@@ -131,8 +131,8 @@ def _java_plan() -> _FixPlan:
     if system == "Darwin":
         return _FixPlan(
             "java",
-            "Install Temurin 17",
-            ["brew", "install", "--cask", "temurin@17"],
+            "Install OpenJDK 17",
+            ["brew", "install", "openjdk@17"],
             False,
         )
     if system == "Windows":
@@ -151,8 +151,8 @@ def _java_plan() -> _FixPlan:
         )
     return _FixPlan(
         "java",
-        "Install Temurin 17",
-        ["sudo", "apt", "install", "-y", "temurin-17-jdk"],
+        "Install OpenJDK 17",
+        ["sudo", "apt", "install", "-y", "openjdk-17-jdk"],
         True,
     )
 
