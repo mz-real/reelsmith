@@ -44,6 +44,31 @@ _FINISH = """
   }
 }
 """
+_READY_TIMEOUT_MS = 15_000
+_ENSURE_READY = """
+() => {
+  if (window.__reelsmithReady !== undefined) return;
+  window.__reelsmithReady = false;
+  document.fonts.ready.then(() => { window.__reelsmithReady = true; });
+}
+"""
+
+
+def _wait_for_render_ready(page: Page) -> None:
+    """Wait for web fonts and any layout script before capture."""
+    page.evaluate("async () => { await document.fonts.ready; }")
+    page.evaluate(_ENSURE_READY)
+    try:
+        page.wait_for_function(
+            "() => window.__reelsmithReady === true",
+            timeout=_READY_TIMEOUT_MS,
+        )
+    except Exception as exc:
+        raise ReelsmithError(
+            "Slide layout did not finish before capture (timed out waiting for "
+            "window.__reelsmithReady).",
+            fix=BROWSER_FIX,
+        ) from exc
 
 
 class SlidePage:
@@ -57,7 +82,7 @@ class SlidePage:
 
     def load(self, html_text: str) -> None:
         self._page.set_content(html_text, wait_until="load")
-        self._page.evaluate("() => document.fonts.ready.then(() => true)")
+        _wait_for_render_ready(self._page)
         self._page.evaluate(_SEEK, 0)
 
     def capture(self) -> bytes:
@@ -85,6 +110,8 @@ class SlidePage:
 
     def clip(self, path: Path) -> None:
         """Write the intro of the loaded page as an mp4 clip."""
+        _wait_for_render_ready(self._page)
+        self.seek(0)
         frames = []
         for number in range(CLIP_FRAMES):
             self.seek(number * 1000 / CLIP_FPS)
