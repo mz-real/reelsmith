@@ -283,3 +283,26 @@ def test_generate_reruns_a_line_whose_speed_changed(tmp_path: Path) -> None:
     assert second.lines[0].hash != first.lines[0].hash
     assert second.lines[0].skipped is False
     assert len(engine2.calls) == 1
+
+
+def test_generate_reruns_a_line_when_the_cloned_voice_changed(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "hello world"
+    spec = _spec()
+    script = _script({"l1": text})
+
+    first = FakeEngine(durations=[0.8])
+    first.voice_id = "me.wav:aaa"  # type: ignore[attr-defined]
+    report = generate(
+        paths, spec, script, None, engine=first, transcribe_fn=FakeTranscriber([_words_for(text)])
+    )
+    assert report.voice == "me.wav:aaa"
+
+    second = FakeEngine(durations=[0.8])
+    second.voice_id = "me.wav:bbb"  # type: ignore[attr-defined]
+    report = generate(
+        paths, spec, script, None, engine=second, transcribe_fn=FakeTranscriber([_words_for(text)])
+    )
+
+    assert report.lines[0].skipped is False
+    assert len(second.calls) == 1
