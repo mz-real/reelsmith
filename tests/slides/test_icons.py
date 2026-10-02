@@ -11,7 +11,6 @@ from playwright.sync_api import sync_playwright
 from reelsmith.errors import ReelsmithError
 from reelsmith.slides.icons import ICON_NAMES, icon_svg
 
-_REVIEW_PNG = Path("/Users/dev/.claude/jobs/reelsmith/review/icons.png")
 
 
 def _parse_svg(svg: str) -> ET.Element:
@@ -42,7 +41,8 @@ def test_unknown_name_raises_with_available_list() -> None:
         assert name in message
 
 
-def test_icon_contact_sheet_png() -> None:
+def test_icon_contact_sheet_png(tmp_path: Path) -> None:
+    sheet = tmp_path / "icons.png"
     cells: list[str] = []
     for name in ICON_NAMES:
         svg = icon_svg(name, size=48, color="#e8e8e8", stroke=1.75)
@@ -71,12 +71,11 @@ def test_icon_contact_sheet_png() -> None:
 </div>
 </body>
 </html>"""
-    _REVIEW_PNG.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch()
         page = browser.new_page()
         page.set_content(html)
-        page.locator("#sheet").screenshot(path=str(_REVIEW_PNG))
+        page.locator("#sheet").screenshot(path=str(sheet))
         browser.close()
-    assert _REVIEW_PNG.is_file()
-    assert _REVIEW_PNG.stat().st_size > 1000
+    assert sheet.is_file()
+    assert sheet.stat().st_size > 1000
