@@ -1,0 +1,78 @@
+# Before this workflow can publish: configure PyPI trusted publishing for this
+# repo and add a GitHub Actions environment named "pypi" (optional approval gate).
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish to PyPI and create GitHub Release
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if [ -z "$VERSION" ]; then
+            echo "Tag must look like vX.Y.Z, got: $TAG"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install Playwright Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Verify version strings match
+        run: uv run python scripts/check_version.py
+
+      - name: Verify tag matches pyproject version
+        run: |
+          PYPROJECT_VERSION=$(uv run python -c "import tomllib; from pathlib import Path; print(tomllib.loads(Path('pyproject.toml').read_text())['project']['version'])")
+          if [ "$PYPROJECT_VERSION" != "${{ steps.meta.outputs.version }}" ]; then
+            echo "Tag version ${{ steps.meta.outputs.version }} does not match pyproject.toml ($PYPROJECT_VERSION)"
+            exit 1
+          fi
+
+      - name: Test
+        run: uv run pytest -q
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES_FILE=$(mktemp)
+          uv run python scripts/changelog_section.py "${{ steps.meta.outputs.version }}" > "$NOTES_FILE"
+          gh release create "${{ steps.meta.outputs.tag }}" \
+            --title "reelsmith ${{ steps.meta.outputs.version }}" \
+            --notes-file "$NOTES_FILE" \
+            dist/*
