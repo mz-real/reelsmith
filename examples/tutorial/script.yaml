@@ -1,0 +1,212 @@
+version: 1
+scenes:
+  - id: hook
+    caption: Made with reelsmith
+    lines:
+      - id: hook-1
+        phrases:
+          - text: This video was made with reelsmith.
+      - id: hook-2
+        phrases:
+          - text: So was this one, a short demo of a small recipe app.
+  - id: what
+    caption: What reelsmith is
+    lines:
+      - id: what-1
+        phrases:
+          - text: reelsmith makes narrated demo videos of your app, on your own machine. Nothing is uploaded.
+      - id: what-2
+        phrases:
+          - text: Your AI coding tool runs it. It asks a few questions, then calls the reelsmith command for you.
+      - id: what-3
+        phrases:
+          - text: You approve the plan and the script before anything is voiced or rendered.
+  - id: install
+    caption: Install
+    lines:
+      - id: install-1
+        phrases:
+          - text: In Claude Code, add the reelsmith marketplace,
+            pin: e1
+          - text: then install the plugin.
+            pin: e3
+      - id: install-2
+        phrases:
+          - text: The plugin needs the reelsmith command, and offers to install it if it is missing.
+            pin: e5
+      - id: install-3
+        phrases:
+          - text: For Codex, Cursor, Gemini CLI or Copilot, run reelsmith agent install instead.
+      - id: install-4
+        phrases:
+          - text: Then run reelsmith doctor.
+            pin: e7
+          - text: It checks ffmpeg, the browser, the mobile tools and the voice models.
+            pin: e8
+      - id: install-5
+        phrases:
+          - text: Here Maestro is missing. That only matters for mobile capture, and doctor shows the fix.
+  - id: interview
+    caption: The interview
+    lines:
+      - id: interview-1
+        phrases:
+          - text: Now ask for a demo.
+            pin: e1
+      - id: interview-2
+        phrases:
+          - text: The assistant asks one question at a time, with suggested answers.
+            pin: e2
+          - text: The first one picks the mode.
+      - id: interview-3
+        phrases:
+          - text: Narrate voices a recording you already have. Produce makes the full package.
+      - id: interview-4
+        phrases:
+          - text: Pick produce,
+            pin: e3
+          - text: and it offers presets that skip most of the questions.
+            pin: e4
+      - id: interview-5
+        phrases:
+          - text: The rest cover what to show, the audience, the footage, the voice and the format.
+      - id: interview-6
+        phrases:
+          - text: Your answers become spec.yaml, the plan.
+            say: Your answers become spec dot yaml, the plan.
+  - id: plan
+    caption: Two approval points
+    lines:
+      - id: plan-1
+        phrases:
+          - text: There are two approval points. First comes the plan, spec.yaml.
+            say: There are two approval points. First comes the plan, spec dot yaml.
+      - id: plan-2
+        phrases:
+          - text: You read it and approve it.
+      - id: plan-3
+        phrases:
+          - text: Then the narration, script.yaml, written against the real recording.
+            say: Then the narration, script dot yaml, written against the real recording.
+      - id: plan-4
+        phrases:
+          - text: You approve that too.
+      - id: plan-5
+        phrases:
+          - text: Only then does anything get voiced or rendered.
+  - id: capture
+    caption: Capture and pin
+    lines:
+      - id: capture-1
+        phrases:
+          - text: reelsmith init makes the demo folder,
+            say: reelsmith in it makes the demo folder,
+            pin: e1
+          - text: with a starter spec and script.
+            pin: e2
+      - id: capture-2
+        phrases:
+          - text: For a web app, the assistant writes a short Playwright flow per clip.
+      - id: capture-3
+        phrases:
+          - text: Capture web runs the flow and records the screen.
+            pin: e3
+          - text: Each click and new screen is logged with its time.
+            pin: e4
+      - id: capture-4
+        phrases:
+          - text: Here are the three events from the search clip.
+            pin: e6
+      - id: capture-5
+        phrases:
+          - text: In script.yaml, a phrase can be pinned to an event, so the voice lands on the click.
+            say: In script dot yaml, a phrase can be pinned to an event, so the voice lands on the click.
+      - id: capture-6
+        phrases:
+          - text: Script check runs on the full Recipe Box demo,
+            pin: e7
+          - text: and confirms every pin names a real event.
+            pin: e8
+  - id: pipeline
+    caption: From script to video
+    lines:
+      - id: pipeline-1
+        phrases:
+          - text: After you approve, the rest runs locally. Voice reads each line with Kokoro by default.
+      - id: pipeline-2
+        phrases:
+          - text: Slides renders the slide images.
+      - id: pipeline-3
+        phrases:
+          - text: Compose builds each scene and lands every phrase on its event.
+      - id: pipeline-4
+        phrases:
+          - text: QA checks the result.
+            say: Q A checks the result.
+      - id: pipeline-5
+        phrases:
+          - text: Export saves the final files. reelsmith run does all of it in one go.
+  - id: qa
+    caption: Check the video
+    lines:
+      - id: qa-1
+        phrases:
+          - text: Run reelsmith qa before you share it.
+            say: Run reelsmith QA before you share it.
+            pin: e1
+          - text: It runs nine checks on the master video.
+            pin: e2
+      - id: qa-2
+        phrases:
+          - text: It compares the voice with the script word by word, and checks sync, loudness, captions and blur.
+      - id: qa-3
+        phrases:
+          - text: Here one word was heard as a plural. That is a warning, not a failure.
+            pin: e4
+      - id: qa-4
+        phrases:
+          - text: Then watch it once yourself, and export.
+  - id: result
+    caption: The result
+    lines:
+      - id: result-1
+        phrases:
+          - text: Here is the Recipe Box demo, rendered and checked.
+      - id: result-2
+        phrases:
+          - text: Export writes a video with the voice and a silent one for each format.
+      - id: result-3
+        phrases:
+          - text: You also get the narration as a wav file, and the captions as an srt file.
+            say: You also get the narration as a wav file, and the captions as an S R T file.
+      - id: result-4
+        phrases:
+          - text: Captions can be burned in, exported as an srt file, or both.
+            say: Captions can be burned in, exported as an S R T file, or both.
+  - id: voices
+    caption: Voices
+    lines:
+      - id: voices-1
+        phrases:
+          - text: The voice you hear is Kokoro, the default. It is small and fast on a laptop.
+      - id: voices-2
+        phrases:
+          - text: You can also clone your own voice with Chatterbox, an optional install.
+      - id: voices-3
+        phrases:
+          - text: It only clones with consent, your own voice or one you have permission to use.
+      - id: voices-4
+        phrases:
+          - text: The watermark is always on, and nothing is uploaded.
+  - id: outro
+    caption: Get reelsmith
+    lines:
+      - id: outro-1
+        phrases:
+          - text: reelsmith is open source, on GitHub at the link on screen.
+      - id: outro-2
+        phrases:
+          - text: In Claude Code, add the marketplace and install the plugin.
+      - id: outro-3
+        phrases:
+          - text: Then ask for a demo of your app.

@@ -1,0 +1,42 @@
+version: 1
+slides:
+  - id: what
+    kind: bullets
+    title: Narrated demo videos of your app
+    items:
+      - Runs on your machine, nothing is uploaded
+      - Your AI coding tool drives it
+      - You approve the plan and the script
+  - id: approvals
+    kind: flow
+    title: Two approval points
+    steps:
+      - spec.yaml
+      - Approve the plan
+      - script.yaml
+      - Approve the script
+      - Voice and render
+  - id: pipeline
+    kind: flow
+    title: From script to video
+    steps:
+      - Voice
+      - Slides
+      - Compose
+      - QA
+      - Export
+  - id: voices
+    kind: bullets
+    title: Voices
+    items:
+      - Kokoro stock voices, the default
+      - Your own voice with Chatterbox, optional
+      - Cloning needs consent, own or permission
+      - Watermark always on, nothing uploaded
+  - id: outro
+    kind: bullets
+    title: Get reelsmith
+    items:
+      - github.com/mz-real/reelsmith
+      - /plugin marketplace add mz-real/reelsmith
+      - "Ask: make a demo of my app"
