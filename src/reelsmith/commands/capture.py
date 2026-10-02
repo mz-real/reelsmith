@@ -1,0 +1,84 @@
+"""reelsmith capture: import or record clips."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from reelsmith.capture.importer import import_recording
+from reelsmith.capture.web import run_web_flow
+from reelsmith.paths import DemoPaths
+from reelsmith.result import Result, Status, emit
+
+capture_app = typer.Typer(help="Import or record capture clips.")
+
+
+def register(app: typer.Typer) -> None:
+    @capture_app.command("import")
+    def import_cmd(
+        source: Annotated[Path, typer.Argument(help="Video file to import.")],
+        clip_id: Annotated[str, typer.Option("--id", help="Clip id for this recording.")],
+        directory: Annotated[
+            Path,
+            typer.Option("--demo", help="Demo folder that owns capture/clips."),
+        ] = Path("."),
+    ) -> None:
+        """Normalise a recording into capture/clips/<id>/."""
+        paths = DemoPaths.at(directory)
+        clip = import_recording(source, clip_id, paths.clips)
+        raise typer.Exit(
+            emit(
+                Result(
+                    status=Status.OK,
+                    message=f"Imported clip '{clip_id}'",
+                    details=[
+                        f"video: {paths.clips / clip_id / clip.video}",
+                        f"{clip.width}x{clip.height} at {clip.fps:g} fps, {clip.duration:.1f} s",
+                    ],
+                    next_step="reelsmith script check",
+                )
+            )
+        )
+
+    @capture_app.command("web")
+    def web_cmd(
+        flow: Annotated[Path, typer.Argument(help="Python file with async def flow(page, log).")],
+        clip_id: Annotated[str, typer.Option("--id", help="Clip id for this recording.")],
+        headed: Annotated[
+            bool,
+            typer.Option("--headed", help="Show the browser window while recording."),
+        ] = False,
+        size: Annotated[
+            str,
+            typer.Option("--size", help="Viewport size, WIDTHxHEIGHT."),
+        ] = "1280x720",
+        directory: Annotated[
+            Path,
+            typer.Option("--demo", help="Demo folder that owns capture/clips."),
+        ] = Path("."),
+    ) -> None:
+        """Record a Playwright flow into capture/clips/<id>/."""
+        paths = DemoPaths.at(directory)
+        clip = run_web_flow(
+            flow,
+            clip_id,
+            paths.clips,
+            headed=headed,
+            size=size,
+        )
+        event_count = len(clip.events)
+        raise typer.Exit(
+            emit(
+                Result(
+                    status=Status.OK,
+                    message=f"Recorded clip '{clip_id}' with {event_count} event"
+                    f"{'' if event_count == 1 else 's'}",
+                    details=[f"video: {paths.clips / clip_id / clip.video}"],
+                    next_step="reelsmith script check",
+                )
+            )
+        )
+
+    app.add_typer(capture_app, name="capture")
