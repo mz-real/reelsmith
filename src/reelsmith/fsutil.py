@@ -26,4 +26,4 @@ def backup_existing(path: Path) -> Path | None:
 
 def cache_dir() -> Path:
     """The folder reelsmith caches downloaded models in."""
-    return Path(user_cache_dir("reelsmith"))
+    return Path(user_cache_dir("reelsmith", appauthor=False, opinion=False))
