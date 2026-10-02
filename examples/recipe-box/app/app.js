@@ -400,7 +400,7 @@ function buildGrid() {
     empty.className = "empty-state";
     empty.textContent =
       state.tab === "favourites"
-        ? "No favourites yet. Open a recipe and tap the heart."
+        ? "No favourites yet. Open a recipe and add it to favourites."
         : "No recipes match your search.";
     grid.appendChild(empty);
     return grid;

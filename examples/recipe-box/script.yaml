@@ -1,0 +1,101 @@
+version: 1
+scenes:
+  - id: intro
+    caption: Recipe Box
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Recipe Box is a small kitchen app in your browser.
+      - id: intro-2
+        phrases:
+          - text: In the next minute you will search, save and add a recipe of your own.
+  - id: why
+    caption: How it works
+    lines:
+      - id: why-1
+        phrases:
+          - text: The flow is simple.
+      - id: why-2
+        phrases:
+          - text: Find a dish, open it, save it, then cook from the steps when you are ready.
+  - id: search
+    caption: Search
+    lines:
+      - id: search-1
+        phrases:
+          - text: Start on the full list of sample recipes.
+      - id: search-2
+        phrases:
+          - text: Type tomato in the search box.
+            pin: e2
+      - id: search-3
+        phrases:
+          - text: The grid narrows to dishes that match the name or an ingredient.
+            pin: e3
+  - id: open
+    caption: Open a recipe
+    lines:
+      - id: open-1
+        phrases:
+          - text: Open Tomato Basil Pasta from the results.
+            pin: e1
+      - id: open-2
+        phrases:
+          - text: The detail view shows the title and actions at the top.
+      - id: open-3
+        phrases:
+          - text: Scroll down to read the ingredient list before you cook.
+            pin: e3
+  - id: favourite
+    caption: Favourites
+    lines:
+      - id: fav-1
+        phrases:
+          - text: Click Add to favourites so you can find this dish again.
+            pin: e2
+      - id: fav-2
+        phrases:
+          - text: Go back to the list,
+            pin: e3
+          - text: and open the Favourites tab.
+            pin: e4
+      - id: fav-3
+        phrases:
+          - text: Tomato Basil Pasta stays on the grid with a saved marker.
+            pin: e5
+  - id: create
+    caption: New recipe
+    lines:
+      - id: create-1
+        phrases:
+          - text: Click New recipe to open the form.
+            pin: e1
+      - id: create-2
+        phrases:
+          - text: Give the dish a title.
+            pin: e2
+      - id: create-2b
+        phrases:
+          - text: List each ingredient on its own line.
+            pin: e3
+      - id: create-2c
+        phrases:
+          - text: Add short cooking steps the same way.
+            pin: e4
+      - id: create-3
+        phrases:
+          - text: Save the recipe when the fields look right.
+            pin: e5
+      - id: create-4
+        phrases:
+          - text: The app opens your new dish on the detail screen.
+            pin: e6
+  - id: outro
+    caption: Recap
+    lines:
+      - id: outro-1
+        phrases:
+          - text: You searched, opened a dish, saved it to Favourites, and wrote your own recipe.
+      - id: outro-2
+        phrases:
+          - text: Everything stays in this browser until you clear site data.
