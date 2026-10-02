@@ -1,0 +1,166 @@
+[
+  {
+    "slug": "tomato-pasta",
+    "title": "Tomato Basil Pasta",
+    "emoji": "🍝",
+    "ingredients": [
+      "400 g spaghetti",
+      "6 ripe tomatoes",
+      "3 cloves garlic",
+      "Fresh basil leaves",
+      "3 tbsp olive oil",
+      "Salt and black pepper"
+    ],
+    "steps": [
+      "Boil salted water and cook spaghetti until al dente.",
+      "Dice tomatoes and mince the garlic.",
+      "Warm olive oil in a pan and cook garlic until fragrant.",
+      "Add tomatoes and simmer for ten minutes.",
+      "Toss pasta with the sauce and torn basil.",
+      "Season and serve warm."
+    ]
+  },
+  {
+    "slug": "garden-salad",
+    "title": "Garden Crunch Salad",
+    "emoji": "🥗",
+    "ingredients": [
+      "Mixed lettuce",
+      "1 cucumber",
+      "2 carrots",
+      "Cherry tomatoes",
+      "Lemon juice",
+      "Olive oil"
+    ],
+    "steps": [
+      "Wash and dry all vegetables.",
+      "Slice cucumber and shred carrots.",
+      "Halve the cherry tomatoes.",
+      "Combine greens and vegetables in a large bowl.",
+      "Whisk lemon juice with olive oil and a pinch of salt.",
+      "Pour dressing over salad and toss gently."
+    ]
+  },
+  {
+    "slug": "morning-oats",
+    "title": "Morning Oat Bowl",
+    "emoji": "🥣",
+    "ingredients": [
+      "1 cup rolled oats",
+      "2 cups milk or water",
+      "1 banana",
+      "Honey",
+      "Pinch of cinnamon"
+    ],
+    "steps": [
+      "Simmer oats in milk for five minutes, stirring often.",
+      "Slice the banana.",
+      "Spoon oats into a bowl.",
+      "Top with banana slices.",
+      "Drizzle honey and dust with cinnamon."
+    ]
+  },
+  {
+    "slug": "bean-chili",
+    "title": "Weeknight Bean Chili",
+    "emoji": "🫘",
+    "ingredients": [
+      "2 cans kidney beans",
+      "1 onion",
+      "1 bell pepper",
+      "2 tbsp chili powder",
+      "1 can crushed tomatoes",
+      "Vegetable stock"
+    ],
+    "steps": [
+      "Dice onion and pepper.",
+      "Sauté vegetables in a pot until soft.",
+      "Stir in chili powder for one minute.",
+      "Add tomatoes, beans, and enough stock to cover.",
+      "Simmer for twenty five minutes.",
+      "Taste and adjust seasoning before serving."
+    ]
+  },
+  {
+    "slug": "veggie-rice",
+    "title": "Colorful Veggie Rice",
+    "emoji": "🍚",
+    "ingredients": [
+      "2 cups cooked rice",
+      "1 cup peas",
+      "1 red pepper",
+      "2 eggs",
+      "Soy sauce",
+      "Sesame oil"
+    ],
+    "steps": [
+      "Dice the pepper into small cubes.",
+      "Scramble eggs in a hot wok and set aside.",
+      "Stir fry pepper and peas until tender.",
+      "Add rice and break up any clumps.",
+      "Return eggs, splash soy sauce and sesame oil.",
+      "Mix well and serve from the wok."
+    ]
+  },
+  {
+    "slug": "herb-omelette",
+    "title": "Herb Filled Omelette",
+    "emoji": "🍳",
+    "ingredients": [
+      "3 eggs",
+      "Fresh parsley",
+      "Fresh chives",
+      "Butter",
+      "Salt",
+      "Grated cheese optional"
+    ],
+    "steps": [
+      "Beat eggs with a pinch of salt.",
+      "Chop herbs finely.",
+      "Melt butter in a nonstick pan over medium heat.",
+      "Pour in eggs and let the base set.",
+      "Scatter herbs and cheese on one half.",
+      "Fold omelette and slide onto a plate."
+    ]
+  },
+  {
+    "slug": "lentil-soup",
+    "title": "Cozy Lentil Soup",
+    "emoji": "🍲",
+    "ingredients": [
+      "1 cup red lentils",
+      "1 carrot",
+      "1 celery stalk",
+      "1 liter vegetable stock",
+      "Turmeric",
+      "Cumin"
+    ],
+    "steps": [
+      "Rinse lentils until water runs clear.",
+      "Chop carrot and celery into small pieces.",
+      "Combine lentils, vegetables, and stock in a pot.",
+      "Add turmeric and cumin.",
+      "Simmer until lentils fall apart, about thirty minutes.",
+      "Blend lightly if you prefer a smoother soup."
+    ]
+  },
+  {
+    "slug": "berry-smoothie",
+    "title": "Berry Yogurt Smoothie",
+    "emoji": "🥤",
+    "ingredients": [
+      "1 cup frozen mixed berries",
+      "1 cup plain yogurt",
+      "Half a cup milk",
+      "1 tbsp oats",
+      "Honey to taste"
+    ],
+    "steps": [
+      "Add berries, yogurt, and milk to a blender.",
+      "Drop in oats for extra body.",
+      "Blend until smooth and purple.",
+      "Taste and sweeten with honey if needed.",
+      "Pour into a glass and drink right away."
+    ]
+  }
+]
