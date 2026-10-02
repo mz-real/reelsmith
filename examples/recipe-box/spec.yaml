@@ -1,0 +1,41 @@
+version: 1
+mode: produce
+goal: Show how to find, save and create a recipe in Recipe Box
+audience: new users
+target_seconds: 75
+formats:
+  - "16:9"
+quality: 1080p
+theme: dark
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+options:
+  allow_holds: true
+  speed_up_waits: false
+  captions: burned
+  highlight_clicks: true
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: why
+    layout: slide
+    slide: why
+  - id: search
+    layout: browser
+    clip: search
+  - id: open
+    layout: browser
+    clip: open
+  - id: favourite
+    layout: browser
+    clip: favourite
+  - id: create
+    layout: browser
+    clip: create
+  - id: outro
+    layout: slide
+    slide: outro

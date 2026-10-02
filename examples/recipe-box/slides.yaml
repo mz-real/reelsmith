@@ -1,0 +1,21 @@
+version: 1
+slides:
+  - id: intro
+    kind: title
+    title: Recipe Box
+    subtitle: Find, save and cook your favourite dishes
+  - id: why
+    kind: flow
+    title: How it works
+    steps:
+      - Find a dish
+      - Open it
+      - Save it
+      - Cook it
+  - id: outro
+    kind: bullets
+    title: You are ready
+    items:
+      - Search by title or ingredient
+      - Save recipes to Favourites
+      - Add your own recipes in the browser
