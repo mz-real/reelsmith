@@ -1,0 +1,10 @@
+version: 1
+scenes:
+  - id: search
+    caption: Find a recipe fast
+    lines:
+      - id: l1
+        phrases:
+          - text: Type a dish into the search box.
+            pin: e1
+          - text: Results update as you type.
