@@ -1,0 +1,77 @@
+# Capture a mobile app
+
+## Goal
+
+Record each mobile scene as a clip on an iOS simulator or an Android emulator or device. Maestro drives the taps from a YAML flow you write. reelsmith records the screen itself and logs the tap times, so nothing goes to a cloud service.
+
+## Rules
+
+{{rules}}
+
+## What to ask or check
+
+- iOS or Android? iOS needs macOS with Xcode and a booted simulator. Android works on every OS with an emulator or a USB device with debugging turned on.
+- Is the app installed on the simulator or device, and what is its app id (bundle id on iOS, package name on Android)? Read it from the project (for example `app.json`, `Info.plist` or `build.gradle`) and confirm with the user.
+- Does it need a login? Ask for a test account. Put private data in the blur list.
+- Which spec.yaml scenes use `phone` layout? Write one flow per clip id.
+- Read the app's screens for the exact visible text or ids to tap. Only tap things that exist.
+- Run `reelsmith doctor`. Mobile capture needs Java 17 or newer and Maestro. It also checks `xcrun simctl` on macOS and `adb`. Doctor prints the install command for anything missing.
+
+## Commands
+
+Write the flow to `capture/flows/<clip id>.yaml` in Maestro's format:
+
+```yaml
+# capture/flows/checkout.yaml
+appId: com.example.shop
+---
+- launchApp
+- tapOn: "Cart"
+- tapOn: "Checkout"
+- inputText: "test@example.com"
+- tapOn: "Pay now"
+- back
+```
+
+Keep each flow short and focused on one scene. Leave time for the narration: Maestro's `- waitForAnimationToEnd` or a `- swipe` that the viewer can follow helps more than speed. Keep each recording under 3 minutes, since Android's screen recorder stops there.
+
+Record it, from inside the demo folder:
+
+```
+reelsmith capture mobile capture/flows/checkout.yaml --platform ios --id checkout
+reelsmith capture mobile capture/flows/checkout.yaml --platform android --id checkout
+```
+
+`--platform` is `ios` or `android`. `--id` is the clip id from spec.yaml. The result is `capture/clips/checkout/video.mp4` and `capture/clips/checkout/clip.json` with a `tap` event for each step and a `back` event for the Android Back key.
+
+If automation is not possible (a game, a hardware feature), ask the user to record the screen themselves and import it with `reelsmith capture import FILE --id ID`, then mark events as in `{{guides}}/narrate.md`.
+
+## Reading the output
+
+The command ends with a result block like the web capture:
+
+```
+[OK] Recorded clip 'checkout' with 5 events
+  - video: capture/clips/checkout/video.mp4
+Next: reelsmith script check
+```
+
+Open clip.json and check that the events match the steps in the flow, in order. Their ids and labels are what you pin phrases to in script.yaml.
+
+## Common failures and fixes
+
+| Problem | Fix |
+|---|---|
+| Java or Maestro missing | Run `reelsmith doctor` and use the fix it prints. Maestro needs Java 17 or newer. |
+| No booted simulator | Ask the user to open the Simulator app and boot a device, then retry. |
+| `adb` sees no device | Start an emulator, or plug in the phone with USB debugging on and accept the prompt on the phone. |
+| Maestro cannot find an element | The text or id is wrong, or the screen is still loading. Check the app's code, then add `- waitForAnimationToEnd` before the tap. |
+| The app is not installed | Ask the user to build and install it on the simulator or device first. |
+| Fewer events than steps | A step failed. Read the error above the result block, fix the flow and record again. |
+
+## Done when
+
+- [ ] Every `phone` scene in spec.yaml has a clip with the same id.
+- [ ] Each clip.json has an event for every tap the narration will talk about.
+- [ ] You sampled the video and it shows the real app, with private data inside the blur boxes.
+- [ ] Next step: write script.yaml with `{{guides}}/script-writing.md`.

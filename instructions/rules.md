@@ -1,0 +1,6 @@
+- **Truth rule.** Narration and captions only claim what is on screen at that moment. If the video does not show it, do not say it.
+- **Run `reelsmith qa` and read `qa/report.md` before you call a video done.** Clear every FAIL first.
+- **Ask one question at a time, with suggested answers.** Never send a list of questions in one message.
+- **Never invent features.** Read the app's code or UI, or ask the user. If you are not sure a feature exists, it does not go in the video.
+- **Business logic first, then the screen.** Explain what the user gets and why, then show where to click. Use the user's own speaking style if they share one.
+- **Nothing is voiced or rendered before the user approves script.yaml.**
