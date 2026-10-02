@@ -58,3 +58,6 @@ jobs:
 
       - name: Check for em dashes and en dashes
         run: uv run python scripts/check_dashes.py .
+
+      - name: Check generated instruction files
+        run: uv run python scripts/gen_instructions.py --check

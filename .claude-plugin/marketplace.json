@@ -1,0 +1,25 @@
+{
+  "name": "reelsmith",
+  "owner": {
+    "name": "mz-real",
+    "url": "https://github.com/mz-real"
+  },
+  "metadata": {
+    "description": "Make narrated demo videos of your app on your own machine. The AI interviews you, then reelsmith records, scripts, voices, assembles and checks the video.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "reelsmith",
+      "source": "./",
+      "description": "Make narrated demo videos of your app on your own machine. The AI interviews you, then reelsmith records, scripts, voices, assembles and checks the video.",
+      "version": "0.1.0",
+      "author": {
+        "name": "mz-real"
+      },
+      "homepage": "https://github.com/mz-real/reelsmith",
+      "repository": "https://github.com/mz-real/reelsmith",
+      "license": "MIT"
+    }
+  ]
+}
