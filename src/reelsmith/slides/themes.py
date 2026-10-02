@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from reelsmith.compose.layouts import canvas_size
 from reelsmith.models import BrandModel
 from reelsmith.models.spec import SpecModel, VideoFormat
 
@@ -50,17 +51,12 @@ _BASE_THEMES: dict[str, dict[str, str]] = {
 }
 
 
-def frame_size(spec: SpecModel) -> tuple[int, int]:
-    """Pixel width and height for the first requested format and quality."""
-    fmt: VideoFormat = spec.formats[0]
-    scale = 2 if spec.quality == "4k" else 1
-    sizes: dict[VideoFormat, tuple[int, int]] = {
-        "16:9": (1920, 1080),
-        "9:16": (1080, 1920),
-        "1:1": (1080, 1080),
-    }
-    base_w, base_h = sizes[fmt]
-    return base_w * scale, base_h * scale
+def frame_size(spec: SpecModel, fmt: VideoFormat | None = None) -> tuple[int, int]:
+    """Pixel width and height for a format and quality (default: first format)."""
+    chosen: VideoFormat = fmt if fmt is not None else spec.formats[0]
+    scale = 2.0 if spec.quality == "4k" else 1.0
+    size = canvas_size(chosen, scale)
+    return size.width, size.height
 
 
 def _pick_color(brand_value: str | None, theme_value: str) -> str:

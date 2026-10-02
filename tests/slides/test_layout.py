@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from reelsmith.models.slides import FlowSlide
+from reelsmith.models.slides import FlowSlide, TitleSlide
 from reelsmith.slides.render import element_boxes, format_chart_value, render_slide_html
 from reelsmith.slides.themes import SlideTheme
 
@@ -65,3 +65,18 @@ def test_portrait_flow_stays_inside_viewport() -> None:
         assert box["y"] >= 0
         assert box["x"] + box["width"] <= width
         assert box["y"] + box["height"] <= height
+
+
+def test_portrait_title_text_box_is_at_least_three_percent_of_frame() -> None:
+    slide = TitleSlide(
+        id="intro",
+        kind="title",
+        title="Recipe Box",
+        subtitle="Save what you cook",
+    )
+    theme = _theme()
+    width, height = 1080, 1920
+    html = render_slide_html(slide, theme, build_index=None, width=width, height=height)
+    boxes = element_boxes(html, width, height, "h1")
+    assert len(boxes) == 1
+    assert boxes[0]["height"] >= height * 0.03

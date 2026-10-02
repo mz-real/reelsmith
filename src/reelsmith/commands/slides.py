@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
+from reelsmith.compose.layouts import format_slug
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import BrandModel, SpecModel, load_model
 from reelsmith.models.slides import SlidesModel
@@ -30,19 +32,31 @@ def run_slides(root: Path) -> Result:
     if paths.brand.is_file():
         brand = load_model(paths.brand, BrandModel)
     theme = resolve_theme(spec, brand, paths.root)
-    width, height = frame_size(spec)
     paths.slides.mkdir(parents=True, exist_ok=True)
-    written = render_slides_to_dir(
-        slides,
-        theme,
-        paths.slides,
-        width=width,
-        height=height,
-    )
+    first_fmt = spec.formats[0]
+    details: list[str] = []
+    for fmt in spec.formats:
+        width, height = frame_size(spec, fmt)
+        slug = format_slug(fmt)
+        fmt_dir = paths.slides / slug
+        written = render_slides_to_dir(
+            slides,
+            theme,
+            fmt_dir,
+            width=width,
+            height=height,
+        )
+        details.append(f"{slug}: {len(written)} image(s) at {width}x{height}")
+        if fmt == first_fmt:
+            for name in written:
+                shutil.copy2(fmt_dir / name, paths.slides / name)
+                details.append(f"wrote slides/{name}")
+    count = len(spec.formats)
+    label = "format" if count == 1 else "formats"
     return Result(
         status=Status.OK,
-        message=f"Rendered {len(slides.slides)} slide(s) at {width}x{height}",
-        details=[f"wrote slides/{name}" for name in written],
+        message=f"Rendered {len(slides.slides)} slide(s) in {count} {label}",
+        details=details,
         next_step="reelsmith compose --preview",
     )
 
