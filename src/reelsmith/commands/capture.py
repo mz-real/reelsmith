@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
 from reelsmith.capture.importer import import_recording
+from reelsmith.capture.mobile import run_mobile_flow
 from reelsmith.capture.web import run_web_flow
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
@@ -76,6 +77,48 @@ def register(app: typer.Typer) -> None:
                     message=f"Recorded clip '{clip_id}' with {event_count} event"
                     f"{'' if event_count == 1 else 's'}",
                     details=[f"video: {paths.clips / clip_id / clip.video}"],
+                    next_step="reelsmith script check",
+                )
+            )
+        )
+
+    @capture_app.command("mobile")
+    def mobile_cmd(
+        flow: Annotated[Path, typer.Argument(help="Maestro flow YAML file.")],
+        clip_id: Annotated[str, typer.Option("--id", help="Clip id for this recording.")],
+        platform: Annotated[
+            Literal["ios", "android"],
+            typer.Option("--platform", help="ios or android."),
+        ],
+        device: Annotated[
+            str | None,
+            typer.Option("--device", help="adb device serial for Android."),
+        ] = None,
+        directory: Annotated[
+            Path,
+            typer.Option("--demo", help="Demo folder that owns capture/clips."),
+        ] = Path("."),
+    ) -> None:
+        """Record a Maestro flow into capture/clips/<id>/."""
+        paths = DemoPaths.at(directory)
+        result = run_mobile_flow(
+            flow,
+            clip_id,
+            paths.clips,
+            platform_name=platform,
+            device=device,
+        )
+        event_count = len(result.clip.events)
+        status = Status.WARN if result.warnings else Status.OK
+        details = [f"video: {paths.clips / clip_id / result.clip.video}"]
+        details.extend(result.warnings)
+        raise typer.Exit(
+            emit(
+                Result(
+                    status=status,
+                    message=f"Recorded clip '{clip_id}' with {event_count} event"
+                    f"{'' if event_count == 1 else 's'}",
+                    details=details,
                     next_step="reelsmith script check",
                 )
             )
