@@ -44,7 +44,7 @@ scenes:
           - text: The detail view shows the title and actions at the top.
       - id: open-3
         phrases:
-          - text: Scroll down to read the ingredient list before you cook.
+          - text: The ingredients and steps are listed right below.
             pin: e3
   - id: favourite
     caption: Favourites

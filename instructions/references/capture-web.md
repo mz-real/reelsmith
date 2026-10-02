@@ -43,7 +43,7 @@ async def flow(page, log):
     await page.wait_for_timeout(2000)
 ```
 
-Pacing matters more than speed. Leave about 1 to 2 seconds after each action so the narration has room, and the viewer sees the result before the next click. Leave a short pause at the end.
+Pacing matters more than speed. After each action, wait about as long as the narration that describes it: roughly 0.4 seconds per word of that line. A 10 word line needs about 4 seconds before the next action. Leave the same kind of pause at the end for the last line. `log.type` types one key at a time so viewers see it, so long text also takes a moment. If compose reports a line as too long for the gap before its event, add time to the wait before that event and record again.
 
 Record it, from inside the demo folder:
 
