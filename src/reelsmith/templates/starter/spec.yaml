@@ -1,0 +1,32 @@
+version: 1
+mode: produce
+goal: Show how to save a favourite recipe
+audience: customers
+target_seconds: 90
+formats: ["16:9"]
+quality: 1080p
+theme: dark
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  sample: null
+  consent: null
+options:
+  allow_holds: true
+  speed_up_waits: false
+  captions: burned
+  highlight_clicks: true
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: search
+    layout: browser
+    clip: search
+blur:
+  - clip: search
+    box: [0.05, 0.10, 0.30, 0.06]
+    start: 0.0
+    end: null
