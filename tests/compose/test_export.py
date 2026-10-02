@@ -130,3 +130,18 @@ def test_export_without_a_master_says_to_compose(demo: Path) -> None:
     with pytest.raises(ReelsmithError) as info:
         export_project(DemoPaths.at(demo), "recipes", FakeFfmpeg())
     assert info.value.fix == "reelsmith compose"
+
+
+def test_export_reports_progress_per_file(demo: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from reelsmith import progress
+
+    (demo / "build").mkdir()
+    (demo / "build" / "master_16x9.mp4").write_bytes(b"master")
+    progress.configure(force=True)
+    try:
+        export_project(DemoPaths.at(demo), "recipes", FakeFfmpeg())
+    finally:
+        progress.reset()
+    lines = capsys.readouterr().err.splitlines()
+    assert lines[0] == "Export file 1/4: recipes_16x9.mp4"
+    assert lines[-1] == "Export file 4/4: recipes.srt"

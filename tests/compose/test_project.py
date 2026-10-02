@@ -131,3 +131,17 @@ def test_step_times_follow_phrases_then_spread() -> None:
     times = step_times(4, placements, 5.0)
     assert times[:2] == [0.0, 1.2]
     assert times[1] < times[2] < times[3] < 5.0
+
+
+def test_compose_reports_progress_per_scene(
+    ready: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith import progress
+
+    progress.configure(force=True)
+    try:
+        compose_project(DemoPaths.at(ready), final_settings(SpecModel()), FakeFfmpeg())
+    finally:
+        progress.reset()
+    lines = capsys.readouterr().err.splitlines()
+    assert lines == ["Scene 16x9 1/2: intro", "Scene 16x9 2/2: search"]

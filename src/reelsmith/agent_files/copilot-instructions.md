@@ -28,10 +28,22 @@ Next: reelsmith compose --preview
 
 `[OK]` and `[WARN]` exit with code 0, `[ERROR]` with code 1. The lines that start with `-` are details. `Next:` is the suggested next step. A WARN is not a pass: read the details and tell the user what they mean.
 
+Add `--json` before any command, for example `reelsmith --json voice generate`, to get the same block as one JSON object: `status`, `message`, `details` and `next`.
+
+## Where you are
+
+Run `reelsmith status --json` to decide the next step. Do not reread the YAML files, voice timings or `qa/report.md` to work it out. It prints one line:
+
+```
+{"steps":[{"name":"spec","state":"done","detail":"produce mode, 3 scenes, 16:9"},...],"next":"reelsmith voice generate"}
+```
+
+Each step (spec, clips, script, voice, slides, master, qa, export) is `done`, `stale`, `missing` or `failed`, and `next` is the exact command to run. Run it again after each step, and after the user changes a file.
+
 ## Workflow
 
 1. **Interview.** Follow `reelsmith-guides/interview.md`. The first question picks the mode: Narrate (they already have a recording) or Produce (a full demo).
-2. **Plan.** Run `reelsmith init DIR` and fill in `DIR/spec.yaml` from the answers. Show it to the user. **Approval point 1: the user approves spec.yaml.**
+2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
 3. **Footage.**
    - Narrate mode: `reelsmith-guides/narrate.md`.
    - Web app: `reelsmith-guides/capture-web.md`.
@@ -56,7 +68,7 @@ Any step can be rerun on its own. If the user changes words, rerun from voice. I
 - **Never invent features.** Read the app's code or UI, or ask the user. If you are not sure a feature exists, it does not go in the video.
 - **Business logic first, then the screen.** Explain what the user gets and why, then show where to click. Use the user's own speaking style if they share one.
 - **Nothing is voiced or rendered before the user approves script.yaml.**
-- Read a guide when you reach its step, not all at once.
+- Read one guide at a time, when you reach its step. Do not load them all at once.
 - Nothing is uploaded. Do not suggest online voice or video services.
 
 ## Guides

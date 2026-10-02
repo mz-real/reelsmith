@@ -652,3 +652,22 @@ def test_generate_drops_timings_for_lines_removed_from_script(tmp_path: Path) ->
     save_model(paths.spec, compose_spec)
     save_model(paths.script, script_split)
     load_project(paths)
+
+
+def test_generate_reports_progress_per_line(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith import progress
+
+    paths = DemoPaths.at(tmp_path)
+    script = _script({"l1": "hello world", "l2": "good bye"})
+    engine = FakeEngine(durations=[0.8])
+    transcriber = FakeTranscriber(results=[_words_for("hello world"), _words_for("good bye")])
+    progress.configure(force=True)
+    try:
+        generate(paths, _spec(), script, None, engine=engine, transcribe_fn=transcriber)
+    finally:
+        progress.reset()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.splitlines() == ["Voice line 1/2: s/l1", "Voice line 2/2: s/l2"]

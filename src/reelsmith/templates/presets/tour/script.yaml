@@ -1,0 +1,56 @@
+# Narration for the full tour. About 450 to 750 words in total.
+# Business logic first: say what the user gets and why, then where to click.
+# Write the browser scenes after their footage is recorded, and pin phrases to
+# clip events, for example pin: e3, so they land on the click.
+# Run reelsmith script check, then show the whole script to the user.
+# This is approval point 2.
+version: 1
+scenes:
+  - id: intro
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Replace this with who the app is for and the problem it solves.
+  - id: overview
+    lines:
+      - id: overview-1
+        phrases:
+          - text: Replace this with a one line tour of the areas we will cover.
+  - id: ch1
+    lines:
+      - id: ch1-1
+        phrases:
+          - text: Replace this with the name of the first area.
+  - id: area-1
+    lines:
+      - id: area-1-1
+        phrases:
+          - text: Replace this with what the viewer sees on the first screen.
+      - id: area-1-2
+        phrases:
+          - text: Replace this with the key action and its result.
+  - id: ch2
+    lines:
+      - id: ch2-1
+        phrases:
+          - text: Replace this with the name of the second area.
+  - id: area-2
+    lines:
+      - id: area-2-1
+        phrases:
+          - text: Replace this with what the second area does, as the footage shows it.
+  - id: ch3
+    lines:
+      - id: ch3-1
+        phrases:
+          - text: Replace this with the name of the third area.
+  - id: area-3
+    lines:
+      - id: area-3-1
+        phrases:
+          - text: Replace this with what the third area does, as the footage shows it.
+  - id: recap
+    lines:
+      - id: recap-1
+        phrases:
+          - text: Replace this with the three things to remember and how to start.

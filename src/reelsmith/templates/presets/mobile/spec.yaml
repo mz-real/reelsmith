@@ -1,0 +1,53 @@
+# Preset: mobile app demo, about a minute.
+# A title slide, two phone scenes recorded with Maestro, a closing slide.
+# Fill in the fields from the interview answers. The 9:16 format suits
+# stories and reels; drop it if the user only wants a landscape video.
+# Show this file to the user. This is approval point 1.
+version: 1
+mode: produce
+# One sentence: what the viewer can do after watching.
+goal: Show the main flow of the mobile app
+audience: customers
+target_seconds: 60
+formats: ["16:9", "9:16"]
+quality: 1080p
+theme: studio
+footage: mobile
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  # Product names and rare words, so the speech checks spell them right.
+  vocabulary: []
+options:
+  allow_holds: true
+  speed_up_waits: true
+  captions: srt
+  highlight_clicks: true
+  transition: fade
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: flow-1
+    layout: phone
+    # Record with: reelsmith capture mobile capture/flows/flow-1.yaml --id flow-1 --platform ios
+    # Use --platform android for an Android emulator or device.
+    clip: flow-1
+    eyebrow: Step 1
+    title: The first *screen*
+    points:
+      - text: What the user taps first
+        line: flow-1-1
+  - id: flow-2
+    layout: phone
+    clip: flow-2
+    eyebrow: Step 2
+    title: The *result*
+    points:
+      - text: What they get back
+        line: flow-2-1
+  - id: outro
+    layout: slide
+    slide: outro
+blur: []

@@ -25,12 +25,13 @@ Before you ask, look at the project: read the README, the routes or screens, and
 
 **Offer a preset next.** A preset fills in most answers at once, so the interview gets shorter:
 
-| Preset | Length | Usual answers |
-|---|---|---|
-| Quick feature clip | 30 to 60 s | one feature, `16:9`, slides only for the intro |
-| Full app tour | 3 to 5 min | every main screen, `16:9`, a slide per section |
-| Mobile demo | 30 to 90 s | mobile footage, `9:16`, phone layout |
-| Release notes video | 1 to 2 min | one scene per change, `16:9` and `1:1` |
+| Preset | `--preset` | Length | Usual answers |
+|---|---|---|---|
+| Quick feature clip | `quick` | 30 to 60 s | one feature, `16:9`, slides only for the intro |
+| Full app tour | `tour` | 3 to 5 min | every main screen, `16:9`, a slide per section |
+| Mobile demo | `mobile` | 30 to 90 s | mobile footage, `16:9` and `9:16`, phone layout |
+| Release notes video | `release-notes` | 1 to 2 min | one scene per change, `16:9` and `1:1` |
+| Narrate a recording | `narrate` | the recording's length | imported footage, `full` layout, no slides |
 
 **Then ask, one at a time, only what the preset did not settle:**
 
@@ -54,13 +55,15 @@ Before you ask, look at the project: read the README, the routes or screens, and
 
 ## Commands
 
-Create the demo folder. Use a new or empty folder, for example `demo/` inside their project:
+Create the demo folder from the preset closest to the answers. Use a new or empty folder, for example `demo/` inside their project:
 
 ```
-reelsmith init demo
+reelsmith init demo --preset quick
 ```
 
-This writes `demo/spec.yaml`, `demo/brand.yaml`, `demo/script.yaml` and the empty folders. The starter files are examples. Replace their contents with the user's answers.
+Presets: `quick`, `tour`, `mobile`, `release-notes` and `narrate`. Prefer a preset over writing spec.yaml from scratch: it already has the Studio theme, sensible options, scenes in a good order, and a matching script.yaml and slides.yaml skeleton. Comments in each file say what to fill in. Edit the goal, audience, scenes and clip ids to match the answers, and leave the rest unless the user asked for something else.
+
+Without `--preset`, `reelsmith init demo` writes a small example spec.yaml, brand.yaml and script.yaml to replace by hand.
 
 A Produce spec.yaml for a web app:
 
@@ -123,9 +126,11 @@ Show the user the finished spec.yaml in plain words (mode, goal, scenes in order
 
 ```
 [OK] Demo folder ready at /path/to/demo
+  - preset: quick feature clip
   - spec: /path/to/demo/spec.yaml
   - script: /path/to/demo/script.yaml
-Next: cd /path/to/demo and edit spec.yaml
+  - slides: /path/to/demo/slides.yaml
+Next: Fill in /path/to/demo/spec.yaml from the interview, then run: reelsmith status /path/to/demo
 ```
 
 Most commands read spec.yaml, so a bad field shows up at the next command as an `[ERROR]` that names the field. Fix the file and rerun.

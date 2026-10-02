@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 
+from reelsmith import progress
 from reelsmith.compose.captions import wrap_text
 from reelsmith.compose.inputs import ProjectInputs, load_project
 from reelsmith.compose.layouts import format_slug
@@ -123,8 +124,10 @@ def export_project(paths: DemoPaths, name: str, run: Runner = run_ffmpeg) -> Exp
     paths.out.mkdir(parents=True, exist_ok=True)
     report = ExportReport()
     narrated = project.spec.voice.engine != "none"
+    total = (2 * len(masters) + 2) if narrated else (len(masters) + 1)
 
     def write(out: Path, args_for: Callable[[Path], list[str]] | None = None) -> Path:
+        progress.count("Export file", len(report.written) + 1, total, out.name)
         backup = backup_existing(out)
         if backup is not None:
             report.backups.append(backup)

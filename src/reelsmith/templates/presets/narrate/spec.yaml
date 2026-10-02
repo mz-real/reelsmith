@@ -1,0 +1,40 @@
+# Preset: narrate a recording the user already has.
+# One full screen scene per recording. The video keeps its length and
+# resolution; the narration is added on top.
+# Steps: reelsmith capture import <video file> --id main, then
+# reelsmith detect --clip main, then pin events in clip.json from the sheets.
+# Fill in the fields from the interview answers and show this file to the
+# user. This is approval point 1.
+version: 1
+mode: narrate
+# One sentence: what the recording shows, for example: Walk through creating an invoice.
+goal: Walk through the recording step by step
+audience: team
+# Set this to the length of the recording, in seconds.
+target_seconds: 60
+formats: ["16:9"]
+quality: 1080p
+theme: studio
+footage: import
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  # Product names and rare words, so the speech checks spell them right.
+  vocabulary: []
+options:
+  # Narrate defaults are off. Turn one on only when the user asks for it.
+  allow_holds: false
+  speed_up_waits: false
+  captions: none
+  highlight_clicks: false
+  transition: fade
+scenes:
+  # The clip id must match --id in reelsmith capture import. Add one scene per
+  # recording if there are several.
+  - id: main
+    layout: full
+    clip: main
+# Add a box for anything private on screen: clip id, then x, y, width and
+# height as shares of the frame from 0 to 1.
+blur: []

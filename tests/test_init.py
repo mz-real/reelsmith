@@ -88,3 +88,94 @@ def test_starter_files_match_the_models(tmp_path: Path, name: str, model: type[A
     root = tmp_path / "demo"
     init_demo(root, force=False)
     load_model(root / name, model)
+
+
+PRESETS = ("quick", "tour", "mobile", "release-notes", "narrate")
+
+
+@pytest.mark.parametrize("preset", PRESETS)
+def test_every_preset_writes_valid_files(tmp_path: Path, preset: str) -> None:
+    from reelsmith.commands.script_check import check_script
+    from reelsmith.models import SlidesModel
+
+    root = tmp_path / "demo"
+    assert init_demo(root, force=False, preset=preset) == 0
+    spec = load_model(root / "spec.yaml", SpecModel)
+    script = load_model(root / "script.yaml", ScriptModel)
+    load_model(root / "brand.yaml", BrandModel)
+    assert spec.theme == "studio"
+    report = check_script(spec, script, lambda _clip: None)
+    assert report.problems == []
+    assert report.warnings == []
+    slide_ids = {scene.slide for scene in spec.scenes if scene.layout == "slide"}
+    if slide_ids:
+        slides = load_model(root / "slides.yaml", SlidesModel)
+        assert slide_ids <= {slide.id for slide in slides.slides}
+    for scene in spec.scenes:
+        for point in scene.points:
+            script_scene = script.scene(scene.id)
+            assert script_scene is not None
+            assert point.line in {line.id for line in script_scene.lines}
+
+
+@pytest.mark.parametrize("preset", PRESETS)
+def test_preset_files_have_no_todo_markers(tmp_path: Path, preset: str) -> None:
+    root = tmp_path / "demo"
+    init_demo(root, force=False, preset=preset)
+    for name in ("spec.yaml", "script.yaml", "slides.yaml"):
+        path = root / name
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            assert "TODO" not in text.upper()
+            assert "#" in text, f"{name} should carry comments for the AI"
+
+
+@pytest.mark.parametrize(
+    ("preset", "low", "high"),
+    [("quick", 30, 60), ("tour", 180, 300), ("release-notes", 60, 120)],
+)
+def test_preset_lengths_match_the_design(
+    tmp_path: Path, preset: str, low: float, high: float
+) -> None:
+    root = tmp_path / "demo"
+    init_demo(root, force=False, preset=preset)
+    spec = load_model(root / "spec.yaml", SpecModel)
+    assert low <= spec.target_seconds <= high
+
+
+def test_mobile_and_narrate_presets_pick_their_footage(tmp_path: Path) -> None:
+    init_demo(tmp_path / "m", force=False, preset="mobile")
+    init_demo(tmp_path / "n", force=False, preset="narrate")
+    mobile = load_model(tmp_path / "m" / "spec.yaml", SpecModel)
+    narrate = load_model(tmp_path / "n" / "spec.yaml", SpecModel)
+    assert mobile.footage == "mobile"
+    assert any(scene.layout == "phone" for scene in mobile.scenes)
+    assert narrate.mode == "narrate"
+    assert narrate.footage == "import"
+    assert all(scene.layout == "full" for scene in narrate.scenes)
+    assert not (tmp_path / "n" / "slides.yaml").exists()
+
+
+def test_init_without_preset_keeps_the_starter(tmp_path: Path) -> None:
+    root = tmp_path / "demo"
+    init_demo(root, force=False)
+    assert not (root / "slides.yaml").exists()
+    assert "Find a recipe fast" in (root / "script.yaml").read_text(encoding="utf-8")
+
+
+def test_unknown_preset_is_an_error(tmp_path: Path) -> None:
+    with pytest.raises(ReelsmithError) as exc:
+        init_demo(tmp_path / "demo", force=False, preset="nope")
+    assert "quick" in str(exc.value)
+
+
+def test_init_cli_with_preset(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    from reelsmith.cli import app
+
+    root = tmp_path / "demo"
+    code = run(app, ["init", str(root), "--preset", "tour"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "tour" in out
+    assert "reelsmith status" in out
+    assert (root / "slides.yaml").is_file()

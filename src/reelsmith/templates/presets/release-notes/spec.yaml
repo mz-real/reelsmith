@@ -1,0 +1,57 @@
+# Preset: release notes video, 60 to 120 seconds.
+# A version title, a card per change, one browser scene per headline change,
+# then how to update. Fill in the fields from the release notes and the
+# interview answers. Only include changes that ship in this release.
+# Show this file to the user. This is approval point 1.
+version: 1
+mode: produce
+# One sentence naming the version, for example: Show what is new in 2.4.
+goal: Show what is new in this release
+audience: customers
+target_seconds: 90
+# 1:1 works well in a changelog post or a social feed.
+formats: ["16:9", "1:1"]
+quality: 1080p
+theme: studio
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  # Product names, feature names and rare words.
+  vocabulary: []
+options:
+  allow_holds: true
+  speed_up_waits: true
+  captions: srt
+  highlight_clicks: true
+  transition: fade
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: changes
+    layout: slide
+    slide: changes
+  # One browser scene per headline change. Copy this block for more.
+  - id: change-1
+    layout: browser
+    # Record with: reelsmith capture web capture/flows/change-1.py --id change-1
+    clip: change-1
+    eyebrow: New
+    title: The first *change*
+    points:
+      - text: What changed
+        line: change-1-1
+  - id: change-2
+    layout: browser
+    clip: change-2
+    eyebrow: Improved
+    title: The second *change*
+    points:
+      - text: What changed
+        line: change-2-1
+  - id: outro
+    layout: slide
+    slide: outro
+blur: []

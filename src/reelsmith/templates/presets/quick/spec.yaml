@@ -1,0 +1,53 @@
+# Preset: quick feature clip, 30 to 60 seconds.
+# One title slide, one feature shown in the browser, one closing slide.
+# Fill in the fields below from the interview answers, then show this file
+# to the user. This is approval point 1.
+version: 1
+mode: produce
+# One sentence: what the viewer can do after watching.
+goal: Show how to use one feature
+# Who watches: team, customers or social.
+audience: customers
+target_seconds: 45
+formats: ["16:9"]
+quality: 1080p
+theme: studio
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  # Product names and rare words, so the speech checks spell them right.
+  vocabulary: []
+options:
+  allow_holds: true
+  speed_up_waits: false
+  # Panel text explains the browser scene, so captions go in an .srt file.
+  captions: srt
+  highlight_clicks: true
+  transition: fade
+scenes:
+  # Slide ids point at slides.yaml. Clip ids point at capture/clips/<id>/.
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: feature
+    layout: browser
+    # Record this clip with: reelsmith capture web capture/flows/feature.py --id feature
+    clip: feature
+    # Short label and title beside the footage. Use the feature's real name.
+    eyebrow: The feature
+    title: What it does *for you*
+    # One point per script line, shown when that line starts. Keep each under
+    # six words and only claim what the footage shows.
+    points:
+      - text: The first thing you do
+        line: feature-1
+      - text: What you get back
+        line: feature-2
+  - id: outro
+    layout: slide
+    slide: outro
+# Add a box for anything private on screen: clip id, then x, y, width and
+# height as shares of the frame from 0 to 1.
+blur: []

@@ -1,0 +1,19 @@
+# Slides for the mobile demo. Words in *stars* use the accent colour.
+# Keep titles under eight words, they must also fit the 9:16 frame.
+# Render with: reelsmith slides
+version: 1
+slides:
+  - id: intro
+    kind: title
+    eyebrow: Mobile app
+    # The app name, with the key word in stars.
+    title: The app, *in your pocket*
+    subtitle: One line on what it helps the viewer do.
+  - id: outro
+    kind: bullets
+    eyebrow: Get the app
+    title: Ready to *try it*
+    # Store names and anything the viewer needs to sign up.
+    items:
+      - Where to download it
+      - What it costs

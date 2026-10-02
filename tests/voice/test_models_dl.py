@@ -123,3 +123,28 @@ def test_ensure_model_raises_on_checksum_mismatch(
 
     assert "checksum" in str(excinfo.value)
     assert not (tmp_path / "models" / "fake.bin").exists()
+
+
+def test_ensure_model_reports_bytes_on_stderr(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith import progress
+
+    payload = b"x" * (3 * 1024 * 1024)
+    spec = _fake_spec(payload)
+    monkeypatch.setattr(models_dl, "cache_dir", lambda: tmp_path)
+    monkeypatch.setattr(models_dl, "_MODELS", {spec.filename: spec})
+    monkeypatch.setattr(
+        models_dl.urllib.request,
+        "urlopen",
+        lambda url, timeout=30: _FakeResponse(payload),
+    )
+    progress.configure(force=True)
+    try:
+        models_dl.ensure_model(spec.filename)
+    finally:
+        progress.reset()
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Downloading fake.bin" in captured.err
+    assert captured.err.splitlines()[-1] == "Downloading fake.bin 3.0/3.0 MB"
