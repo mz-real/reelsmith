@@ -136,18 +136,20 @@ def detect_scene_points(video: Path, threshold: float) -> list[tuple[float, floa
             "-loglevel",
             "error",
             "-i",
-            str(video),
+            str(video.resolve()),
             "-an",
             "-vf",
             (
                 f"scale=480:-2,select='gt(scene,{threshold})',"
-                f"metadata=print:file={meta_path.as_posix()}"
+                # A bare file name, run from the temp folder: a Windows drive
+                # colon would break the filter syntax.
+                f"metadata=print:file={meta_path.name}"
             ),
             "-f",
             "null",
             "-",
         ]
-        completed = subprocess.run(command, capture_output=True, text=True)
+        completed = subprocess.run(command, capture_output=True, text=True, cwd=tmp)
         if completed.returncode != 0:
             tail = " ".join(completed.stderr.split())[-400:]
             raise ReelsmithError(f"Scene detection failed: {tail}")
