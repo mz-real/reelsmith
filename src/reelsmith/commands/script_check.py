@@ -9,6 +9,7 @@ from typing import Annotated
 
 import typer
 
+from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import ClipModel, ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
@@ -107,9 +108,9 @@ def register(app: typer.Typer) -> None:
 
     @script_app.command("check")
     def check(
-        directory: Annotated[Path, typer.Argument(help="The demo folder.")] = Path("."),
+        directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
     ) -> int:
         """Check that scenes match spec.yaml and pins name real clip events."""
-        return emit(run_check(directory))
+        return emit(run_check(demo_dir(directory, None)))
 
     app.add_typer(script_app, name="script")
