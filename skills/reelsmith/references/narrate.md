@@ -22,6 +22,7 @@ Add a voice that explains each click in a recording the user already has. The le
 - May it speed up long waits, like a loading spinner? (`speed_up_waits`, default no.)
 - Captions? `none` (default for Narrate), `burned`, `srt` or `both`. Highlight each click? (`highlight_clicks`, default no for Narrate.)
 - What does the app actually do at each step? Read the code or ask. Do not guess from the pixels alone.
+- detect and QA cannot tell whether an event time matches the screen. Check each pinned event on the around sheet before you write the script.
 
 A Narrate spec.yaml has one `full` scene per recording:
 
@@ -68,7 +69,17 @@ Run these from inside the demo folder, or add the demo folder `DIR` as the last 
 
    Options: `--threshold 0.08` (lower finds more changes), `--min-gap 0.4` (seconds between changes), `--every 3.0` (adds a frame every few seconds in still stretches). It writes `capture/clips/main/detected.json` and contact sheets in `capture/clips/main/sheets/`. Each thumbnail is labelled with its number and time, for example `#7 0:04.2`.
 
-3. Look at every contact sheet. Propose a timeline to the user in plain words, one action per line:
+   A scene change is the whole picture changing. A local change is a small region changing while the rest holds still, like a button label flipping after a click: it has a `box` and that box is outlined on its thumbnail. A local change can land before, on or after the real click, and a slow frame rate or a 3 second periodic frame can still miss the exact moment, so treat these as a starting point, not the final time.
+
+3. Pin each event precisely. For any moment you are not sure of, ask for a close up sheet:
+
+   ```
+   reelsmith detect --clip main --around 14.9 --span 1.5 --step 0.1
+   ```
+
+   This writes `capture/clips/main/sheets/around_14.9.jpg`: frames every `--step` seconds across `--around` plus or minus `--span`, each labelled with its exact time. Find the frame where the result of the click first appears (the label change, the new screen, the state flip), then put the event 0.1 to 0.2 seconds before that frame, since the click happens before its result shows. If a local change box is near the click, use its centre as the event's `x` and `y` for the ripple.
+
+4. Look at every contact sheet. Propose a timeline to the user in plain words, one action per line:
 
    ```
    0:02.1  clicks New invoice
@@ -78,7 +89,7 @@ Run these from inside the demo folder, or add the demo folder `DIR` as the last 
 
    Ask the user to correct it. They know what they clicked.
 
-4. Write the agreed events into `capture/clips/main/clip.json`. Keep the other fields as they are:
+5. Write the agreed events into `capture/clips/main/clip.json`. Keep the other fields as they are:
 
    ```json
    "events": [
@@ -90,13 +101,13 @@ Run these from inside the demo folder, or add the demo folder `DIR` as the last 
 
    `type` is one of `click`, `tap`, `key`, `scroll`, `screen`, `back`. `x` and `y` are fractions of the frame (0 to 1, from the top left). `click` and `tap` need them. `screen` and `key` can leave them out. Times must be inside the clip.
 
-5. Write script.yaml with `references/script-writing.md`, pinning each phrase to its event. Then check it and get approval 2:
+6. Write script.yaml with `references/script-writing.md`, pinning each phrase to its event. Then check it and get approval 2:
 
    ```
    reelsmith script check
    ```
 
-6. After approval: `reelsmith voice generate`, `reelsmith compose --preview`, `reelsmith compose`, `reelsmith qa`, `reelsmith export`.
+7. After approval: `reelsmith voice generate`, `reelsmith compose --preview`, `reelsmith compose`, `reelsmith qa`, `reelsmith export`.
 
 ## Reading the output
 
@@ -104,18 +115,26 @@ Run these from inside the demo folder, or add the demo folder `DIR` as the last 
 [OK] Imported clip 'main'
   - video: capture/clips/main/video.mp4
   - 1920x1080 at 30 fps, 42.5 s
-Next: reelsmith script check
+Next: reelsmith detect --clip main
 ```
 
 ```
 [OK] Detected timeline for clip 'main'
   - 9 scene changes
+  - 1 local change
   - 4 periodic frames
   - 2 contact sheets
 Next: read the sheets and add events to clip.json, then reelsmith script check
 ```
 
-Scene changes are where the picture changed. Periodic frames fill still stretches. Neither is an event by itself: a click often happens just before a change. Use them to find the moments, then decide each event with the user.
+```
+[OK] Wrote frames around 14.9s for clip 'main'
+  - 31 frames every 0.1s
+  - sheet: capture/clips/main/sheets/around_14.9.jpg
+Next: find the frame where the result first appears, then put the event 0.1 to 0.2s before it
+```
+
+Scene changes are where the whole picture changed. Local changes are where a small region changed. Periodic frames fill still stretches. None of these is an event by itself: a click often happens just before a change shows up. Use them to find the moments, pin the exact time with `--around`, then decide each event with the user.
 
 ## Common failures and fixes
 
@@ -132,5 +151,6 @@ Scene changes are where the picture changed. Periodic frames fill still stretche
 
 - [ ] The recording is imported, with private areas in the blur list.
 - [ ] You read every contact sheet, and the user confirmed the timeline.
+- [ ] Each pinned event was checked on an around sheet, not guessed from the scene or periodic frame alone.
 - [ ] clip.json has one event per action that the narration talks about.
 - [ ] `reelsmith script check` is OK and the user approved script.yaml.

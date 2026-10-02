@@ -277,7 +277,9 @@ def test_generate_with_only_filters_lines_and_leaves_others_untouched(tmp_path: 
 
     by_line = {line.line: line for line in second.lines}
     assert by_line["l1"].skipped is True
+    assert by_line["l1"].left_out is False
     assert "l2" in by_line
+    assert by_line["l2"].left_out is True
     assert len(only_engine.calls) == 0
 
 

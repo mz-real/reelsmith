@@ -89,7 +89,9 @@ def check_transcript(ctx: QAContext) -> CheckRow:
     A singular/plural difference against the script is not treated as a
     real mistake, and nor is a vocabulary word heard as a word with the
     same sound (realsmith for reelsmith): both are noted as a WARN
-    instead of a FAIL.
+    instead of a FAIL. Every line gets its own detail line, ok or not, so
+    a PASS report can still be checked line by line instead of trusted
+    on one blanket sentence.
     """
     status = CheckStatus.PASS
     details: list[str] = []
@@ -168,6 +170,8 @@ def check_transcript(ctx: QAContext) -> CheckRow:
                     f"{where}: vocabulary word sounds the same, not a failure: {said}. "
                     "Listen once; if it sounds wrong, add say to the phrase."
                 )
+                continue
+            details.append(f"{_line_where(scene_tl.id, first)} at {first.out_start:.2f}s: ok.")
     if not details:
         details.append("Every narrated phrase matches its script text.")
     return CheckRow("Transcript vs script", status, details)
