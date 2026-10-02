@@ -100,7 +100,7 @@ def test_ios_stop_sends_sigint() -> None:
 def test_ios_record_command_line() -> None:
     cmd = mobile_mod.ios_record_command(Path("/tmp/out.mov"))
     assert cmd[:6] == ["xcrun", "simctl", "io", "booted", "recordVideo", "--codec=h264"]
-    assert cmd[-1] == "/tmp/out.mov"
+    assert cmd[-1] == str(Path("/tmp/out.mov"))
 
 
 def test_android_record_and_stop_commands() -> None:
