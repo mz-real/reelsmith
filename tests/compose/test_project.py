@@ -102,9 +102,10 @@ def test_timing_conflicts_become_warnings(ready: Path) -> None:
     edit_yaml(ready / "spec.yaml", no_holds)
     edit_yaml(ready / "script.yaml", pin_both)
     report = compose_project(DemoPaths.at(ready), PREVIEW, FakeFfmpeg())
-    assert len(report.warnings) == 1
-    assert "Scene 'search', line 'l1'" in report.warnings[0]
-    assert "s over" in report.warnings[0]
+    conflicts = [w for w in report.warnings if "no intro clip" not in w]
+    assert len(conflicts) == 1
+    assert "Scene 'search', line 'l1'" in conflicts[0]
+    assert "s over" in conflicts[0]
 
 
 def test_missing_slide_says_to_render_slides(ready: Path) -> None:

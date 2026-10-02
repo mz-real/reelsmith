@@ -291,6 +291,24 @@ def _slide_images_in_dir(slides_dir: Path, slide_id: str) -> list[Path]:
     return [single] if single.is_file() else []
 
 
+def slide_clip(image: Path) -> Path | None:
+    """The intro clip next to a slide step image, if reelsmith slides wrote one."""
+    if not _STEP.search(image.name):
+        return None
+    clip = image.with_suffix(".mp4")
+    return clip if clip.is_file() else None
+
+
+def _clip_warnings(images: list[Path], slide_id: str, fmt: str) -> list[str]:
+    missing = [image for image in images if slide_clip(image) is None]
+    if not missing:
+        return []
+    return [
+        f"Slide '{slide_id}' for {fmt} has no intro clip for {len(missing)} of"
+        f" {len(images)} step(s), so they show the still image. Run reelsmith slides"
+    ]
+
+
 def slide_images(slides_dir: Path, slide_id: str) -> list[Path]:
     """Slide PNGs under slides_dir (legacy flat layout)."""
     return _slide_images_in_dir(slides_dir, slide_id)
@@ -302,7 +320,7 @@ def resolve_slide_images(slides_dir: Path, slide_id: str, fmt: str) -> tuple[lis
     slug = format_slug(fmt)
     per_format = _slide_images_in_dir(slides_dir / slug, slide_id)
     if per_format:
-        return per_format, warnings
+        return per_format, _clip_warnings(per_format, slide_id, fmt)
     flat = _slide_images_in_dir(slides_dir, slide_id)
     if not flat:
         return [], warnings
@@ -313,4 +331,4 @@ def resolve_slide_images(slides_dir: Path, slide_id: str, fmt: str) -> tuple[lis
             f"Slide '{slide_id}' for {fmt} uses slides/{slide_id}.png at {width}x{height}."
             f" Run reelsmith slides to render slides/{slug}/"
         )
-    return flat, warnings
+    return flat, warnings + _clip_warnings(flat, slide_id, fmt)

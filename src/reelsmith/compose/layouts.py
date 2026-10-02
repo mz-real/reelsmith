@@ -65,6 +65,7 @@ class ThemeColors:
 
 
 THEMES: dict[str, ThemeColors] = {
+    "studio": ThemeColors("#05070a", "#f5f7fa", "#2dd4bf"),
     "dark": ThemeColors("#0f172a", "#f8fafc", "#38bdf8"),
     "light": ThemeColors("#f1f5f9", "#0f172a", "#2563eb"),
     "minimal": ThemeColors("#ffffff", "#111827", "#111827"),

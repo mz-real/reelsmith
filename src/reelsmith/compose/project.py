@@ -12,7 +12,13 @@ from reelsmith import __version__
 from reelsmith.compose.cache import is_cached, scene_key, scene_path
 from reelsmith.compose.captions import find_font
 from reelsmith.compose.graph import Encode, scene_args
-from reelsmith.compose.inputs import ProjectInputs, SceneSource, load_project, resolve_slide_images
+from reelsmith.compose.inputs import (
+    ProjectInputs,
+    SceneSource,
+    load_project,
+    resolve_slide_images,
+    slide_clip,
+)
 from reelsmith.compose.layouts import canvas_size, format_slug, theme_colors
 from reelsmith.compose.master import master_args
 from reelsmith.compose.scene import Look, plan_for_scene
@@ -23,7 +29,7 @@ from reelsmith.media.ffmpeg import run_ffmpeg
 from reelsmith.models import SpecModel
 from reelsmith.paths import DemoPaths
 
-COMPOSE_VERSION = 1  # bump when the look changes, so cached scenes rebuild
+COMPOSE_VERSION = 2  # bump when the look changes, so cached scenes rebuild
 
 Runner = Callable[[list[str]], None]
 
@@ -133,7 +139,7 @@ def _look(project: ProjectInputs, fmt: str, settings: RenderSettings) -> Look:
         fmt=fmt,
         canvas=canvas_size(fmt, settings.scale),
         colors=theme_colors(spec.theme, brand),
-        dark=spec.theme == "dark",
+        dark=spec.theme in ("dark", "studio"),
         font=find_font(fonts),
         captions=spec.options.captions in ("burned", "both"),
         highlight_clicks=spec.options.highlight_clicks,
@@ -242,6 +248,7 @@ def _inputs(scene: SceneSource, slides: list[Path], look: Look) -> list[Path]:
     if scene.clip is not None and scene.clip_dir is not None:
         files.append(scene.clip_dir / scene.clip.video)
     files += slides
+    files += [clip for clip in (slide_clip(image) for image in slides) if clip is not None]
     files += sorted({p.wav for p in scene.phrases if p.wav is not None})
     if look.font is not None:
         files.append(look.font)

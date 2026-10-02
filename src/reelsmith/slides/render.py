@@ -1,12 +1,12 @@
-"""Turn slide models into HTML and PNG images."""
+"""Turn slide models into HTML, still images and short intro clips."""
 
 from __future__ import annotations
 
 import html
 import re
+import time
+from dataclasses import dataclass
 from pathlib import Path
-
-from playwright.sync_api import sync_playwright
 
 from reelsmith.errors import ReelsmithError
 from reelsmith.fsutil import backup_existing
@@ -18,6 +18,9 @@ from reelsmith.models.slides import (
     SlidesModel,
     TitleSlide,
 )
+from reelsmith.slides.animate import SlidePage, slide_page
+from reelsmith.slides.markup import ACCENT_CLASS, markup_html, plain_text
+from reelsmith.slides.studio import step_count, studio_values
 from reelsmith.slides.themes import SlideTheme, theme_styles
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -25,12 +28,8 @@ _PLACEHOLDER = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 
 
 def step_cue_count(slide: SlideItem) -> int:
-    """How many build step images to write (steps minus one)."""
-    if isinstance(slide, FlowSlide):
-        return max(0, len(slide.steps) - 1)
-    if isinstance(slide, BulletsSlide):
-        return max(0, len(slide.items) - 1)
-    return 0
+    """How many build steps come after the first one (steps minus one)."""
+    return step_count(slide) - 1
 
 
 def format_chart_value(value: float) -> str:
@@ -67,10 +66,25 @@ def _logo_block(theme: SlideTheme) -> str:
     return f'<img class="logo" src="{html.escape(theme.logo_uri, quote=True)}" alt="">'
 
 
-def _title_block(title: str | None) -> str:
-    if not title:
+def _eyebrow_block(eyebrow: str | None) -> str:
+    if not eyebrow:
         return ""
-    return f"<h1>{html.escape(title)}</h1>"
+    return f'<p class="eyebrow">{markup_html(eyebrow)}</p>'
+
+
+def _subtitle_block(subtitle: str | None) -> str:
+    if not subtitle:
+        return ""
+    return f'<p class="subtitle">{markup_html(subtitle)}</p>'
+
+
+def _title_block(slide: FlowSlide | ChartSlide | BulletsSlide) -> str:
+    title = f"<h1>{markup_html(slide.title)}</h1>" if slide.title else ""
+    return _eyebrow_block(slide.eyebrow) + title + _subtitle_block(slide.subtitle)
+
+
+def _future_class(style: str) -> str:
+    return "is-hidden" if style == "reveal" else "is-dim"
 
 
 def _chart_svg(slide: ChartSlide, theme: SlideTheme, frame_height: int) -> str:
@@ -111,7 +125,7 @@ def _chart_svg(slide: ChartSlide, theme: SlideTheme, frame_height: int) -> str:
             parts.append(
                 f'<text x="{x + bar_w / 2:.1f}" y="{height - pad * 0.35:.1f}" '
                 f'text-anchor="middle" fill="{theme.secondary}" '
-                f'font-size="{axis_font:.1f}">{html.escape(label)}</text>'
+                f'font-size="{axis_font:.1f}">{html.escape(plain_text(label))}</text>'
             )
     else:
         points: list[tuple[float, float]] = []
@@ -131,7 +145,7 @@ def _chart_svg(slide: ChartSlide, theme: SlideTheme, frame_height: int) -> str:
             parts.append(
                 f'<text x="{x:.1f}" y="{height - pad * 0.35:.1f}" text-anchor="middle" '
                 f'fill="{theme.secondary}" font-size="{axis_font:.1f}">'
-                f"{html.escape(label)}</text>"
+                f"{html.escape(plain_text(label))}</text>"
             )
     parts.append("</svg>")
     return "\n".join(parts)
@@ -155,27 +169,42 @@ def _flow_body(
     pad_px = height * 0.018
     min_step_w = height * 0.14
     max_step_w = height * 0.22
-    total = len(slide.steps)
+    items = slide.step_items()
+    total = len(items)
+    future = _future_class(slide.step_style)
+    entering = visible_steps - 1
     step_cells: list[str] = []
-    for index, label in enumerate(slide.steps):
-        hidden = index >= visible_steps
-        step_class = "flow-step is-hidden" if hidden else "flow-step"
+    for index, item in enumerate(items):
+        step_class = "flow-step"
+        if index >= visible_steps:
+            step_class += f" {future}"
+        elif index == entering and index > 0:
+            step_class += " enter"
+        detail = ""
+        if item.detail:
+            detail = f'<span class="step-detail">{markup_html(item.detail)}</span>'
         step_cells.append(
             f'<div class="{step_class}" data-step="{index}">'
             f'<span class="step-num">{index + 1}</span>'
-            f'<span class="step-label">{html.escape(label)}</span>'
-            "</div>"
+            f'<span class="step-label">{markup_html(item.title)}</span>'
+            f"{detail}</div>"
         )
-        if index < len(slide.steps) - 1:
-            arrow_hidden = (index + 1) >= visible_steps
-            arrow_class = "flow-arrow is-hidden" if arrow_hidden else "flow-arrow"
+        if index < total - 1:
+            arrow_class = "flow-arrow"
+            if (index + 1) >= visible_steps:
+                arrow_class += f" {future}"
+            elif index + 1 == entering:
+                arrow_class += " enter"
             step_cells.append(f'<div class="{arrow_class}" aria-hidden="true">{arrow}</div>')
     steps_html = "".join(step_cells)
-    hide_exits = visible_steps < total
     exit_cells = []
     for label in slide.exits:
-        chip_class = "exit-chip is-hidden" if hide_exits else "exit-chip"
-        exit_cells.append(f'<span class="{chip_class}">{html.escape(label)}</span>')
+        chip_class = "exit-chip"
+        if visible_steps < total:
+            chip_class += f" {future}"
+        elif total > 1:
+            chip_class += " enter"
+        exit_cells.append(f'<span class="{chip_class}">{markup_html(label)}</span>')
     exits_html = "".join(exit_cells)
     flex_dir = "column" if portrait else "row"
     flow_css = f"""
@@ -224,6 +253,12 @@ def _flow_body(
   margin-top: {gap_px:.1f}px;
   width: 100%;
 }}
+.step-detail {{
+  text-align: center;
+  font-size: {exit_px:.1f}px;
+  color: {theme.secondary};
+  line-height: 1.3;
+}}
 .exit-chip {{
   padding: {gap_px * 0.5:.1f}px {gap_px * 1.1:.1f}px;
   border-radius: 999px;
@@ -245,11 +280,15 @@ def _bullets_body(
     gap_px = height * 0.015
     pad_px = height * 0.018
     lis: list[str] = []
+    future = _future_class(slide.step_style)
     for index, text in enumerate(slide.items):
-        hidden = index >= visible_items
-        item_class = "is-hidden" if hidden else ""
+        item_class = ""
+        if index >= visible_items:
+            item_class = future
+        elif index == visible_items - 1 and index > 0:
+            item_class = "enter"
         class_attr = f' class="{item_class}"' if item_class else ""
-        lis.append(f"<li{class_attr}>{html.escape(text)}</li>")
+        lis.append(f"<li{class_attr}>{markup_html(text)}</li>")
     bullet_css = f"""
 ul.bullets {{
   list-style: none;
@@ -285,34 +324,46 @@ def render_slide_html(
     width: int,
     height: int,
 ) -> str:
-    """Build self contained HTML for one slide state."""
-    styles = theme_styles(theme, height)
+    """Build self contained HTML for one slide state.
+
+    build_index is the build step shown (0 is the first). None shows the
+    finished slide. The page carries the CSS intro of that step.
+    """
+    last = step_count(slide) - 1
+    active = last if build_index is None else max(0, min(build_index, last))
+    if theme.style == "studio":
+        values = studio_values(slide, theme, active=active, width=width, height=height)
+        return apply_template(_load_template("studio"), values)
+    return _classic_html(slide, theme, active, width, height)
+
+
+def _classic_html(slide: SlideItem, theme: SlideTheme, active: int, width: int, height: int) -> str:
+    styles = theme_styles(theme, height) + _classic_motion(height)
     logo = _logo_block(theme)
+    body_class = "intro" if active == 0 else ""
     if isinstance(slide, TitleSlide):
-        subtitle = ""
-        if slide.subtitle:
-            subtitle = f'<p class="subtitle">{html.escape(slide.subtitle)}</p>'
         return apply_template(
             _load_template("title"),
             {
                 "styles": styles,
+                "body_class": body_class,
                 "logo": logo,
-                "title": html.escape(slide.title),
-                "subtitle": subtitle,
+                "eyebrow": _eyebrow_block(slide.eyebrow),
+                "title": markup_html(slide.title),
+                "subtitle": _subtitle_block(slide.subtitle),
             },
         )
     if isinstance(slide, FlowSlide):
-        total = len(slide.steps)
-        visible = total if build_index is None else min(build_index + 1, total)
         steps_html, exits_html, flow_css, row_class = _flow_body(
-            slide, theme, visible, width, height
+            slide, theme, active + 1, width, height
         )
         return apply_template(
             _load_template("flow"),
             {
                 "styles": styles + flow_css,
+                "body_class": body_class,
                 "logo": logo,
-                "heading": _title_block(slide.title),
+                "heading": _title_block(slide),
                 "steps": steps_html,
                 "exits": exits_html,
                 "flow_row_class": row_class,
@@ -326,71 +377,127 @@ def render_slide_html(
             _load_template("chart"),
             {
                 "styles": styles + chart_css,
+                "body_class": body_class,
                 "logo": logo,
-                "heading": _title_block(slide.title),
+                "heading": _title_block(slide),
                 "chart": _chart_svg(slide, theme, height),
             },
         )
     if isinstance(slide, BulletsSlide):
-        total = len(slide.items)
-        visible = total if build_index is None else min(build_index + 1, total)
-        content, bullet_css = _bullets_body(slide, theme, visible, height)
+        content, bullet_css = _bullets_body(slide, theme, active + 1, height)
         return apply_template(
             _load_template("bullets"),
             {
                 "styles": styles + bullet_css,
+                "body_class": body_class,
                 "logo": logo,
-                "heading": _title_block(slide.title),
+                "heading": _title_block(slide),
                 "content": content,
             },
         )
     raise ReelsmithError(f"Unknown slide kind for '{slide.id}'")
 
 
+def _classic_motion(height: int) -> str:
+    """A gentle rise for the classic themes: the whole slide, then each new item."""
+    rise = height * 0.025
+    return f"""
+.{ACCENT_CLASS} {{ font-weight: 700; }}
+.eyebrow {{
+  font-size: {height * 0.022:.1f}px; letter-spacing: 0.12em; text-transform: uppercase;
+  font-weight: 600;
+}}
+.is-dim {{ opacity: 0.35; }}
+@keyframes rs-rise {{ from {{ opacity: 0; transform: translateY({rise:.1f}px); }} }}
+.intro .slide > * {{ animation: rs-rise 460ms cubic-bezier(0.16, 1, 0.3, 1) both; }}
+.intro .slide > *:nth-child(2) {{ animation-delay: 60ms; }}
+.intro .slide > *:nth-child(3) {{ animation-delay: 120ms; }}
+.intro .slide > *:nth-child(n + 4) {{ animation-delay: 180ms; }}
+.enter {{ animation: rs-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both; }}
+"""
+
+
 def element_boxes(html_text: str, width: int, height: int, selector: str) -> list[dict[str, float]]:
-    """Measure element bounding boxes after layout (for tests)."""
+    """Measure element bounding boxes of the finished slide (for tests)."""
     boxes: list[dict[str, float]] = []
-    try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
-            page = browser.new_page(viewport={"width": width, "height": height})
-            page.set_content(html_text, wait_until="load")
-            for handle in page.locator(selector).element_handles():
-                box = handle.bounding_box()
-                if box is not None:
-                    boxes.append(
-                        {
-                            "x": float(box["x"]),
-                            "y": float(box["y"]),
-                            "width": float(box["width"]),
-                            "height": float(box["height"]),
-                        }
-                    )
-            browser.close()
-    except Exception as exc:
-        raise ReelsmithError(
-            "Could not measure slide layout with Playwright.",
-            fix="reelsmith setup browser",
-        ) from exc
+    with slide_page(width, height) as page:
+        page.load(html_text)
+        page.finish()
+        for handle in page.locator(selector).element_handles():
+            box = handle.bounding_box()
+            if box is not None:
+                boxes.append(
+                    {
+                        "x": float(box["x"]),
+                        "y": float(box["y"]),
+                        "width": float(box["width"]),
+                        "height": float(box["height"]),
+                    }
+                )
     return boxes
 
 
 def screenshot_html(html_text: str, width: int, height: int, path: Path) -> None:
-    """Render HTML to a PNG at the given viewport size."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    """Render the finished state of a slide page to a PNG."""
     backup_existing(path)
-    try:
-        with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
-            page = browser.new_page(viewport={"width": width, "height": height})
-            page.set_content(html_text, wait_until="load")
-            page.screenshot(path=str(path), type="png")
-            browser.close()
-    except Exception as exc:
-        raise ReelsmithError(
-            "Could not render slides with Playwright.",
-            fix="reelsmith setup browser",
-        ) from exc
+    with slide_page(width, height) as page:
+        page.load(html_text)
+        page.still(path)
+
+
+@dataclass(frozen=True)
+class RenderStats:
+    slides: int
+    steps: int
+    clips: int
+    seconds: float
+
+
+def step_still_name(slide_id: str, step: int) -> str:
+    return f"{slide_id}_step{step}.png"
+
+
+def step_clip_name(slide_id: str, step: int) -> str:
+    return f"{slide_id}_step{step}.mp4"
+
+
+def _clear_stale_steps(out_dir: Path, slide_id: str, count: int) -> None:
+    """Move away step files from an older render that has more steps."""
+    pattern = re.compile(rf"^{re.escape(slide_id)}_step(\d+)\.(png|mp4)$")
+    for path in out_dir.glob(f"{slide_id}_step*"):
+        match = pattern.match(path.name)
+        if match and int(match.group(1)) >= count:
+            backup_existing(path)
+
+
+def _render_slide(
+    page: SlidePage,
+    slide: SlideItem,
+    theme: SlideTheme,
+    out_dir: Path,
+    clips: bool,
+) -> list[str]:
+    written: list[str] = []
+    count = step_count(slide)
+    _clear_stale_steps(out_dir, slide.id, count)
+    for step in range(count):
+        page.load(
+            render_slide_html(slide, theme, build_index=step, width=page.width, height=page.height)
+        )
+        if clips:
+            clip_name = step_clip_name(slide.id, step)
+            page.clip(out_dir / clip_name)
+            written.append(clip_name)
+        still_name = step_still_name(slide.id, step)
+        backup_existing(out_dir / still_name)
+        page.still(out_dir / still_name)
+        written.append(still_name)
+    final_name = f"{slide.id}.png"
+    backup_existing(out_dir / final_name)
+    last_still = out_dir / step_still_name(slide.id, count - 1)
+    (out_dir / final_name).write_bytes(last_still.read_bytes())
+    written.append(final_name)
+    return written
 
 
 def render_slides_to_dir(
@@ -400,20 +507,24 @@ def render_slides_to_dir(
     *,
     width: int,
     height: int,
+    clips: bool = True,
+    stats: list[RenderStats] | None = None,
 ) -> list[str]:
-    """Write PNGs for every slide. Returns paths relative to out_dir."""
+    """Write every slide's step stills and intro clips, plus <id>.png, the finished slide.
+
+    Step n shows the first n + 1 items. Returns paths relative to out_dir.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
-    for slide in slides.slides:
-        main_name = f"{slide.id}.png"
-        html_final = render_slide_html(slide, theme, build_index=None, width=width, height=height)
-        screenshot_html(html_final, width, height, out_dir / main_name)
-        written.append(main_name)
-        cues = step_cue_count(slide)
-        for step in range(cues):
-            step_name = f"{slide.id}_step{step + 1}.png"
-            html_step = render_slide_html(
-                slide, theme, build_index=step, width=width, height=height
+    started = time.monotonic()
+    with slide_page(width, height) as page:
+        for slide in slides.slides:
+            written += _render_slide(page, slide, theme, out_dir, clips)
+    if stats is not None:
+        steps = sum(step_count(slide) for slide in slides.slides)
+        stats.append(
+            RenderStats(
+                len(slides.slides), steps, steps if clips else 0, time.monotonic() - started
             )
-            screenshot_html(html_step, width, height, out_dir / step_name)
-            written.append(step_name)
+        )
     return written

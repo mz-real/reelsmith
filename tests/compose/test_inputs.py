@@ -134,9 +134,11 @@ def test_resolve_slide_images_prefers_format_subdirectory(tmp_path: Path) -> Non
     per_format = tmp_path / "9x16" / "intro.png"
     per_format.parent.mkdir()
     per_format.write_bytes(_fake_png_header(1080, 1920))
+    (tmp_path / "9x16" / "intro_step0.png").write_bytes(_fake_png_header(1080, 1920))
+    (tmp_path / "9x16" / "intro_step0.mp4").write_bytes(b"mp4")
     paths, warnings = resolve_slide_images(tmp_path, "intro", "9:16")
     assert warnings == []
-    assert paths == [per_format]
+    assert paths == [tmp_path / "9x16" / "intro_step0.png"]
 
 
 def test_resolve_slide_images_warns_on_flat_fallback_with_wrong_aspect(tmp_path: Path) -> None:
@@ -144,7 +146,7 @@ def test_resolve_slide_images_warns_on_flat_fallback_with_wrong_aspect(tmp_path:
     flat.write_bytes(_fake_png_header(1920, 1080))
     paths, warnings = resolve_slide_images(tmp_path, "intro", "9:16")
     assert paths == [flat]
-    assert len(warnings) == 1
+    assert len(warnings) == 2  # the wrong size, and no intro clip
     assert "intro" in warnings[0]
     assert "reelsmith slides" in warnings[0]
     assert "9x16" in warnings[0]

@@ -80,7 +80,7 @@ class SpecModel(StrictModel):
     target_seconds: float = Field(default=90, gt=0)
     formats: list[VideoFormat] = Field(default_factory=_default_formats, min_length=1)
     quality: Literal["1080p", "4k"] = "1080p"
-    theme: Literal["dark", "light", "minimal"] = "dark"
+    theme: Literal["studio", "dark", "light", "minimal"] = "studio"
     footage: Literal["import", "web", "mobile"] = "web"
     voice: VoiceSettings = Field(default_factory=VoiceSettings)
     options: Options = Field(default_factory=Options)

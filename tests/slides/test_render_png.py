@@ -34,8 +34,9 @@ def test_rendered_png_matches_format_size(tmp_path: Path) -> None:
     width, height = frame_size(spec)
     out = tmp_path / "slides"
     written = render_slides_to_dir(slides, theme, out, width=width, height=height)
-    assert written == ["intro.png"]
+    assert written == ["intro_step0.mp4", "intro_step0.png", "intro.png"]
     assert _png_size(out / "intro.png") == (width, height)
+    assert _png_size(out / "intro_step0.png") == (width, height)
 
 
 def test_multi_format_spec_writes_sized_pngs_per_folder(tmp_path: Path) -> None:
@@ -64,5 +65,6 @@ def test_multi_format_spec_writes_sized_pngs_per_folder(tmp_path: Path) -> None:
         width, height = frame_size(spec, fmt)
         slug = format_slug(fmt)
         out = tmp_path / "slides" / slug
-        render_slides_to_dir(slides, theme, out, width=width, height=height)
+        render_slides_to_dir(slides, theme, out, width=width, height=height, clips=False)
         assert _png_size(out / "intro.png") == expected[slug]
+        assert not (out / "intro_step0.mp4").exists()
