@@ -58,12 +58,18 @@ def test_qa_missing_demo_is_an_error_block_not_a_traceback(
     assert code == 1
 
 
-def test_qa_without_faster_whisper_gives_a_clear_fix_not_a_traceback(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+def test_qa_when_the_speech_model_cannot_load_gives_a_clear_fix_not_a_traceback(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Everything except the transcript check should still run and pass, so
-    # a missing optional dependency only warns about the one check it
-    # breaks instead of losing the whole report.
+    # For example offline on first use: the transcript check warns with the
+    # fix and every other check still runs.
+    from reelsmith.errors import ReelsmithError
+    from reelsmith.voice import transcribe as voice_transcribe
+
+    def offline(audio: object) -> list[object]:
+        raise ReelsmithError("Could not load the base.en speech model.", fix="retry online")
+
+    monkeypatch.setattr(voice_transcribe, "transcribe", offline)
     (tmp_path / "build").mkdir()
     (tmp_path / "spec.yaml").write_text(yaml.safe_dump(SPEC), encoding="utf-8")
     (tmp_path / "script.yaml").write_text(yaml.safe_dump(SCRIPT), encoding="utf-8")
@@ -86,5 +92,5 @@ def test_qa_without_faster_whisper_gives_a_clear_fix_not_a_traceback(
     assert code == 0
 
     report = (tmp_path / "qa" / "report.md").read_text(encoding="utf-8")
-    assert "faster-whisper" in report
-    assert "uv pip install faster-whisper" in report
+    assert "Could not load the base.en speech model" in report
+    assert "retry online" in report

@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf  # type: ignore[import-untyped]
+import soundfile as sf
 
 from reelsmith.errors import ReelsmithError
 from reelsmith.media.ffmpeg import require_ffmpeg, run_ffmpeg
