@@ -17,3 +17,7 @@ build/
 !examples/**/*.wav
 .cache/
 HANDOVER.md
+
+# backup files from backup_existing
+*.bak-*
+
