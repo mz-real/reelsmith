@@ -155,3 +155,11 @@ def test_slide_scene_steps_fade_in_and_zoom_slowly() -> None:
     assert "overlay=0:0:enable='gte(t,2.05)'" in graph
     assert "eval=frame" in graph and "crop=1920:1080" in graph
     assert "concat=" not in graph and ",trim=start=" not in graph
+
+
+def test_footage_with_an_inset_is_letterboxed_under_the_status_bar() -> None:
+    plan = clip_plan(inset=Box(10, 60, 1180, 680), pad_color="#f4efe6", status_bar=Path("bar.png"))
+    graph = graph_of(scene_args(plan, Encode("fast", 20), Path("o.mp4")))
+    assert "scale=1180:680:flags=lanczos" in graph
+    assert "pad=1200:750:10:60:color=0xf4efe6" in graph
+    assert graph.index("pad=1200:750") < graph.index("[content]")

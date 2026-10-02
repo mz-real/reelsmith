@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, StringConstraints, model_validator
 
 from reelsmith.models.common import Fraction, Identifier, StrictModel, check_unique
 
@@ -43,12 +43,44 @@ class Options(StrictModel):
     transition: TransitionKind = "fade"
 
 
+class PanelPoint(StrictModel):
+    """A curated point beside the footage. It appears when its line starts."""
+
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    line: Identifier  # a script line id in the same scene
+
+
+Seconds = Annotated[float, Field(ge=0.0)]
+
+
+class ZoomSpec(StrictModel):
+    """Ease in to a region of the footage around a moment, hold, then ease out."""
+
+    box: tuple[Fraction, Fraction, Fraction, Fraction]  # x, y, w, h
+    at: Seconds | Identifier  # an event id such as e3, or seconds in clip time
+    hold: float = Field(default=1.5, ge=0.0)
+
+    @model_validator(mode="after")
+    def _box_fits(self) -> Self:
+        x, y, w, h = self.box
+        if w <= 0 or h <= 0:
+            raise ValueError("A zoom box needs a width and a height above 0")
+        if x + w > 1.0 + 1e-6 or y + h > 1.0 + 1e-6:
+            raise ValueError("A zoom box must stay inside the frame (x + w and y + h at most 1)")
+        return self
+
+
 class SceneSpec(StrictModel):
     id: Identifier
     layout: Layout
     slide: str | None = None
     clip: str | None = None
     transition: TransitionKind | None = None
+    eyebrow: str | None = None
+    title: str | None = None
+    points: list[PanelPoint] = Field(default_factory=list)
+    zoom: list[ZoomSpec] = Field(default_factory=list)
+    cursor: bool | None = None  # None means on for web clips with clicks
 
     @model_validator(mode="after")
     def _source_matches_layout(self) -> Self:
@@ -57,6 +89,23 @@ class SceneSpec(StrictModel):
         if self.layout != "slide" and not self.clip:
             raise ValueError(f"Scene '{self.id}' has layout {self.layout}, so it needs a clip")
         return self
+
+    @model_validator(mode="after")
+    def _motion_needs_footage(self) -> Self:
+        if self.layout != "slide":
+            return self
+        used = [name for name in ("eyebrow", "title", "points", "zoom") if getattr(self, name)]
+        if used:
+            raise ValueError(
+                f"Scene '{self.id}' is a slide, but {', '.join(used)} only work beside footage."
+                " Put slide text in slides.yaml"
+            )
+        return self
+
+    @property
+    def has_panel(self) -> bool:
+        """True when the scene shows curated panel text instead of spoken captions."""
+        return bool(self.points or self.title or self.eyebrow)
 
 
 class BlurRegion(StrictModel):

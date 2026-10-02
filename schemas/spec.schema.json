@@ -107,6 +107,28 @@
       "title": "Options",
       "type": "object"
     },
+    "PanelPoint": {
+      "additionalProperties": false,
+      "description": "A curated point beside the footage. It appears when its line starts.",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "line": {
+          "minLength": 1,
+          "title": "Line",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "line"
+      ],
+      "title": "PanelPoint",
+      "type": "object"
+    },
     "SceneSpec": {
       "additionalProperties": false,
       "properties": {
@@ -166,6 +188,56 @@
           ],
           "default": null,
           "title": "Transition"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "points": {
+          "items": {
+            "$ref": "#/$defs/PanelPoint"
+          },
+          "title": "Points",
+          "type": "array"
+        },
+        "zoom": {
+          "items": {
+            "$ref": "#/$defs/ZoomSpec"
+          },
+          "title": "Zoom",
+          "type": "array"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cursor"
         }
       },
       "required": [
@@ -236,6 +308,65 @@
         }
       },
       "title": "VoiceSettings",
+      "type": "object"
+    },
+    "ZoomSpec": {
+      "additionalProperties": false,
+      "description": "Ease in to a region of the footage around a moment, hold, then ease out.",
+      "properties": {
+        "box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            }
+          ],
+          "title": "Box",
+          "type": "array"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "minLength": 1,
+              "type": "string"
+            }
+          ],
+          "title": "At"
+        },
+        "hold": {
+          "default": 1.5,
+          "minimum": 0.0,
+          "title": "Hold",
+          "type": "number"
+        }
+      },
+      "required": [
+        "box",
+        "at"
+      ],
+      "title": "ZoomSpec",
       "type": "object"
     }
   },

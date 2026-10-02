@@ -13,6 +13,8 @@ from pathlib import Path
 
 from reelsmith.compose.blur import BlurBox, blur_filters
 from reelsmith.compose.layouts import Box, Size, even, num
+from reelsmith.compose.motion import Key, track_expr
+from reelsmith.compose.studio import Backdrop
 from reelsmith.timing import Segment
 
 FPS = 30
@@ -41,6 +43,15 @@ class SlideSource:
 
 
 @dataclass(frozen=True)
+class Reveal:
+    """Fade a still in from start over duration while it rises by rise pixels."""
+
+    start: float
+    duration: float
+    rise: int
+
+
+@dataclass(frozen=True)
 class Still:
     """A still image laid on the canvas, for the whole scene or a window."""
 
@@ -49,6 +60,22 @@ class Still:
     y: int
     start: float | None = None
     end: float | None = None
+    reveal: Reveal | None = None
+
+
+@dataclass(frozen=True)
+class Overlay:
+    """An image drawn on the footage after any zoom, so it is never scaled.
+
+    x and y are ffmpeg expressions in footage pixels and may use t. With
+    sequence_start set, image is a numbered frame pattern that plays once
+    from that time.
+    """
+
+    image: Path
+    x: str
+    y: str
+    sequence_start: float | None = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +108,14 @@ class ScenePlan:
     audio: list[AudioPiece]
     duration: float  # the timeline duration
     tail: float  # extra held frames at the end, for the cross fade
+    backdrop: Backdrop | None = None  # the Studio background, instead of a flat colour
+    underlays: list[Still] = field(default_factory=list)  # under the footage: shadows
+    view: list[Key] = field(default_factory=list)  # zoom keyframes, empty for none
+    overlays: list[Overlay] = field(default_factory=list)  # cursor and pulses
+    mask: Path | None = None  # rounds the corners of the footage
+    inset: Box | None = None  # footage box inside the screen (under a status bar)
+    pad_color: str = "#ffffff"  # fills the screen around an inset
+    status_bar: Path | None = None  # drawn at the top of the screen
 
     @property
     def total(self) -> float:
@@ -210,10 +245,30 @@ def _slide_still_steps(graph: _Graph, plan: ScenePlan, source: SlideSource, fit:
     return current
 
 
-def _layout(graph: _Graph, plan: ScenePlan) -> str:
+def _looped(graph: _Graph, path: Path, seconds: float) -> str:
+    """A still image as a stream of seconds length, decoded only once."""
+    index = graph.add_input(*_image_input(path))
+    frames = max(1, round(seconds * FPS) + 1)
+    label = f"loop{index}"
+    graph.chains.append(
+        f"[{index}:v]format=rgba,loop=loop={frames}:size=1:start=0,setpts=N/{FPS}/TB[{label}]"
+    )
+    return label
+
+
+def _background(graph: _Graph, plan: ScenePlan) -> str:
     w, h = plan.canvas.width, plan.canvas.height
-    box = plan.content
     color = plan.background.lstrip("#")
+    backdrop = plan.backdrop
+    if backdrop is not None:
+        base = _looped(graph, backdrop.image, plan.total)
+        glow = graph.add_input(*_image_input(backdrop.glow))
+        turn = f"2*PI*t/{num(backdrop.period)}"
+        graph.chains.append(
+            f"[{base}][{glow}:v]overlay=x='{backdrop.glow_x}+{backdrop.drift}*sin({turn})'"
+            f":y='{backdrop.glow_y}+{round(backdrop.drift * 0.6)}*cos({turn})',format=yuv420p[bg]"
+        )
+        return "src"
     if plan.blurred_background:
         sw, sh = even(w / 8), even(h / 8)
         graph.chains.append("[src]split[srcmain][srcbg]")
@@ -227,19 +282,101 @@ def _layout(graph: _Graph, plan: ScenePlan) -> str:
             f"format=rgba[veil]"
         )
         graph.chains.append("[bgblur][veil]overlay=0:0:shortest=1[bg]")
-        main = "srcmain"
+        return "srcmain"
+    graph.chains.append(f"color=c=0x{color}:s={w}x{h}:r={FPS}:d={num(plan.total)}[bg]")
+    return "src"
+
+
+VIEW_TIME = f"(in/{FPS})"
+
+
+def view_filter(view: list[Key]) -> str:
+    """A perspective filter that shows the zoom view at each frame."""
+
+    def side(index: int, size: str) -> str:
+        return f"'{size}*{track_expr(view, lambda v: v[index], VIEW_TIME)}'"
+
+    left, top, right, bottom = side(0, "W"), side(1, "H"), side(2, "W"), side(3, "H")
+    return (
+        f"perspective=x0={left}:y0={top}:x1={right}:y1={top}:x2={left}:y2={bottom}"
+        f":x3={right}:y3={bottom}:interpolation=cubic:eval=frame"
+    )
+
+
+def _footage(graph: _Graph, plan: ScenePlan, main: str) -> str:
+    """Scale the footage into its box, then zoom, overlays and rounded corners."""
+    box = plan.content
+    plain = not (plan.view or plan.overlays or plan.mask or plan.inset)
+    if plain:
+        graph.chains.append(f"[{main}]scale={box.w}:{box.h},setsar=1[content]")
+        return "content"
+    inner = plan.inset or Box(0, 0, box.w, box.h)
+    graph.chains.append(f"[{main}]scale={inner.w}:{inner.h}:flags=lanczos,setsar=1[foot0]")
+    current = "foot0"
+    if plan.view:
+        graph.chains.append(f"[{current}]{view_filter(plan.view)}[footz]")
+        current = "footz"
+    for number, overlay in enumerate(plan.overlays, start=1):
+        target = f"foot{number}"
+        if overlay.sequence_start is None:
+            index = graph.add_input(*_image_input(overlay.image))
+            source = f"{index}:v"
+            tail = ""
+        else:
+            index = graph.add_input(
+                "-f", "image2", "-framerate", str(FPS), "-i", str(overlay.image)
+            )
+            source = f"seq{index}"
+            graph.chains.append(
+                f"[{index}:v]format=rgba,"
+                f"setpts=PTS-STARTPTS+{num(overlay.sequence_start)}/TB[{source}]"
+            )
+            tail = ":eof_action=pass"
+        graph.chains.append(
+            f"[{current}][{source}]overlay=x='{overlay.x}':y='{overlay.y}'{tail}[{target}]"
+        )
+        current = target
+    if plan.inset is not None:
+        color = plan.pad_color.lstrip("#")
+        graph.chains.append(
+            f"[{current}]pad={box.w}:{box.h}:{inner.x}:{inner.y}:color=0x{color}[footp]"
+        )
+        current = "footp"
+        if plan.status_bar is not None:
+            index = graph.add_input(*_image_input(plan.status_bar))
+            graph.chains.append(f"[{current}][{index}:v]overlay=0:0[footb]")
+            current = "footb"
+    if plan.mask is not None:
+        index = graph.add_input(*_image_input(plan.mask))
+        graph.chains.append(f"[{index}:v]format=gray[mask]")
+        graph.chains.append(f"[{current}]format=yuva420p[foota]")
+        graph.chains.append("[foota][mask]alphamerge[content]")
     else:
-        graph.chains.append(f"color=c=0x{color}:s={w}x{h}:r={FPS}:d={num(plan.total)}[bg]")
-        main = "src"
-    graph.chains.append(f"[{main}]scale={box.w}:{box.h},setsar=1[content]")
-    graph.chains.append(f"[bg][content]overlay={box.x}:{box.y}[layer0]")
+        graph.chains.append(f"[{current}]null[content]")
+    return "content"
+
+
+def _layout(graph: _Graph, plan: ScenePlan) -> str:
+    box = plan.content
+    main = _background(graph, plan)
+    current = "bg"
+    for number, still in enumerate(plan.underlays):
+        index = graph.add_input(*_image_input(still.image))
+        target = f"under{number}"
+        graph.chains.append(f"[{current}][{index}:v]overlay={still.x}:{still.y}[{target}]")
+        current = target
+    content = _footage(graph, plan, main)
+    graph.chains.append(f"[{current}][{content}]overlay={box.x}:{box.y}[layer0]")
     current = "layer0"
     for number, still in enumerate(plan.stills, start=1):
-        index = graph.add_input(*_image_input(still.image))
         target = f"layer{number}"
-        graph.chains.append(
-            f"[{current}][{index}:v]overlay={still.x}:{still.y}{_window(still)}[{target}]"
-        )
+        if still.reveal is None:
+            index = graph.add_input(*_image_input(still.image))
+            graph.chains.append(
+                f"[{current}][{index}:v]overlay={still.x}:{still.y}{_window(still)}[{target}]"
+            )
+        else:
+            graph.chains.append(_revealed(graph, plan, still, current, target))
         current = target
     total = num(plan.total)
     graph.chains.append(
@@ -247,6 +384,20 @@ def _layout(graph: _Graph, plan: ScenePlan) -> str:
         f"trim=duration={total},setpts=PTS-STARTPTS[vout]"
     )
     return "vout"
+
+
+def _revealed(graph: _Graph, plan: ScenePlan, still: Still, current: str, target: str) -> str:
+    """Overlay a still that fades in while it rises into place."""
+    reveal = still.reveal
+    assert reveal is not None
+    looped = _looped(graph, still.image, plan.total)
+    start, length = num(reveal.start), num(reveal.duration)
+    graph.chains.append(f"[{looped}]fade=t=in:st={start}:d={length}:alpha=1[fade_{looped}]")
+    rise = f"{still.y}+{reveal.rise}*pow(1-clip((t-{start})/{length},0,1),3)"
+    return (
+        f"[{current}][fade_{looped}]overlay=x={still.x}:y='{rise}'"
+        f":enable='gte(t,{start})'[{target}]"
+    )
 
 
 def _window(still: Still) -> str:

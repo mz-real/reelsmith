@@ -12,11 +12,13 @@ from pathlib import Path
 from typing import Any
 
 from reelsmith.compose.blur import blur_boxes
+from reelsmith.compose.footage import footage_box, panel_pieces
 from reelsmith.compose.inputs import ProjectInputs, SceneSource
 from reelsmith.compose.layouts import Box, Layout, even, format_slug
 from reelsmith.compose.ripples import out_time
 from reelsmith.compose.scene import Look, caption_slots, scene_layout
 from reelsmith.compose.transitions import scene_starts
+from reelsmith.slides.markup import plain_text
 from reelsmith.timing import Segment
 
 EPS = 1e-6
@@ -89,7 +91,7 @@ def _placements(scene: SceneSource, start: float) -> list[dict[str, Any]]:
 
 def _captions(scene: SceneSource, layout: Layout, look: Look, start: float) -> list[dict[str, Any]]:
     duration = scene.timeline.duration
-    return [
+    entries = [
         {
             "text": slot.text,
             "out_start": _round(start + (slot.start if slot.start is not None else 0.0)),
@@ -99,13 +101,27 @@ def _captions(scene: SceneSource, layout: Layout, look: Look, start: float) -> l
         }
         for slot in caption_slots(scene, layout, look)
     ]
+    panel = layout.panel
+    for piece in panel_pieces(scene, layout, look):
+        if piece.kind not in ("title", "point") or panel is None:
+            continue
+        entries.append(
+            {
+                "text": plain_text(piece.text),
+                "out_start": _round(start + piece.start),
+                "out_end": _round(start + duration),
+                "box": _box(piece.box),
+                "panel": _box(panel),
+            }
+        )
+    return entries
 
 
 def _blur(scene: SceneSource, layout: Layout, look: Look, start: float) -> list[dict[str, Any]]:
     clip = scene.clip
     if clip is None:
         return []
-    content = layout.content
+    content = footage_box(layout)
     src_w, src_h = even(clip.width), even(clip.height)
     entries = []
     for box in blur_boxes(look.blur, clip.id, src_w, src_h):

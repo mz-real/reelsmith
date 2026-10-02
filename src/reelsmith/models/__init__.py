@@ -18,9 +18,11 @@ from reelsmith.models.spec import (
     CLONE_CONSENT_MESSAGE,
     BlurRegion,
     Options,
+    PanelPoint,
     SceneSpec,
     SpecModel,
     VoiceSettings,
+    ZoomSpec,
 )
 
 __all__ = [
@@ -33,6 +35,7 @@ __all__ = [
     "Event",
     "Line",
     "Options",
+    "PanelPoint",
     "Phrase",
     "SceneSpec",
     "ScriptModel",
@@ -45,6 +48,7 @@ __all__ = [
     "ChartSlide",
     "BulletsSlide",
     "VoiceSettings",
+    "ZoomSpec",
     "load_model",
     "save_model",
 ]
