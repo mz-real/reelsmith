@@ -79,4 +79,12 @@ def phrase_bounds(
         bounds[index] = (bounds[index][0], cut)
         bounds[index + 1] = (cut, bounds[index + 1][1])
 
+    # The line's edges cover the whole file. Whisper's first start can be late
+    # and its last end early, and cutting there clips the first sound or the
+    # last syllable. The voice step has already trimmed the tail safely.
+    duration = len(audio.samples) / audio.sample_rate
+    if bounds[0][1] > 0.0:
+        bounds[0] = (0.0, bounds[0][1])
+    if bounds[-1][1] > 0.0:
+        bounds[-1] = (bounds[-1][0], duration)
     return bounds
