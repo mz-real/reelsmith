@@ -147,3 +147,36 @@ def test_spec_scenes_without_narration_are_a_warning(
     assert code == 0
     assert out.startswith("[WARN]")
     assert "Scene 'search' has no narration" in out
+
+
+def test_say_that_only_respells_text_is_quiet(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = SCRIPT.format(pin="e1").replace(
+        "- text: Meet Recipe Box.",
+        "- text: Meet Recipe Box qa.\n            say: Meet Recipe Box Q A.",
+    )
+    make_demo(tmp_path, script=script)
+
+    code = run(app, ["script", "check", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert out.startswith("[OK]")
+
+
+def test_say_that_reads_differently_is_a_warning_not_an_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    script = SCRIPT.format(pin="e1").replace(
+        "- text: Meet Recipe Box.", "- text: Meet Recipe Box.\n            say: Delete every file."
+    )
+    make_demo(tmp_path, script=script)
+
+    code = run(app, ["script", "check", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert out.startswith("[WARN]")
+    assert "Scene 'intro', line 'l1', phrase 1" in out
+    assert "say" in out

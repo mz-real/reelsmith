@@ -62,6 +62,7 @@ voice:
   speed: 1.0
   sample: null           # chatterbox only: path to the reference, relative to this folder
   consent: null          # chatterbox only: own or permission
+  vocabulary: []         # rare words the voice says, such as product names
 options:
   allow_holds: true      # may hold the last frame when a line needs more time
   speed_up_waits: false  # may speed up long waits
@@ -86,6 +87,7 @@ Rules worth knowing:
 - A `slide` scene needs `slide:`. Every other layout needs `clip:`.
 - Use `browser` for web footage, `phone` for mobile footage, `full` for raw recordings and desktop apps.
 - `engine: chatterbox` needs both `sample` and `consent`. See [voices.md](voices.md).
+- `vocabulary` lists rare words such as your product name. They are passed to the speech model that checks the narration, as hints. Unusual words in the script (capitalised in mid sentence, or with digits, dots or underscores) are added for you.
 
 ## script.yaml
 
@@ -113,9 +115,15 @@ scenes:
             pin: e3
           - text: and open the Favourites tab.
             pin: e4
+      - id: fav-3
+        phrases:
+          - text: Then run reelsmith qa.
+            say: Then run reelsmith Q A.   # what the voice reads
 ```
 
 A line is voiced as one piece of audio. Pinned phrases are placed so they start on their event. `reelsmith script check` confirms that the scenes match spec.yaml and that every pin names a real event.
+
+`say` is optional. The captions and the srt show `text`; the voice reads `say`, and the transcript checks compare against it. Use it for acronyms, file names (`spec.yaml` as "spec dot yaml") and command words. `reelsmith script check` warns when `say` reads very differently from `text`.
 
 ## slides.yaml
 

@@ -24,6 +24,8 @@ class VoiceSettings(StrictModel):
     speed: float = Field(default=1.0, gt=0.0)
     sample: str | None = None
     consent: Literal["own", "permission"] | None = None
+    # Product names and other rare words, passed to the speech model as hints.
+    vocabulary: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _clone_needs_consent(self) -> Self:

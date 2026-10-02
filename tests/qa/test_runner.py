@@ -196,3 +196,25 @@ def test_run_qa_raises_when_spec_is_missing(tmp_path: Path) -> None:
     with pytest.raises(ReelsmithError) as info:
         run_qa(tmp_path, "16x9")
     assert info.value.fix == "reelsmith init"
+
+
+def test_run_qa_gives_the_transcriber_the_vocabulary_hints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from reelsmith.qa import runner
+
+    _build_demo(tmp_path, pin_event_out=0.0)
+    spec = yaml.safe_load((tmp_path / "spec.yaml").read_text(encoding="utf-8"))
+    spec.setdefault("voice", {})["vocabulary"] = ["reelsmith"]
+    (tmp_path / "spec.yaml").write_text(yaml.safe_dump(spec), encoding="utf-8")
+    seen: list[list[str]] = []
+
+    def fake_get_transcriber(vocabulary: list[str]) -> object:
+        seen.append(list(vocabulary))
+        return _fake_transcriber
+
+    monkeypatch.setattr(runner, "get_transcriber", fake_get_transcriber)
+
+    run_qa(tmp_path, "16x9")
+
+    assert seen and seen[0][0] == "reelsmith"

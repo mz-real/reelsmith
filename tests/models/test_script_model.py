@@ -65,3 +65,32 @@ def test_a_line_needs_at_least_one_phrase() -> None:
 def test_phrase_text_cannot_be_blank() -> None:
     with pytest.raises(ValidationError):
         Phrase.model_validate({"text": "   "})
+
+
+def test_a_phrase_can_say_something_other_than_its_text() -> None:
+    phrase = Phrase(text="Run reelsmith qa.", say="Run reelsmith Q A.")
+    assert phrase.text == "Run reelsmith qa."
+    assert phrase.spoken == "Run reelsmith Q A."
+
+
+def test_a_phrase_without_say_speaks_its_text() -> None:
+    assert Phrase(text="Open the app.").spoken == "Open the app."
+
+
+def test_say_cannot_be_blank() -> None:
+    with pytest.raises(ValidationError):
+        Phrase(text="Run reelsmith qa.", say="  ")
+
+
+def test_a_line_keeps_text_for_captions_and_say_for_the_voice() -> None:
+    line = Line(
+        id="l1",
+        phrases=[
+            Phrase(text="Open spec.yaml,", say="Open spec dot yaml,"),
+            Phrase(text="then go."),
+        ],
+    )
+    assert line.text == "Open spec.yaml, then go."
+    assert line.spoken_text == "Open spec dot yaml, then go."
+    assert line.has_say
+    assert not Line(id="l2", phrases=[Phrase(text="Hi.")]).has_say

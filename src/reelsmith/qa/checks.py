@@ -11,10 +11,11 @@ from reelsmith.errors import ReelsmithError
 from reelsmith.models import ScriptModel, SpecModel
 from reelsmith.qa.av import ebur128_loudness, extract_audio_window, extract_frame, rms_of_window
 from reelsmith.qa.image import build_contact_sheet, grayscale_crop, laplacian_variance
-from reelsmith.qa.text import compare_words
 from reelsmith.qa.timeline import CaptionOut, PlacementOut, SceneOut, Timeline
 from reelsmith.qa.transcribe import Transcriber
+from reelsmith.text import compare_text
 from reelsmith.timing import TimingRules, caption_duration
+from reelsmith.voice.transcribe import vocabulary_hints
 
 LOUDNESS_TARGET = -16.0
 LOUDNESS_TOLERANCE = 1.5
@@ -82,13 +83,18 @@ def check_transcript(ctx: QAContext) -> CheckRow:
     Each line is transcribed as a whole, from a little before its first
     phrase starts to a little after its last phrase ends, so a word
     boundary never falls right at the cut and clips the last word (heard
-    as a shorter, different word). A singular/plural difference against
-    the script is not treated as a real mistake: it is noted as a WARN
+    as a shorter, different word). The transcript is compared with what
+    the voice reads: say where a phrase has one, otherwise text.
+
+    A singular/plural difference against the script is not treated as a
+    real mistake, and nor is a vocabulary word heard as a word with the
+    same sound (realsmith for reelsmith): both are noted as a WARN
     instead of a FAIL.
     """
     status = CheckStatus.PASS
     details: list[str] = []
     scenes_by_id = {s.id: s for s in ctx.script.scenes}
+    vocabulary = vocabulary_hints(ctx.spec, ctx.script)
 
     for scene_tl in ctx.timeline.scenes:
         if scene_tl.placements is None:
@@ -120,7 +126,7 @@ def check_transcript(ctx: QAContext) -> CheckRow:
                 )
                 status = worse(status, CheckStatus.WARN)
                 continue
-            expected = line.text
+            expected = line.spoken_text
             last = max(ordered, key=lambda p: p.phrase)
             start = max(0.0, first.out_start - TRANSCRIPT_LEAD)
             end = last.out_end + TRANSCRIPT_TRAIL
@@ -131,7 +137,8 @@ def check_transcript(ctx: QAContext) -> CheckRow:
             if ctx.master_duration:
                 end = min(end, ctx.master_duration)
             heard = _transcribe_window(ctx, start, end)
-            missing, changed = compare_words(expected, heard)
+            result = compare_text(expected, heard, vocabulary)
+            missing, changed = result.missing, result.changed
             real_changed = [pair for pair in changed if not _is_plural_only(*pair)]
             plural_notes = [pair for pair in changed if _is_plural_only(*pair)]
             if missing or real_changed:
@@ -149,12 +156,17 @@ def check_transcript(ctx: QAContext) -> CheckRow:
                     "and recompose."
                 )
                 continue
+            where = f"{_line_where(scene_tl.id, first)} at {first.out_start:.2f}s"
             if plural_notes:
                 status = worse(status, CheckStatus.WARN)
                 said = [f"'{exp}' heard as '{act}'" for exp, act in plural_notes]
+                details.append(f"{where}: singular/plural only, not a failure: {said}.")
+            if result.homophones:
+                status = worse(status, CheckStatus.WARN)
+                said = [f"'{exp}' heard as '{act}'" for exp, act in result.homophones]
                 details.append(
-                    f"{_line_where(scene_tl.id, first)} at {first.out_start:.2f}s: "
-                    f"singular/plural only, not a failure: {said}."
+                    f"{where}: vocabulary word sounds the same, not a failure: {said}. "
+                    "Listen once; if it sounds wrong, add say to the phrase."
                 )
     if not details:
         details.append("Every narrated phrase matches its script text.")

@@ -197,6 +197,13 @@
           ],
           "default": null,
           "title": "Consent"
+        },
+        "vocabulary": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Vocabulary",
+          "type": "array"
         }
       },
       "title": "VoiceSettings",

@@ -12,20 +12,26 @@ fixed amount: a line that reads at 220 wpm needs a real correction, not
 a plus-or-minus three percent nudge. Lines with four words or fewer have
 too little speech for wpm to mean anything, so their pace is not
 checked at all.
+
+A phrase may have say as well as text. The captions show text; the
+voice reads say, and the transcript is checked against say. The speech
+model gets the vocabulary hints from spec.yaml and the script (see
+voice/transcribe.py), the same hints QA uses.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
+from functools import partial
 from pathlib import Path
 
 import soundfile as sf
 
 from reelsmith.fsutil import backup_existing
-from reelsmith.models import ScriptModel, SpecModel
+from reelsmith.models import Line, ScriptModel, SpecModel
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.align import phrase_bounds
 from reelsmith.voice.base import Audio, VoiceEngine, get_engine
@@ -36,7 +42,7 @@ from reelsmith.voice.quality import (
     trim_tail,
     words_per_minute,
 )
-from reelsmith.voice.transcribe import Word
+from reelsmith.voice.transcribe import Word, vocabulary_hints
 from reelsmith.voice.transcribe import transcribe as default_transcribe
 
 _MAX_RETRIES = 3
@@ -95,11 +101,15 @@ class VoiceReport:
     lines: list[LineReport]
 
 
-def _line_hash(text: str, engine_name: str, voice: str, speed: float) -> str:
+def _line_hash(line: Line, engine_name: str, voice: str, speed: float) -> str:
     # The engine name is part of the hash so switching engines, for example
     # from Kokoro to Chatterbox, regenerates every line instead of being
-    # mistaken for a line that has not changed.
-    raw = f"{text}|{engine_name}|{voice}|{speed}"
+    # mistaken for a line that has not changed. What the voice reads is
+    # added only when a phrase has say, so lines without it keep the hash
+    # they had before say existed and are not voiced again.
+    raw = f"{line.text}|{engine_name}|{voice}|{speed}"
+    if line.has_say:
+        raw += f"|say={line.spoken_text}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -147,7 +157,11 @@ def _with_tiny_jitter(speed: float, attempt: int) -> float:
 
 
 def _generate_line_audio(
-    engine: VoiceEngine, transcribe_fn: TranscribeFn, text: str, base_speed: float
+    engine: VoiceEngine,
+    transcribe_fn: TranscribeFn,
+    text: str,
+    base_speed: float,
+    vocabulary: Sequence[str] = (),
 ) -> tuple[Audio, float, bool, bool, list[str], list[Word], int, bool, bool]:
     """Synthesize one line, retrying for pace and then for dropped words.
 
@@ -177,7 +191,7 @@ def _generate_line_audio(
             words = transcribe_fn(audio)
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
-    transcript_ok, missing = transcript_matches(text, words)
+    transcript_ok, missing = transcript_matches(text, words, vocabulary)
 
     transcript_retried = False
     for retry in range(1, _MAX_RETRIES + 1):
@@ -190,7 +204,7 @@ def _generate_line_audio(
         words = transcribe_fn(audio)
         if pace_checked:
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
-        transcript_ok, missing = transcript_matches(text, words)
+        transcript_ok, missing = transcript_matches(text, words, vocabulary)
 
     return (
         audio,
@@ -253,13 +267,17 @@ def generate(
     only: set[str] | None = None,
     *,
     engine: VoiceEngine | None = None,
-    transcribe_fn: TranscribeFn = default_transcribe,
+    transcribe_fn: TranscribeFn | None = None,
 ) -> VoiceReport:
     """Generate narration audio for every line, or just those in only.
 
     only holds "scene/line" keys. When given, lines outside it are left as
     they are: kept from any previous run, otherwise skipped entirely.
+    Without a transcribe_fn, faster-whisper is used with the vocabulary
+    hints.
     """
+    hints = vocabulary_hints(spec, script)
+    active_transcribe: TranscribeFn = transcribe_fn or partial(default_transcribe, vocabulary=hints)
     active_engine = engine if engine is not None else get_engine(spec, root=paths.root)
     # A cloned voice is identified by its sample, so a new sample regenerates.
     voice_id = str(getattr(active_engine, "voice_id", "") or spec.voice.kokoro_voice)
@@ -277,8 +295,8 @@ def generate(
                     line_reports.append(prior)
                 continue
 
-            text = line.text
-            line_hash = _line_hash(text, active_engine.name, voice_id, spec.voice.speed)
+            text = line.spoken_text
+            line_hash = _line_hash(line, active_engine.name, voice_id, spec.voice.speed)
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
 
             prior = existing.get(key)
@@ -296,9 +314,11 @@ def generate(
                 attempts,
                 pace_retried,
                 transcript_retried,
-            ) = _generate_line_audio(active_engine, transcribe_fn, text, spec.voice.speed)
+            ) = _generate_line_audio(
+                active_engine, active_transcribe, text, spec.voice.speed, hints
+            )
 
-            bounds = phrase_bounds([phrase.text for phrase in line.phrases], words, audio)
+            bounds = phrase_bounds([phrase.spoken for phrase in line.phrases], words, audio)
             phrase_timings = [
                 PhraseTiming(index=i, start=start, end=end) for i, (start, end) in enumerate(bounds)
             ]

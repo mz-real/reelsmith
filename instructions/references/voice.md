@@ -72,6 +72,10 @@ Next: reelsmith voice generate --only search/l2
 
 `pace` means the line reads too fast or too slow. `dropped words` means the transcript did not match the script. Usually the fix is in the text: shorter sentences, spelled out numbers, no symbols or unusual names. Show the user any wording change before you make it, then rerun only those lines.
 
+When a phrase has `say:`, the voice reads `say` and the transcript is checked against it. The captions still show `text`. Changing `say` regenerates that line.
+
+The transcript check is forgiving in a few narrow ways only: "9" matches "nine", "1st" matches "first", "dr" matches "doctor", "scriptcheck" matches "script check", "plug in" matches "plugin", "SRT" matches "S R T", and "spec.yaml" matches "spec dot yaml". A word listed in `voice.vocabulary`, or an unusual word from the script, may be heard as a word that sounds the same ("realsmith" for "reelsmith"); that counts as heard. Any other changed or missing word is still a failure.
+
 ## Common failures and fixes
 
 | Problem | Fix |
@@ -81,7 +85,8 @@ Next: reelsmith voice generate --only search/l2
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `{{guides}}/interview.md`. Without consent, use Kokoro. |
 | `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
-| A word is said wrong | Spell it the way it sounds in the script, then regenerate that line. |
+| A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
+| A product name keeps failing as a different word | Add it to `voice.vocabulary` in spec.yaml. If the voice says it wrong, also add `say:`. |
 | Voice too fast for the clicks | Lower `voice.speed`, or shorten the lines. |
 
 ## Done when

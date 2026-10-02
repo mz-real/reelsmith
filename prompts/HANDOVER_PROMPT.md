@@ -619,6 +619,25 @@ scenes:
 - Line ids must be unique inside a scene. Phrases in one line are voiced together, so keep a line to one or two sentences.
 - Slide scenes cannot have pins. Their build steps (flow steps, bullet items) appear one per phrase: step 1 at the start, step 2 with phrase 2, and so on. So write one phrase per step.
 
+**Say it differently from how it reads.** A phrase can have `say:` as well as `text:`. The captions and the srt show `text`. The voice reads `say`, and the transcript checks compare against `say`. Keep `text` as the viewer should read it.
+
+```yaml
+          - text: Run reelsmith qa before you share it.
+            say: Run reelsmith Q A before you share it.
+          - text: First comes the plan, spec.yaml.
+            say: First comes the plan, spec dot yaml.
+```
+
+Use `say` for:
+
+- acronyms and lowercase command names: `qa` as "QA" or "Q A", `srt` as "S R T". Capitals or spaced letters are spelled out; lowercase is read as a word;
+- file names: `spec.yaml` as "spec dot yaml";
+- CLI words that read as other words: `init` as "in it".
+
+Only change how the words sound, not what they mean. `reelsmith script check` warns when `say` reads very differently from `text`.
+
+**Product names.** List rare names the voice says, such as your product name, in `voice.vocabulary` in spec.yaml, for example `vocabulary: [reelsmith, Kokoro]`. They are passed to the speech model as hints, together with the script's own unusual words (capitalised in mid sentence, or with digits, dots or underscores). If the checker still hears one of these words as a word that sounds the same, such as "realsmith" for "reelsmith", that is a note, not a failure.
+
 **slides.yaml** (Produce mode), in the demo folder. Slide ids match `slide:` in spec.yaml:
 
 ```yaml
@@ -666,7 +685,7 @@ Then show the user the whole script as it will be read, scene by scene, with the
 - **Keep the voice from running ahead of the clicks.** A phrase must fit in the gap before the next pinned event. At about 2.5 words per second, a 2 second gap holds about five words. If it does not fit, shorten the phrase. Holds (a frozen frame while the voice finishes) are a last resort, only if `allow_holds` is on, and at most about 3 seconds.
 - **Business logic first, then the screen.** Lead with what the user gets ("Your favourites stay on this device"), then where to click.
 - **Truth rule.** Only claim what the viewer can see in that moment. No "instantly", "secure" or "AI powered" unless the screen shows it.
-- Use short sentences and plain words. Spell numbers and names the way they should be spoken.
+- Use short sentences and plain words. Spell numbers and names the way they should be spoken, or add `say:` when the captions should keep the written form.
 
 ## Reading the output
 
@@ -692,6 +711,7 @@ Next: Fix /path/to/demo/script.yaml, then run: reelsmith script check
 | `capture/clips/search/clip.json is missing` | Capture or import the clip first. |
 | `Scene 'x' is not in spec.yaml` | Use the same scene ids as spec.yaml, or add the scene there (and get the change approved). |
 | `Line id 'l1' is used more than once` | Give each line in a scene its own id. |
+| `say reads quite differently from text` | A hint only. Check `say` is how `text` sounds, not a different sentence. |
 | Later, compose says a line is some seconds over | The line is too long for its gap. Shorten it, then rerun `reelsmith voice generate`. |
 
 ## Done when
@@ -786,6 +806,10 @@ Next: reelsmith voice generate --only search/l2
 
 `pace` means the line reads too fast or too slow. `dropped words` means the transcript did not match the script. Usually the fix is in the text: shorter sentences, spelled out numbers, no symbols or unusual names. Show the user any wording change before you make it, then rerun only those lines.
 
+When a phrase has `say:`, the voice reads `say` and the transcript is checked against it. The captions still show `text`. Changing `say` regenerates that line.
+
+The transcript check is forgiving in a few narrow ways only: "9" matches "nine", "1st" matches "first", "dr" matches "doctor", "scriptcheck" matches "script check", "plug in" matches "plugin", "SRT" matches "S R T", and "spec.yaml" matches "spec dot yaml". A word listed in `voice.vocabulary`, or an unusual word from the script, may be heard as a word that sounds the same ("realsmith" for "reelsmith"); that counts as heard. Any other changed or missing word is still a failure.
+
 ## Common failures and fixes
 
 | Problem | Fix |
@@ -795,7 +819,8 @@ Next: reelsmith voice generate --only search/l2
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
 | `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
-| A word is said wrong | Spell it the way it sounds in the script, then regenerate that line. |
+| A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
+| A product name keeps failing as a different word | Add it to `voice.vocabulary` in spec.yaml. If the voice says it wrong, also add `say:`. |
 | Voice too fast for the clicks | Lower `voice.speed`, or shorten the lines. |
 
 ## Done when

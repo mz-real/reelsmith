@@ -3,13 +3,15 @@
 Each reference gets the first few script lines. Every set is scored on
 voice similarity (the cosine of mean MFCCs between the output and its
 reference), pace (words a minute inside the comfortable window) and
-whether the transcript matches the script.
+whether the transcript matches the script. Each line is read as the
+voice step would read it: say where a phrase has one.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -23,7 +25,7 @@ from reelsmith.voice.base import Audio, VoiceEngine
 from reelsmith.voice.chatterbox_engine import ChatterboxEngine, check_consent
 from reelsmith.voice.quality import pace_ok, transcript_matches, trim_tail, words_per_minute
 from reelsmith.voice.reference import load_recording, resample
-from reelsmith.voice.transcribe import Word
+from reelsmith.voice.transcribe import Word, vocabulary_hints
 from reelsmith.voice.transcribe import transcribe as default_transcribe
 
 EngineFactory = Callable[[SpecModel, Path], VoiceEngine]
@@ -139,9 +141,9 @@ def read_audio(path: Path) -> Audio:
 
 
 def _first_lines(script: ScriptModel, count: int) -> list[tuple[str, str, str]]:
-    picked = [(scene.id, line.id, line.text) for scene in script.scenes for line in scene.lines][
-        :count
-    ]
+    picked = [
+        (scene.id, line.id, line.spoken_text) for scene in script.scenes for line in scene.lines
+    ][:count]
     if not picked:
         raise ReelsmithError("script.yaml has no lines to read.", fix="Add lines to script.yaml")
     return picked
@@ -173,6 +175,7 @@ def _score_ref(
     lines: list[tuple[str, str, str]],
     engine_factory: EngineFactory,
     transcribe_fn: TranscribeFn,
+    vocabulary: list[str],
 ) -> RefScore:
     engine = engine_factory(spec, ref)
     folder = paths.voice / "compare" / ref.stem
@@ -189,7 +192,7 @@ def _score_ref(
         seconds = audio.samples.size / audio.sample_rate
         if pace_ok(words_per_minute(text, seconds)):
             pace_count += 1
-        if transcript_matches(text, transcribe_fn(audio))[0]:
+        if transcript_matches(text, transcribe_fn(audio), vocabulary)[0]:
             transcript_count += 1
         total_words += len(text.split())
         total_seconds += seconds
@@ -261,7 +264,12 @@ def compare_references(
     """
     _check_refs(spec, refs)
     picked = _first_lines(script, lines)
-    scores = [_score_ref(paths, spec, ref, picked, engine_factory, transcribe_fn) for ref in refs]
+    hints = vocabulary_hints(spec, script)
+    if transcribe_fn is default_transcribe:
+        transcribe_fn = partial(default_transcribe, vocabulary=hints)
+    scores = [
+        _score_ref(paths, spec, ref, picked, engine_factory, transcribe_fn, hints) for ref in refs
+    ]
     best = max(scores, key=lambda s: s.score)
     markdown = paths.voice / "compare" / "compare.md"
     if markdown.exists():

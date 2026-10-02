@@ -334,3 +334,97 @@ def test_loudness_fails_far_from_target(tmp_path: Path) -> None:
 
     assert row.status == CheckStatus.FAIL
     assert "LUFS" in row.details[0]
+
+
+def _one_line_context(
+    tmp_path: Path, phrase: dict[str, str], heard: str, vocabulary: list[str] | None = None
+) -> QAContext:
+    master = tmp_path / "master.mp4"
+    build_video(master, ["sine=frequency=440:duration=1.0"], duration=1.0)
+    scene = SceneOut(
+        id="search",
+        out_start=0.0,
+        out_end=1.0,
+        segments=None,
+        placements=[
+            PlacementOut(line="l1", phrase=0, out_start=0.0, out_end=1.0, pin_event_out=None)
+        ],
+        captions=None,
+        blur=None,
+    )
+    timeline = Timeline(format="16x9", duration=1.0, scenes=[scene], transitions=[])
+    script = ScriptModel.model_validate(
+        {"scenes": [{"id": "search", "lines": [{"id": "l1", "phrases": [phrase]}]}]}
+    )
+    return QAContext(
+        spec=SpecModel.model_validate({"voice": {"vocabulary": vocabulary or []}}),
+        script=script,
+        timeline=timeline,
+        master=master,
+        master_duration=1.0,
+        sheets_dir=tmp_path / "sheets",
+        work_dir=tmp_path,
+        transcriber=_fake_transcriber(heard),  # type: ignore[arg-type]
+    )
+
+
+def test_transcript_is_checked_against_say(tmp_path: Path) -> None:
+    ctx = _one_line_context(
+        tmp_path, {"text": "Run reelsmith qa.", "say": "Run reelsmith Q A."}, "run reelsmith q a"
+    )
+
+    row = check_transcript(ctx)
+
+    assert row.status == CheckStatus.PASS
+
+
+def test_transcript_with_say_still_fails_on_a_dropped_word(tmp_path: Path) -> None:
+    ctx = _one_line_context(
+        tmp_path, {"text": "Run reelsmith qa.", "say": "Run reelsmith Q A."}, "run reelsmith q"
+    )
+
+    row = check_transcript(ctx)
+
+    assert row.status == CheckStatus.FAIL
+    assert "missing word(s) ['a']" in row.details[0]
+
+
+def test_transcript_warns_on_a_homophone_of_a_vocabulary_word(tmp_path: Path) -> None:
+    ctx = _one_line_context(
+        tmp_path,
+        {"text": "This video was made with reelsmith."},
+        "this video was made with realsmith",
+        vocabulary=["reelsmith"],
+    )
+
+    row = check_transcript(ctx)
+
+    assert row.status == CheckStatus.WARN
+    assert "sounds the same, not a failure" in row.details[0]
+    assert "'reelsmith' heard as 'realsmith'" in row.details[0]
+
+
+def test_transcript_fails_on_a_homophone_outside_the_vocabulary(tmp_path: Path) -> None:
+    ctx = _one_line_context(
+        tmp_path,
+        {"text": "Save the recipe."},
+        "safe the recipe",
+        vocabulary=["reelsmith"],
+    )
+
+    row = check_transcript(ctx)
+
+    assert row.status == CheckStatus.FAIL
+    assert "'save' heard as 'safe'" in row.details[0]
+
+
+def test_transcript_accepts_digits_abbreviations_and_joins(tmp_path: Path) -> None:
+    ctx = _one_line_context(
+        tmp_path,
+        {"text": "It runs nine checks. Script check and doctor need the plugin."},
+        "it runs 9 checks scriptcheck and dr need the plug in",
+    )
+
+    row = check_transcript(ctx)
+
+    assert row.status == CheckStatus.PASS

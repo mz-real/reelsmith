@@ -148,3 +148,9 @@ def test_blur_box_must_be_fractions() -> None:
 def test_bad_enum_value_is_rejected() -> None:
     with pytest.raises(ValidationError):
         SpecModel.model_validate(base_spec(formats=["4:3"]))
+
+
+def test_voice_vocabulary_defaults_to_empty_and_can_be_filled() -> None:
+    assert SpecModel().voice.vocabulary == []
+    spec = SpecModel.model_validate({"voice": {"vocabulary": ["reelsmith", "kokoro"]}})
+    assert spec.voice.vocabulary == ["reelsmith", "kokoro"]
