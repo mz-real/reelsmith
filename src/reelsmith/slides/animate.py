@@ -87,6 +87,10 @@ class SlidePage:
 
     def capture(self) -> bytes:
         """The current frame as PNG bytes."""
+        self._page.evaluate(
+            "() => { if (typeof window.__reelsmithRelayout === 'function') "
+            "window.__reelsmithRelayout(); }"
+        )
         shot = self._cdp.send(
             "Page.captureScreenshot",
             {"format": "png", "optimizeForSpeed": True, "captureBeyondViewport": False},

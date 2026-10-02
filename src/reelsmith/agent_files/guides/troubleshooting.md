@@ -38,8 +38,8 @@ On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="
 Install or update reelsmith:
 
 ```
-uv tool install reelsmith
-uv tool install "reelsmith[clone]"        # with own voice cloning, Python 3.11 or 3.12
+uv tool install git+https://github.com/mz-real/reelsmith
+uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"        # with own voice cloning, Python 3.11 or 3.12
 uv tool upgrade reelsmith
 ```
 
@@ -61,7 +61,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 
 | Problem | Fix |
 |---|---|
-| `reelsmith: command not found` | `uv tool install reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
+| `reelsmith: command not found` | `uv tool install git+https://github.com/mz-real/reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
 | doctor warns the plugin version does not match | Upgrade the CLI with `uv tool upgrade reelsmith`, or update the plugin or instruction files to match. |
 | ffmpeg missing or older than 6 | macOS `brew install ffmpeg`, Windows `winget install ffmpeg`, Debian or Ubuntu `sudo apt install ffmpeg`, Fedora `sudo dnf install ffmpeg`. |
 | Chromium missing | `reelsmith setup browser` |
@@ -72,7 +72,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 | `... not found` with `Next: reelsmith init` | You are not in the demo folder. `cd` into it or pass the folder to the command. |
 | `... is not empty. Use --force to init anyway.` | Use a new folder for the demo. |
 | `Could not download ...` | Check the network and retry. The `Next:` line has a manual download link. Models are cached after the first download. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"` with Python 3.11 or 3.12, or use a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` with Python 3.11 or 3.12, or use a Kokoro voice. |
 | compose says `slides/<id>.png, which is missing` | `reelsmith slides` |
 | compose says a wav is missing | `reelsmith voice generate` |
 | compose `[WARN]` with lines some seconds over | Shorten those lines, then `reelsmith voice generate` and `reelsmith compose`. |
