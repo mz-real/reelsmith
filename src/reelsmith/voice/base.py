@@ -25,12 +25,14 @@ class VoiceEngine(Protocol):
 
     seed lets a caller ask for a different take of the same line. Not
     every engine has a real random seed: see kokoro_engine for how Kokoro
-    approximates one.
+    approximates one. speed, when given, asks for that exact rate instead
+    of the engine's own default; an engine that cannot control its rate
+    is free to ignore it.
     """
 
     name: str
 
-    def synthesize(self, text: str, seed: int) -> Audio: ...
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio: ...
 
 
 def get_engine(spec: SpecModel, root: Path | None = None) -> VoiceEngine:

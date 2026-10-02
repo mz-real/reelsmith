@@ -38,7 +38,7 @@ def _plural(count: int, noun: str) -> str:
 
 def _failure_reasons(line: LineReport) -> list[str]:
     reasons: list[str] = []
-    if not pace_ok(line.wpm):
+    if line.pace_checked and not pace_ok(line.wpm):
         reasons.append("pace")
     if not line.transcript_ok:
         reasons.append("dropped words")

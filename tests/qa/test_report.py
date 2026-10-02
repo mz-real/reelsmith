@@ -37,6 +37,23 @@ def test_render_report_lists_every_check_and_its_details() -> None:
     assert "qa/sheets/scenes.jpg" in text
 
 
+def test_render_report_marks_a_preview_check_in_the_header() -> None:
+    meta = ReportMeta(
+        generated_at=datetime(2026, 1, 1),
+        format="16x9",
+        master="build/master_16x9_preview.mp4",
+        master_duration=1.0,
+        engine=None,
+        voice=None,
+        notes=[],
+        preview=True,
+    )
+
+    text = render_report(meta, [], [])
+
+    assert "# QA report (preview check)" in text
+
+
 def test_render_report_notes_a_missing_sheet() -> None:
     meta = ReportMeta(
         generated_at=datetime(2026, 1, 1),

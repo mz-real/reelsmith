@@ -111,7 +111,10 @@ class ChatterboxEngine:
         check_consent(self.consent, self.sample)
         self.voice_id = f"{self.sample.name}:{_sample_digest(self.sample)}"
 
-    def synthesize(self, text: str, seed: int) -> Audio:
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
+        # Chatterbox has no setting for how fast it reads a cloned voice,
+        # so speed is accepted for a common interface with other engines
+        # and otherwise ignored.
         check_consent(self.consent, self.sample)
         torch, tts_class = _import_chatterbox()
         model = _load_model(torch, tts_class)
