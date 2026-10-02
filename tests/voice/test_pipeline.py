@@ -8,7 +8,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from reelsmith.models import Line, Phrase, ScriptModel, ScriptScene, SpecModel, VoiceSettings
+from reelsmith.compose.inputs import load_project
+from reelsmith.models import (
+    Line,
+    Phrase,
+    SceneSpec,
+    ScriptModel,
+    ScriptScene,
+    SpecModel,
+    VoiceSettings,
+    save_model,
+)
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.base import Audio
 from reelsmith.voice.pipeline import TranscribeFn, generate
@@ -459,3 +469,60 @@ def test_generate_passes_the_vocabulary_hints_to_the_default_transcriber(
 
     assert seen[0] == ["reelsmith"]
     assert report.lines[0].transcript_ok is True
+
+
+def test_generate_drops_timings_for_lines_removed_from_script(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    spec = _spec()
+    engine = FakeEngine(durations=[0.8, 0.8, 0.8])
+    transcriber = FakeTranscriber(
+        results=[_words_for("one"), _words_for("two a"), _words_for("two b")]
+    )
+    script_l3 = ScriptModel(
+        scenes=[
+            ScriptScene(
+                id="demo",
+                caption="c",
+                lines=[Line(id="l3", phrases=[Phrase(text="one")])],
+            )
+        ]
+    )
+    generate(paths, spec, script_l3, None, engine=engine, transcribe_fn=transcriber)
+    assert (paths.voice / "demo__l3.wav").exists()
+
+    script_split = ScriptModel(
+        scenes=[
+            ScriptScene(
+                id="demo",
+                caption="c",
+                lines=[
+                    Line(id="l3a", phrases=[Phrase(text="two a")]),
+                    Line(id="l3b", phrases=[Phrase(text="two b")]),
+                ],
+            )
+        ]
+    )
+    only_engine = FakeEngine(durations=[0.8, 0.8])
+    only_transcriber = FakeTranscriber(results=[_words_for("two a"), _words_for("two b")])
+    report = generate(
+        paths,
+        spec,
+        script_split,
+        {"demo/l3a", "demo/l3b"},
+        engine=only_engine,
+        transcribe_fn=only_transcriber,
+    )
+
+    assert report.dropped_stale == 1
+    payload = json.loads((paths.voice / "timings.json").read_text(encoding="utf-8"))
+    keys = {(row["scene"], row["line"]) for row in payload["lines"]}
+    assert ("demo", "l3") not in keys
+    assert ("demo", "l3a") in keys
+    assert ("demo", "l3b") in keys
+    assert not (paths.voice / "demo__l3.wav").exists()
+    assert list(paths.voice.glob("demo__l3.wav.bak-*"))
+
+    compose_spec = SpecModel(scenes=[SceneSpec(id="demo", layout="slide", slide="demo")])
+    save_model(paths.spec, compose_spec)
+    save_model(paths.script, script_split)
+    load_project(paths)

@@ -68,6 +68,8 @@ def _result_for(report: VoiceReport) -> Result:
         f"{_plural(pace_regen, 'line')} regenerated for pace",
         f"{_plural(transcript_regen, 'line')} regenerated for dropped words",
     ]
+    if report.dropped_stale:
+        details.append(f"dropped {_plural(report.dropped_stale, 'line')} no longer in script.yaml")
 
     if failing:
         for key, reasons in failing:

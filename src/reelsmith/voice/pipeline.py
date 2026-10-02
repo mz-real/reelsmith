@@ -100,6 +100,7 @@ class VoiceReport:
     engine: str
     voice: str
     lines: list[LineReport]
+    dropped_stale: int = 0
 
 
 def _line_hash(line: Line, engine_name: str, voice: str, speed: float) -> str:
@@ -250,6 +251,25 @@ def _load_existing(timings_path: Path) -> dict[str, LineReport]:
     return existing
 
 
+def _script_line_keys(script: ScriptModel) -> set[str]:
+    return {f"{scene.id}/{line.id}" for scene in script.scenes for line in scene.lines}
+
+
+def _drop_stale_lines(voice_dir: Path, existing: dict[str, LineReport], script: ScriptModel) -> int:
+    """Remove timings entries (and back up wavs) for lines no longer in script.yaml."""
+    valid = _script_line_keys(script)
+    dropped = 0
+    for key, prior in list(existing.items()):
+        if key in valid:
+            continue
+        dropped += 1
+        wav_path = voice_dir / prior.file
+        if wav_path.is_file():
+            backup_existing(wav_path)
+        del existing[key]
+    return dropped
+
+
 def _write_timings(timings_path: Path, report: VoiceReport) -> None:
     if timings_path.exists():
         backup_existing(timings_path)
@@ -285,6 +305,7 @@ def generate(
     paths.voice.mkdir(parents=True, exist_ok=True)
     timings_path = paths.voice / "timings.json"
     existing = _load_existing(timings_path)
+    dropped_stale = _drop_stale_lines(paths.voice, existing, script)
 
     line_reports: list[LineReport] = []
     for scene in script.scenes:
@@ -347,7 +368,12 @@ def generate(
                 )
             )
 
-    report = VoiceReport(engine=active_engine.name, voice=voice_id, lines=line_reports)
+    report = VoiceReport(
+        engine=active_engine.name,
+        voice=voice_id,
+        lines=line_reports,
+        dropped_stale=dropped_stale,
+    )
     _write_timings(timings_path, report)
     return report
 

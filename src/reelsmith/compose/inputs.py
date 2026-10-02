@@ -62,16 +62,25 @@ class VoiceTimings:
         return next((t for t in self.lines if t.scene == scene and t.line == line), None)
 
 
-def read_timings(path: Path) -> VoiceTimings:
+def read_timings(path: Path, script: ScriptModel | None = None) -> VoiceTimings:
     """Read voice/timings.json, turning any problem into a clear error."""
     if not path.is_file():
         raise ReelsmithError(f"{path} not found, so there is no narration yet", fix=VOICE_FIX)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         lines = [_line_timing(item) for item in data["lines"]]
-        return VoiceTimings(str(data.get("engine", "")), str(data.get("voice", "")), lines)
+        timings = VoiceTimings(str(data.get("engine", "")), str(data.get("voice", "")), lines)
+        if script is not None:
+            timings = _timings_for_script(timings, script)
+        return timings
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         raise ReelsmithError(f"{path.name} could not be read: {exc!r}", fix=VOICE_FIX) from None
+
+
+def _timings_for_script(timings: VoiceTimings, script: ScriptModel) -> VoiceTimings:
+    valid = {(scene.id, line.id) for scene in script.scenes for line in scene.lines}
+    lines = [line for line in timings.lines if (line.scene, line.line) in valid]
+    return VoiceTimings(timings.engine, timings.voice, lines)
 
 
 def _line_timing(item: dict[str, object]) -> LineTiming:
@@ -139,7 +148,9 @@ def load_project(paths: DemoPaths) -> ProjectInputs:
     spec = load_model(paths.spec, SpecModel)
     script = load_model(paths.script, ScriptModel)
     brand = load_model(paths.brand, BrandModel) if paths.brand.is_file() else BrandModel()
-    timings = None if spec.voice.engine == "none" else read_timings(paths.voice / "timings.json")
+    timings = (
+        None if spec.voice.engine == "none" else read_timings(paths.voice / "timings.json", script)
+    )
     rules = timing_rules(spec)
     scenes = [_scene_source(paths, spec, s, script, timings, rules) for s in spec.scenes]
     return ProjectInputs(paths, spec, script, brand, scenes)
