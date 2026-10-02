@@ -1,7 +1,10 @@
 version: 1
 name: My product
-primary: "#2563eb"
-background: "#0f172a"
-text: "#f8fafc"
-font_family: system-ui
 logo: null
+colors:
+  primary: "#2563eb"
+  background: "#0f172a"
+  text: "#f8fafc"
+font:
+  family: system-ui
+  files: []
