@@ -12,7 +12,6 @@ from reelsmith.errors import ReelsmithError
 from reelsmith.slides.icons import ICON_NAMES, icon_svg
 
 
-
 def _parse_svg(svg: str) -> ET.Element:
     return ET.fromstring(svg)
 
