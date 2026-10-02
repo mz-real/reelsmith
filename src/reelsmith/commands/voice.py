@@ -47,9 +47,10 @@ def _failure_reasons(line: LineReport) -> list[str]:
 
 def _result_for(report: VoiceReport) -> Result:
     total = len(report.lines)
+    generated = [line for line in report.lines if not line.skipped and not line.left_out]
     skipped = [line for line in report.lines if line.skipped]
-    pace_regen = sum(1 for line in report.lines if line.pace_retried)
-    transcript_regen = sum(1 for line in report.lines if line.transcript_retried)
+    pace_regen = sum(1 for line in generated if line.pace_retried)
+    transcript_regen = sum(1 for line in generated if line.transcript_retried)
 
     failing: list[tuple[str, list[str]]] = []
     for line in report.lines:
@@ -59,13 +60,14 @@ def _result_for(report: VoiceReport) -> Result:
         if reasons:
             failing.append((f"{line.scene}/{line.line}", reasons))
 
-    details: list[str] = []
-    if pace_regen:
-        details.append(f"{_plural(pace_regen, 'line')} regenerated for pace")
-    if transcript_regen:
-        details.append(f"{_plural(transcript_regen, 'line')} regenerated for dropped words")
-    if skipped:
-        details.append(f"{_plural(len(skipped), 'line')} skipped, already up to date")
+    # Always shown, even at zero, so a --only run says plainly what happened
+    # to the lines it touched instead of staying silent on a clean pass.
+    details: list[str] = [
+        f"{_plural(len(generated), 'line')} generated",
+        f"{_plural(len(skipped), 'line')} skipped, already up to date",
+        f"{_plural(pace_regen, 'line')} regenerated for pace",
+        f"{_plural(transcript_regen, 'line')} regenerated for dropped words",
+    ]
 
     if failing:
         for key, reasons in failing:

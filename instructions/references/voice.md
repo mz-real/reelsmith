@@ -57,8 +57,10 @@ All good:
 
 ```
 [OK] Voice generated for 12 lines
-  - 2 lines regenerated for pace
+  - 4 lines generated
   - 8 lines skipped, already up to date
+  - 2 lines regenerated for pace
+  - 0 lines regenerated for dropped words
 Next: reelsmith compose --preview
 ```
 
