@@ -63,6 +63,7 @@ voice:
   sample: null           # chatterbox only: path to the reference, relative to this folder
   consent: null          # chatterbox only: own or permission
   vocabulary: []         # rare words the voice says, such as product names
+  pronounce: {}          # kokoro only: word to phonemes, for a word plain text still says wrong
 options:
   allow_holds: true      # may hold the last frame when a line needs more time
   speed_up_waits: false  # may speed up long waits
@@ -104,6 +105,7 @@ Rules worth knowing:
 - Web pages recorded at phone size get a drawn status bar above them in the `phone` frame, so nothing sits under the camera cutout.
 - `engine: chatterbox` needs both `sample` and `consent`. See [voices.md](voices.md).
 - `vocabulary` lists rare words such as your product name. They are passed to the speech model that checks the narration, as hints. Unusual words in the script (capitalised in mid sentence, or with digits, dots or underscores) are added for you.
+- `pronounce` maps a whole word, matched without regard to case, to the Kokoro or espeak phonemes it should be read as. Use it when a word still sounds wrong with plain text, for example a product name. It only works with the `kokoro` engine: Chatterbox cannot read phonemes, so it warns and ignores the map, use a phrase's `say` for it instead. Find a word's phonemes with `uv run python -c "from kokoro_onnx.tokenizer import Tokenizer; print(Tokenizer().phonemize('reelsmith', 'en-us'))"`, then adjust spacing or symbols in the result to fix the sound, for example `ɹˈiːl smɪθ` instead of `ɹˈiːlsmɪθ` to say "REEL-smith" instead of "realsmith".
 
 ## script.yaml
 

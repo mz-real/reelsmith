@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import os
 
+import numpy as np
 import pytest
 
+from reelsmith.voice import kokoro_engine
 from reelsmith.voice.kokoro_engine import KokoroEngine
 from reelsmith.voice.quality import pace_ok, transcript_matches, trim_tail, words_per_minute
 from reelsmith.voice.transcribe import transcribe
@@ -37,3 +39,38 @@ def test_kokoro_line_is_read_back_correctly_by_whisper() -> None:
     words = transcribe(audio)
     ok, missing = transcript_matches(text, words)
     assert ok, f"missing words: {missing}"
+
+
+@pytest.mark.models
+def test_pronounce_changes_the_phonemes_passed_to_kokoro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With the map, Kokoro is asked to speak different phonemes for the line.
+
+    This uses the real espeak backed tokenizer to phonemize "Made with
+    reelsmith." with and without voice.pronounce, and only replaces the
+    ONNX model call so the test does not need to judge the audio by ear.
+    The fact that the two calls differ, and that the mapped one reads
+    phonemes instead of text, is what makes the fix real.
+    """
+    text = "Made with reelsmith."
+    captured: list[dict[str, object]] = []
+
+    class _RecordingKokoro:
+        def create(self, text: str, **kwargs: object) -> tuple[np.ndarray, int]:
+            captured.append({"text": text, **kwargs})
+            return np.zeros(2400, dtype=np.float32), 24000
+
+    monkeypatch.setattr(kokoro_engine, "_load_kokoro", lambda: _RecordingKokoro())
+
+    plain_engine = KokoroEngine(voice="af_heart")
+    plain_engine.synthesize(text, seed=0)
+
+    mapped_engine = KokoroEngine(voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+    mapped_engine.synthesize(text, seed=0)
+
+    assert captured[0]["is_phonemes"] is False
+    assert captured[0]["text"] == text
+    assert captured[1]["is_phonemes"] is True
+    assert captured[1]["text"] != captured[0]["text"]
+    assert "ɹˈiːl smɪθ" in str(captured[1]["text"])

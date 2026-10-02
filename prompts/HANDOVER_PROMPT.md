@@ -879,6 +879,28 @@ Next: reelsmith voice generate --only search/l2
 
 When a phrase has `say:`, the voice reads `say` and the transcript is checked against it. The captions still show `text`. Changing `say` regenerates that line.
 
+## Fixing a word that sounds wrong
+
+Try `say:` first (see above). It respells the word, which works for most engines and both Kokoro and Chatterbox.
+
+If Kokoro still glides the word towards the wrong sound, for example reading a product name with a vowel it should not have, set `voice.pronounce` in spec.yaml instead. It maps a whole word (matched without regard to case) to the exact phonemes Kokoro should read:
+
+```yaml
+voice:
+  pronounce:
+    reelsmith: "ɹˈiːl smɪθ"
+```
+
+Find the phonemes by asking espeak directly:
+
+```
+uv run python -c "from kokoro_onnx.tokenizer import Tokenizer; print(Tokenizer().phonemize('reelsmith', 'en-us'))"
+```
+
+That prints `ɹˈiːlsmɪθ`, which reads as "realsmith". Insert a space where the word should break, here between the two halves, written `ɹˈiːl smɪθ`, which reads as "REEL-smith". Regenerate the line, listen, and adjust the spacing or symbols if it is still off.
+
+`voice.pronounce` only works with Kokoro. Chatterbox cannot read phonemes: it prints a warning and ignores the map, so use `say:` for a cloned voice instead. Changing `voice.pronounce` regenerates only the lines that use the word it changed.
+
 The transcript check is forgiving in a few narrow ways only: "9" matches "nine", "1st" matches "first", "dr" matches "doctor", "scriptcheck" matches "script check", "plug in" matches "plugin", "SRT" matches "S R T", and "spec.yaml" matches "spec dot yaml". A word listed in `voice.vocabulary`, or an unusual word from the script, may be heard as a word that sounds the same ("realsmith" for "reelsmith"); that counts as heard. Any other changed or missing word is still a failure.
 
 ## Common failures and fixes
@@ -891,6 +913,7 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
 | A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
+| `say:` still reads a word wrong, on Kokoro | Set `voice.pronounce` in spec.yaml to the word's phonemes. See "Fixing a word that sounds wrong" above. |
 | A product name keeps failing as a different word | Add it to `voice.vocabulary` in spec.yaml. If the voice says it wrong, also add `say:`. |
 | Voice too fast for the clicks | Lower `voice.speed`, or shorten the lines. |
 

@@ -73,6 +73,17 @@ def _result_for(report: VoiceReport) -> Result:
     if report.rerecorded_on_request:
         details.append(f"re-recorded {_plural(report.rerecorded_on_request, 'line')} on request")
 
+    # A pronunciation that espeak changed in context falls back to plain
+    # text for that line (see KokoroEngine), and is reported here rather
+    # than silently read wrong.
+    pronunciation_warnings = [
+        f"{line.scene}/{line.line}: {message}"
+        for line in report.lines
+        if not line.skipped
+        for message in line.warnings
+    ]
+    details.extend(pronunciation_warnings)
+
     if failing:
         for key, reasons in failing:
             details.append(f"{key} still fails: {' and '.join(reasons)}")
@@ -83,6 +94,15 @@ def _result_for(report: VoiceReport) -> Result:
             message=f"Voice generated for {_plural(total, 'line')}, {len(failing)} need review",
             details=details,
             next_step=f"reelsmith voice generate {only_args}",
+        )
+
+    if pronunciation_warnings:
+        return Result(
+            status=Status.WARN,
+            message=f"Voice generated for {_plural(total, 'line')}, "
+            f"{_plural(len(pronunciation_warnings), 'line')} fell back on pronunciation",
+            details=details,
+            next_step="reelsmith compose --preview",
         )
 
     return Result(

@@ -175,6 +175,28 @@ def test_refuses_a_model_without_its_watermarker(
         ChatterboxEngine(sample=sample, consent="own").synthesize("Hi.", seed=0)
 
 
+def test_pronounce_prints_a_warning_and_is_ignored(
+    monkeypatch: pytest.MonkeyPatch, sample: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _, made = _install_fakes(monkeypatch, cuda=True)
+    engine = ChatterboxEngine(sample=sample, consent="own", pronounce={"reelsmith": "ɹˈiːl smɪθ"})
+    err = capsys.readouterr().err
+    assert "WARN" in err
+    assert "say" in err
+
+    engine.synthesize("Made with reelsmith.", seed=0)
+
+    assert made[0].calls == [{"text": "Made with reelsmith.", "audio_prompt_path": str(sample)}]
+
+
+def test_no_pronounce_prints_no_warning(
+    monkeypatch: pytest.MonkeyPatch, sample: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _install_fakes(monkeypatch, cuda=True)
+    ChatterboxEngine(sample=sample, consent="own")
+    assert capsys.readouterr().err == ""
+
+
 def test_has_no_way_to_turn_the_watermark_off(sample: Path) -> None:
     import dataclasses
 
@@ -227,6 +249,21 @@ def test_get_engine_returns_chatterbox_with_sample_relative_to_root(tmp_path: Pa
     engine = get_engine(_clone_spec("voice/me.wav"), root=tmp_path)
     assert isinstance(engine, ChatterboxEngine)
     assert engine.sample == tmp_path / "voice" / "me.wav"
+
+
+def test_get_engine_passes_pronounce_to_chatterbox(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (tmp_path / "voice").mkdir()
+    (tmp_path / "voice" / "me.wav").write_bytes(b"RIFF")
+    spec = _clone_spec("voice/me.wav")
+    spec.voice = spec.voice.model_copy(update={"pronounce": {"reelsmith": "ɹˈiːl smɪθ"}})
+
+    engine = get_engine(spec, root=tmp_path)
+
+    assert isinstance(engine, ChatterboxEngine)
+    assert engine.pronounce == {"reelsmith": "ɹˈiːl smɪθ"}
+    assert "WARN" in capsys.readouterr().err
 
 
 def test_get_engine_refuses_a_spec_built_without_validation(tmp_path: Path) -> None:

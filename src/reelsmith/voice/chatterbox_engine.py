@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ CLONE_FIX = 'uv tool install "reelsmith[clone]"'
 CPU_WARNING = (
     "WARN: no GPU found, so Chatterbox runs on the CPU. Expect it to be slow, "
     "often a minute or more per line."
+)
+PRONOUNCE_WARNING = (
+    "WARN: Chatterbox cannot read phonemes, so voice.pronounce is ignored. "
+    "Spell the word the way it sounds in the phrase's say instead."
 )
 
 _models: dict[str, Any] = {}
@@ -104,12 +109,17 @@ class ChatterboxEngine:
 
     sample: Path
     consent: str | None
+    # Accepted for a common interface with KokoroEngine. Chatterbox cannot
+    # take phonemes, so this is ignored, with a warning, by synthesize.
+    pronounce: Mapping[str, str] = field(default_factory=dict)
     name: str = "chatterbox"
     voice_id: str = field(init=False, default="")
 
     def __post_init__(self) -> None:
         check_consent(self.consent, self.sample)
         self.voice_id = f"{self.sample.name}:{_sample_digest(self.sample)}"
+        if self.pronounce:
+            typer.echo(PRONOUNCE_WARNING, err=True)
 
     def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
         # Chatterbox has no setting for how fast it reads a cloned voice,

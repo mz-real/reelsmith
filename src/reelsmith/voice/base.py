@@ -14,10 +14,16 @@ from reelsmith.models import SpecModel
 
 @dataclass
 class Audio:
-    """Mono audio samples as float32, at the given sample rate."""
+    """Mono audio samples as float32, at the given sample rate.
+
+    warning carries a message the engine wants the pipeline to report for
+    this line, such as a pronunciation that fell back to plain text. None
+    means there is nothing to report.
+    """
 
     samples: np.ndarray
     sample_rate: int
+    warning: str | None = None
 
 
 class VoiceEngine(Protocol):
@@ -45,14 +51,18 @@ def get_engine(spec: SpecModel, root: Path | None = None) -> VoiceEngine:
     if engine_name == "kokoro":
         from reelsmith.voice.kokoro_engine import KokoroEngine
 
-        return KokoroEngine(voice=spec.voice.kokoro_voice, speed=spec.voice.speed)
+        return KokoroEngine(
+            voice=spec.voice.kokoro_voice, speed=spec.voice.speed, pronounce=spec.voice.pronounce
+        )
     if engine_name == "chatterbox":
         from reelsmith.voice.chatterbox_engine import ChatterboxEngine
 
         sample = Path(spec.voice.sample or "")
         if root is not None and not sample.is_absolute():
             sample = root / sample
-        return ChatterboxEngine(sample=sample, consent=spec.voice.consent)
+        return ChatterboxEngine(
+            sample=sample, consent=spec.voice.consent, pronounce=spec.voice.pronounce
+        )
     if engine_name == "none":
         raise ReelsmithError(
             "spec.yaml sets voice.engine to none, so there is no narration to generate."

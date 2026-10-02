@@ -158,6 +158,22 @@ def test_voice_vocabulary_defaults_to_empty_and_can_be_filled() -> None:
     assert spec.voice.vocabulary == ["reelsmith", "kokoro"]
 
 
+def test_voice_pronounce_defaults_to_empty_and_can_be_filled() -> None:
+    assert SpecModel().voice.pronounce == {}
+    spec = SpecModel.model_validate({"voice": {"pronounce": {"reelsmith": "ɹˈiːl smɪθ"}}})
+    assert spec.voice.pronounce == {"reelsmith": "ɹˈiːl smɪθ"}
+
+
+def test_voice_pronounce_key_must_be_a_single_word() -> None:
+    with pytest.raises(ValidationError, match="single word"):
+        SpecModel.model_validate({"voice": {"pronounce": {"reel smith": "ɹˈiːl smɪθ"}}})
+
+
+def test_voice_pronounce_key_cannot_be_blank() -> None:
+    with pytest.raises(ValidationError, match="single word"):
+        SpecModel.model_validate({"voice": {"pronounce": {"   ": "ɹˈiːl smɪθ"}}})
+
+
 def motion_scene(**changes: Any) -> dict[str, Any]:
     scene: dict[str, Any] = {"id": "fav", "layout": "browser", "clip": "fav"}
     scene.update(changes)
