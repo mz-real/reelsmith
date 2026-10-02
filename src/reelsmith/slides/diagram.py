@@ -30,8 +30,12 @@ from reelsmith.slides.themes import SlideTheme
 # bend its arrow. It runs again once fonts are ready, before any capture.
 _WIRES_JS = """
 (() => {
+  window.__reelsmithReady = false;
   const root = document.querySelector('.arch');
-  if (!root) return;
+  if (!root) {
+    document.fonts.ready.then(() => { window.__reelsmithReady = true; });
+    return;
+  }
   const pos = (el) => {
     let x = 0, y = 0, node = el;
     while (node && node !== root) { x += node.offsetLeft; y += node.offsetTop;
@@ -80,8 +84,10 @@ _WIRES_JS = """
       }
     }
   };
-  layout();
-  document.fonts.ready.then(layout);
+  document.fonts.ready.then(() => {
+    layout();
+    window.__reelsmithReady = true;
+  });
 })();
 """
 
