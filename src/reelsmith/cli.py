@@ -14,7 +14,7 @@ from reelsmith.result import Result, Status, emit
 # Later tasks add commands by creating src/reelsmith/commands/<name>.py with
 # a `def register(app: typer.Typer) -> None` function, then listing the
 # module name here.
-COMMANDS: list[str] = []
+COMMANDS: list[str] = ["schema", "script_check"]
 
 app = typer.Typer(
     name="reelsmith",

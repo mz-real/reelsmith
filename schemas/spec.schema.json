@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "BlurRegion": {
+      "additionalProperties": false,
+      "properties": {
+        "clip": {
+          "minLength": 1,
+          "title": "Clip",
+          "type": "string"
+        },
+        "box": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            }
+          ],
+          "title": "Box",
+          "type": "array"
+        },
+        "start": {
+          "default": 0.0,
+          "minimum": 0.0,
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        }
+      },
+      "required": [
+        "clip",
+        "box"
+      ],
+      "title": "BlurRegion",
+      "type": "object"
+    },
+    "Options": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_holds": {
+          "default": true,
+          "title": "Allow Holds",
+          "type": "boolean"
+        },
+        "speed_up_waits": {
+          "default": false,
+          "title": "Speed Up Waits",
+          "type": "boolean"
+        },
+        "captions": {
+          "default": "burned",
+          "enum": [
+            "none",
+            "burned",
+            "srt",
+            "both"
+          ],
+          "title": "Captions",
+          "type": "string"
+        },
+        "highlight_clicks": {
+          "default": true,
+          "title": "Highlight Clicks",
+          "type": "boolean"
+        }
+      },
+      "title": "Options",
+      "type": "object"
+    },
+    "SceneSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "layout": {
+          "enum": [
+            "slide",
+            "phone",
+            "browser",
+            "full"
+          ],
+          "title": "Layout",
+          "type": "string"
+        },
+        "slide": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Slide"
+        },
+        "clip": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clip"
+        }
+      },
+      "required": [
+        "id",
+        "layout"
+      ],
+      "title": "SceneSpec",
+      "type": "object"
+    },
+    "VoiceSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "default": "kokoro",
+          "enum": [
+            "kokoro",
+            "chatterbox",
+            "none"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "kokoro_voice": {
+          "default": "af_heart",
+          "title": "Kokoro Voice",
+          "type": "string"
+        },
+        "speed": {
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "title": "Speed",
+          "type": "number"
+        },
+        "sample": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample"
+        },
+        "consent": {
+          "anyOf": [
+            {
+              "enum": [
+                "own",
+                "permission"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Consent"
+        }
+      },
+      "title": "VoiceSettings",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "mode": {
+      "default": "produce",
+      "enum": [
+        "narrate",
+        "produce"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "goal": {
+      "default": "",
+      "title": "Goal",
+      "type": "string"
+    },
+    "audience": {
+      "default": "",
+      "title": "Audience",
+      "type": "string"
+    },
+    "target_seconds": {
+      "default": 90,
+      "exclusiveMinimum": 0,
+      "title": "Target Seconds",
+      "type": "number"
+    },
+    "formats": {
+      "items": {
+        "enum": [
+          "16:9",
+          "9:16",
+          "1:1"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Formats",
+      "type": "array"
+    },
+    "quality": {
+      "default": "1080p",
+      "enum": [
+        "1080p",
+        "4k"
+      ],
+      "title": "Quality",
+      "type": "string"
+    },
+    "theme": {
+      "default": "dark",
+      "enum": [
+        "dark",
+        "light",
+        "minimal"
+      ],
+      "title": "Theme",
+      "type": "string"
+    },
+    "footage": {
+      "default": "web",
+      "enum": [
+        "import",
+        "web",
+        "mobile"
+      ],
+      "title": "Footage",
+      "type": "string"
+    },
+    "voice": {
+      "$ref": "#/$defs/VoiceSettings"
+    },
+    "options": {
+      "$ref": "#/$defs/Options"
+    },
+    "scenes": {
+      "items": {
+        "$ref": "#/$defs/SceneSpec"
+      },
+      "title": "Scenes",
+      "type": "array"
+    },
+    "blur": {
+      "items": {
+        "$ref": "#/$defs/BlurRegion"
+      },
+      "title": "Blur",
+      "type": "array"
+    }
+  },
+  "title": "SpecModel",
+  "type": "object"
+}

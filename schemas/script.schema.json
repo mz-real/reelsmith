@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Line": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "phrases": {
+          "items": {
+            "$ref": "#/$defs/Phrase"
+          },
+          "minItems": 1,
+          "title": "Phrases",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "phrases"
+      ],
+      "title": "Line",
+      "type": "object"
+    },
+    "Phrase": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "pin": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pin"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "Phrase",
+      "type": "object"
+    },
+    "ScriptScene": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "caption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Caption"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/Line"
+          },
+          "title": "Lines",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ScriptScene",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "scenes": {
+      "items": {
+        "$ref": "#/$defs/ScriptScene"
+      },
+      "title": "Scenes",
+      "type": "array"
+    }
+  },
+  "title": "ScriptModel",
+  "type": "object"
+}
