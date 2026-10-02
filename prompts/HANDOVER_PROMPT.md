@@ -123,7 +123,7 @@ Before you ask, look at the project: read the README, the routes or screens, and
 1. What should it show? Suggest: one feature, a full tour, the mobile app, or release notes. Name real features you found in the app.
 2. Who is watching, and how long should it be? Suggest: team, customers or social, and 30 s, 90 s, 3 min or 5 min.
 3. Where does the footage come from? Suggest: your own recordings (import), automated web capture, or automated mobile capture. Web capture needs a URL or a local file the browser can open. Mobile capture needs an iOS simulator (macOS only) or an Android emulator or device.
-4. Which voice? Suggest: a Kokoro stock voice (default), your own voice (Chatterbox), or silent with captions. For Kokoro, offer `af_heart` (US female, default), `af_bella` (US female), `bf_emma` (UK female), `am_michael` (US male), `am_fenrir` (US male), `bm_george` (UK male). Offer `reelsmith voice preview` so they can hear them.
+4. Which voice? Suggest: a Kokoro stock voice (default), your own voice (Chatterbox), or silent with captions. For Kokoro, start with `af_heart` (US female, default) and `am_michael` (US male, calm), then mention `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Offer `reelsmith voice preview` so they can hear them.
 5. Format, branding and anything to blur. Suggest: `16:9` (default), `9:16`, `1:1`, or several. Theme `dark` (default), `light` or `minimal`. Ask whether they have a logo, colours or a font for brand.yaml. Ask whether any emails, names, keys or prices on screen must be hidden.
 6. Optional: a sample of how they talk (a past video, a blog post, a README they wrote). Use it for the script's tone.
 
@@ -769,7 +769,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
 - Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
   - `none` means a silent video with captions. Skip this step and go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
-- Not sure which Kokoro voice? Offer a preview first. Good English voices: `af_heart` (default), `af_bella`, `bf_emma`, `am_michael`, `am_fenrir`, `bm_george`. Other languages are best effort.
+- Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
 - The first run downloads models into the user's cache folder: the Kokoro model (about 114 MB plus 28 MB of voices) and the Whisper model used to check the words (about 145 MB). Tell the user before the first run.
 

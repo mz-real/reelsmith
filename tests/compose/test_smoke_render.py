@@ -15,7 +15,7 @@ from PIL import Image, ImageColor, ImageStat
 from reelsmith.compose.graph import Encode
 from reelsmith.compose.inputs import load_project
 from reelsmith.compose.layouts import Size, canvas_size, plan_layout, theme_colors
-from reelsmith.compose.project import RenderSettings, compose_project
+from reelsmith.compose.project import RenderSettings, compose_project, final_settings
 from reelsmith.export import export_project
 from reelsmith.media.ffmpeg import probe
 from reelsmith.models import BrandModel
@@ -126,3 +126,103 @@ def test_timeline_placements_match_the_narration_in_the_master(media_demo: Path)
     for expected, found in zip(starts[1:], onsets, strict=True):
         # AAC frames and the detector window make onsets up to a few frames late.
         assert found == pytest.approx(expected, abs=0.08)
+
+
+def test_4k_compose_uses_3840_by_2160(media_demo: Path) -> None:
+    spec = yaml.safe_load((media_demo / "spec.yaml").read_text(encoding="utf-8"))
+    spec["quality"] = "4k"
+    (media_demo / "spec.yaml").write_text(yaml.safe_dump(spec), encoding="utf-8")
+    paths = DemoPaths.at(media_demo)
+    settings = final_settings(load_project(paths).spec)
+    settings = RenderSettings(settings.scale, settings.encode, use_cache=False, preview=False)
+    assert settings.scale == 2.0
+    report = compose_project(paths, settings)
+    master = probe(report.formats[0].master)
+    assert (master.width, master.height) == (3840, 2160)
+
+
+def test_three_scene_master_uses_slide_and_zoom_transitions(media_demo: Path) -> None:
+    spec = yaml.safe_load((media_demo / "spec.yaml").read_text(encoding="utf-8"))
+    spec["scenes"].append(
+        {"id": "outro", "layout": "slide", "slide": "intro", "transition": "zoom"}
+    )
+    spec["scenes"][1]["transition"] = "slide"
+    (media_demo / "spec.yaml").write_text(yaml.safe_dump(spec), encoding="utf-8")
+    script = yaml.safe_load((media_demo / "script.yaml").read_text(encoding="utf-8"))
+    script["scenes"].append(
+        {
+            "id": "outro",
+            "caption": "Done",
+            "lines": [{"id": "l1", "phrases": [{"text": "That is the whole flow."}]}],
+        }
+    )
+    (media_demo / "script.yaml").write_text(yaml.safe_dump(script), encoding="utf-8")
+    timings = json.loads((media_demo / "voice" / "timings.json").read_text(encoding="utf-8"))
+    timings["lines"].append(
+        {
+            "scene": "outro",
+            "line": "l1",
+            "file": "outro__l1.wav",
+            "duration": 2.0,
+            "hash": "z",
+            "phrases": [{"index": 0, "start": 0.0, "end": 2.0}],
+            "wpm": 150.0,
+            "transcript_ok": True,
+            "attempts": 1,
+        }
+    )
+    (media_demo / "voice" / "timings.json").write_text(json.dumps(timings), encoding="utf-8")
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=880:duration=2",
+            str(media_demo / "voice" / "outro__l1.wav"),
+        ],
+        check=True,
+    )
+    paths = DemoPaths.at(media_demo)
+    report = compose_project(paths, TINY)
+    doc = json.loads((paths.build / "timeline.json").read_text(encoding="utf-8"))
+    intro_end = doc["scenes"][0]["out_end"]
+    search_end = doc["scenes"][1]["out_end"]
+    mid_first = intro_end
+    mid_second = search_end
+    before = media_demo / "before_slide.png"
+    during = media_demo / "during_slide.png"
+    during_zoom = media_demo / "during_zoom.png"
+    grabs = (
+        (mid_first, before),
+        (mid_first + 0.2, during),
+        (mid_second + 0.2, during_zoom),
+    )
+    for at, dest in grabs:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                str(at),
+                "-i",
+                str(report.formats[0].master),
+                "-frames:v",
+                "1",
+                str(dest),
+            ],
+            check=True,
+        )
+    with Image.open(before) as image:
+        before_rgb = image.convert("RGB").getpixel((240, 135))
+    with Image.open(during) as image:
+        during_rgb = image.convert("RGB").getpixel((240, 135))
+    with Image.open(during_zoom) as image:
+        zoom_rgb = image.convert("RGB").getpixel((240, 135))
+    assert before_rgb != during_rgb
+    assert during_rgb != zoom_rgb

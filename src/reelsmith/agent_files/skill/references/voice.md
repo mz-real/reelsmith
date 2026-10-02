@@ -20,7 +20,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
 - Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
   - `none` means a silent video with captions. Skip this step and go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
-- Not sure which Kokoro voice? Offer a preview first. Good English voices: `af_heart` (default), `af_bella`, `bf_emma`, `am_michael`, `am_fenrir`, `bm_george`. Other languages are best effort.
+- Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
 - The first run downloads models into the user's cache folder: the Kokoro model (about 114 MB plus 28 MB of voices) and the Whisper model used to check the words (about 145 MB). Tell the user before the first run.
 

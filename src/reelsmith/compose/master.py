@@ -18,6 +18,7 @@ def master_args(
     encode: Encode,
     out: Path,
     fade: float = XFADE,
+    transitions: Sequence[str] | None = None,
 ) -> list[str]:
     """Cross fade the scenes and lay each scene's audio at its start time.
 
@@ -28,7 +29,7 @@ def master_args(
     for path in scene_files:
         inputs += ["-i", str(path)]
     total = sum(durations)
-    chains = xfade_filters(durations, fade, "vout")
+    chains = xfade_filters(durations, fade, "vout", transitions)
     starts = scene_starts(durations)
     for k, start in enumerate(starts):
         chains.append(f"[{k}:a]adelay={round(start * 1000)}:all=1[sa{k}]")
