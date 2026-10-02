@@ -290,7 +290,7 @@ blur: []
 
 ## Commands
 
-Run these from inside the demo folder, or add `--demo DIR` to the capture command and `DIR` to the others.
+Run these from inside the demo folder, or add the demo folder `DIR` as the last argument to each command.
 
 1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml:
 
@@ -441,7 +441,7 @@ Options:
 
 - `--headed` shows the browser while it records. Good for a first try.
 - `--size 1280x720` sets the viewport. Both numbers must be even. Use the default for `16:9`. For a phone sized web view, try `--size 390x844`.
-- `--demo DIR` if you run it from outside the demo folder.
+- The demo folder as a second argument (`reelsmith capture web FLOW DIR --id ID`) if you run it from outside the demo folder.
 
 The result is `capture/clips/search/video.mp4` and `capture/clips/search/clip.json` with the events and their times.
 

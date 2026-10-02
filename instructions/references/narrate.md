@@ -44,7 +44,7 @@ blur: []
 
 ## Commands
 
-Run these from inside the demo folder, or add `--demo DIR` to the capture command and `DIR` to the others.
+Run these from inside the demo folder, or add the demo folder `DIR` as the last argument to each command.
 
 1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml:
 
