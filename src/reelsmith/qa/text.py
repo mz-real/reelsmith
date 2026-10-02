@@ -5,12 +5,15 @@ from __future__ import annotations
 import difflib
 import re
 
+from reelsmith.text import normalise_word
+
 _WORD_RE = re.compile(r"[a-z0-9']+")
 
 
 def normalize_words(text: str) -> list[str]:
-    """Lowercase and split into bare words, dropping punctuation."""
-    return _WORD_RE.findall(text.lower())
+    """Lowercase, split into bare words, drop punctuation, and fold
+    British/American spelling variants to the same form."""
+    return [normalise_word(word) for word in _WORD_RE.findall(text.lower())]
 
 
 def compare_words(expected: str, actual: str) -> tuple[list[str], list[tuple[str, str]]]:

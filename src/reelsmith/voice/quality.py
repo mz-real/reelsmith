@@ -6,6 +6,7 @@ import re
 
 import numpy as np
 
+from reelsmith.text import normalise_word
 from reelsmith.voice.base import Audio
 from reelsmith.voice.transcribe import Word
 
@@ -41,6 +42,21 @@ def words_per_minute(text: str, seconds: float) -> float:
         return 0.0
     minutes = seconds / 60.0
     return word_count / minutes
+
+
+def speaking_seconds(words: list[Word], fallback: float) -> float:
+    """Seconds of actual speech, from the first word's start to the last word's end.
+
+    The whole audio file's length includes the engine's lead-in and the
+    short tail kept after trim_tail, neither of which is time spent
+    speaking the line. Whisper's own word timestamps mark where speech
+    actually starts and stops, so they give a truer reading for words a
+    minute than the file length does. When there are no words at all
+    (nothing was transcribed), fallback is used instead.
+    """
+    if not words:
+        return fallback
+    return words[-1].end - words[0].start
 
 
 def pace_ok(wpm: float, low: float = 130.0, high: float = 210.0) -> bool:
@@ -96,7 +112,8 @@ def _number_to_words(value: int) -> str:
 
 
 def _normalise_tokens(text: str) -> list[str]:
-    """Lower case, drop punctuation, and spell out small numbers."""
+    """Lower case, drop punctuation, spell out small numbers, and fold
+    British/American spelling variants to the same form."""
     tokens: list[str] = []
     for raw in text.split():
         cleaned = re.sub(r"[^\w]", "", raw.lower())
@@ -105,7 +122,7 @@ def _normalise_tokens(text: str) -> list[str]:
         if cleaned.isdigit():
             tokens.extend(_number_to_words(int(cleaned)).split())
         else:
-            tokens.append(cleaned)
+            tokens.append(normalise_word(cleaned))
     return tokens
 
 
@@ -113,8 +130,9 @@ def transcript_matches(expected: str, words: list[Word]) -> tuple[bool, list[str
     """Check a transcript against the expected line text.
 
     Case, punctuation and small numbers are normalised on both sides
-    first. Returns whether every expected word was heard, and the list of
-    words that were not.
+    first, and spelling variants such as "favourites" and "Favorites"
+    are treated as the same word. Returns whether every expected word
+    was heard, and the list of words that were not.
     """
     expected_tokens = _normalise_tokens(expected)
     heard: set[str] = set()

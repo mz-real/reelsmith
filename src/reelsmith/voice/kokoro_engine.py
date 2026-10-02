@@ -55,8 +55,10 @@ class KokoroEngine:
     lang: str = "en-us"
     name: str = "kokoro"
 
-    def synthesize(self, text: str, seed: int) -> Audio:
+    def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
         kokoro = _load_kokoro()
-        speed = _jittered_speed(self.speed, seed)
-        samples, sample_rate = kokoro.create(text, voice=self.voice, speed=speed, lang=self.lang)
+        effective_speed = speed if speed is not None else _jittered_speed(self.speed, seed)
+        samples, sample_rate = kokoro.create(
+            text, voice=self.voice, speed=effective_speed, lang=self.lang
+        )
         return Audio(samples=np.asarray(samples, dtype=np.float32), sample_rate=int(sample_rate))

@@ -28,7 +28,7 @@ NOT_AVAILABLE = "step not available in this build"
 
 StepFn = Callable[[], Result]
 ComposeFn = Callable[[Path, bool], Result]
-QaFn = Callable[[Path, str], Result]
+QaFn = Callable[[Path, str, bool], Result]
 ExportFn = Callable[[Path, str | None], Result]
 
 
@@ -78,11 +78,13 @@ def _load_compose() -> ComposeFn | None:
 def _load_qa() -> QaFn | None:
     direct = _import_attr("reelsmith.qa.runner", "run_qa")
     if direct is not None:
-        return direct  # type: ignore[no-any-return]
+        return lambda root, fmt, preview: direct(root, fmt, preview=preview)
     fallback = _cli_fallback("qa")
     if fallback is None:
         return None
-    return lambda root, fmt: fallback([str(root), "--format", fmt])
+    return lambda root, fmt, preview: fallback(
+        [str(root), "--format", fmt, *(["--preview"] if preview else [])]
+    )
 
 
 def _load_export() -> ExportFn | None:
@@ -101,8 +103,8 @@ def _formats(root: Path) -> list[str]:
     return [fmt.replace(":", "x") for fmt in spec.formats]
 
 
-def _qa_all_formats(qa: QaFn, root: Path) -> Result:
-    results = [(fmt, qa(root, fmt)) for fmt in _formats(root)]
+def _qa_all_formats(qa: QaFn, root: Path, preview: bool) -> Result:
+    results = [(fmt, qa(root, fmt, preview)) for fmt in _formats(root)]
     for fmt, result in results:
         if result.status == Status.ERROR:
             return Result(
@@ -134,7 +136,7 @@ def build_steps(root: Path, preview: bool) -> list[Step]:
     if qa is None:
         steps.append(Step("qa", None, NOT_AVAILABLE, Status.WARN))
     else:
-        steps.append(Step("qa", lambda: _qa_all_formats(qa, root)))
+        steps.append(Step("qa", lambda: _qa_all_formats(qa, root, preview)))
 
     if preview:
         steps.append(Step("export", None, "skipped with --preview"))

@@ -1,8 +1,17 @@
 """Turns script lines into narration audio, with quality checks and retries.
 
-Per line: synthesize, trim the tail, check the pace, check the transcript,
-then align the phrases. A line whose text, voice and speed have not
-changed, and whose wav file already exists, is skipped.
+Per line: synthesize, trim the tail, transcribe, check the pace, check the
+transcript, then align the phrases. A line whose text, voice and speed
+have not changed, and whose wav file already exists, is skipped.
+
+Pace is measured from the transcribed words rather than the file's
+length (see speaking_seconds in quality.py), so the line is transcribed
+before its pace is judged. A pace retry scales speed by how far off
+target the measured words-a-minute was, rather than jittering it by a
+fixed amount: a line that reads at 220 wpm needs a real correction, not
+a plus-or-minus three percent nudge. Lines with four words or fewer have
+too little speech for wpm to mean anything, so their pace is not
+checked at all.
 """
 
 from __future__ import annotations
@@ -20,11 +29,22 @@ from reelsmith.models import ScriptModel, SpecModel
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.align import phrase_bounds
 from reelsmith.voice.base import Audio, VoiceEngine, get_engine
-from reelsmith.voice.quality import pace_ok, transcript_matches, trim_tail, words_per_minute
+from reelsmith.voice.quality import (
+    pace_ok,
+    speaking_seconds,
+    transcript_matches,
+    trim_tail,
+    words_per_minute,
+)
 from reelsmith.voice.transcribe import Word
 from reelsmith.voice.transcribe import transcribe as default_transcribe
 
 _MAX_RETRIES = 3
+_TARGET_WPM = 175.0
+_MIN_SPEED_FACTOR = 0.75
+_MAX_SPEED_FACTOR = 1.25
+_SHORT_LINE_MAX_WORDS = 4
+_WORD_RETRY_JITTER = 0.02
 
 TranscribeFn = Callable[[Audio], list[Word]]
 
@@ -51,6 +71,7 @@ class LineReport:
     missing_words: list[str] = field(default_factory=list)
     pace_retried: bool = False
     transcript_retried: bool = False
+    pace_checked: bool = True
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -63,6 +84,7 @@ class LineReport:
             "wpm": self.wpm,
             "transcript_ok": self.transcript_ok,
             "attempts": self.attempts,
+            "pace_checked": self.pace_checked,
         }
 
 
@@ -87,35 +109,74 @@ def _duration(audio: Audio) -> float:
     return audio.samples.size / audio.sample_rate
 
 
-def _synthesize_and_trim(engine: VoiceEngine, text: str, seed: int) -> Audio:
-    audio = engine.synthesize(text, seed)
+def _synthesize_and_trim(
+    engine: VoiceEngine, text: str, seed: int, speed: float | None = None
+) -> Audio:
+    audio = engine.synthesize(text, seed, speed)
     return trim_tail(audio)
 
 
+def _pace_corrected_speed(current_speed: float, wpm: float) -> float:
+    """Scale speed by how far off target the measured pace was.
+
+    A flat jitter cannot reliably fix a line that is well outside the
+    comfortable window: af_heart at speed 1.0 can read 200 to 235 words a
+    minute on short lines, and a plus-or-minus three percent nudge barely
+    moves that. Scaling directly towards the target wpm converges in far
+    fewer attempts. The correction is clamped to three quarters to five
+    quarters of the current speed per attempt, so one bad pace reading
+    cannot send the next attempt to an unusable speed.
+    """
+    if wpm <= 0:
+        return current_speed
+    factor = min(_MAX_SPEED_FACTOR, max(_MIN_SPEED_FACTOR, _TARGET_WPM / wpm))
+    return current_speed * factor
+
+
+def _with_tiny_jitter(speed: float, attempt: int) -> float:
+    """A small speed nudge so a dropped word retry is not identical audio.
+
+    Pace has already been corrected (or skipped as unreliable) by the
+    time this runs, so the nudge is kept small: enough to get a different
+    take from an engine with no real seed, not enough to push a line back
+    out of the comfortable pace window.
+    """
+    sign = 1 if attempt % 2 == 1 else -1
+    step = (attempt + 1) // 2
+    return speed * (1 + sign * _WORD_RETRY_JITTER * step)
+
+
 def _generate_line_audio(
-    engine: VoiceEngine, transcribe_fn: TranscribeFn, text: str
-) -> tuple[Audio, float, bool, list[str], list[Word], int, bool, bool]:
+    engine: VoiceEngine, transcribe_fn: TranscribeFn, text: str, base_speed: float
+) -> tuple[Audio, float, bool, bool, list[str], list[Word], int, bool, bool]:
     """Synthesize one line, retrying for pace and then for dropped words.
 
-    Returns the final audio, its words per minute, whether the transcript
-    matched, the missing words if not, the transcribed words used for
-    alignment, the total number of synthesis attempts, and whether a retry
-    was needed for pace or for the transcript.
+    Returns the final audio, its words per minute, whether pace was
+    checked at all, whether the transcript matched, the missing words if
+    not, the transcribed words used for alignment, the total number of
+    synthesis attempts, and whether a retry was needed for pace or for
+    the transcript.
     """
+    pace_checked = len(text.split()) > _SHORT_LINE_MAX_WORDS
+
     attempts = 1
-    audio = _synthesize_and_trim(engine, text, seed=0)
-    wpm = words_per_minute(text, _duration(audio))
+    speed = base_speed
+    audio = _synthesize_and_trim(engine, text, seed=0, speed=speed)
+    words = transcribe_fn(audio)
+    wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
     pace_retried = False
-    for retry in range(1, _MAX_RETRIES + 1):
-        if pace_ok(wpm):
-            break
-        pace_retried = True
-        attempts += 1
-        audio = _synthesize_and_trim(engine, text, seed=retry)
-        wpm = words_per_minute(text, _duration(audio))
+    if pace_checked:
+        for _ in range(_MAX_RETRIES):
+            if pace_ok(wpm):
+                break
+            pace_retried = True
+            attempts += 1
+            speed = _pace_corrected_speed(speed, wpm)
+            audio = _synthesize_and_trim(engine, text, seed=0, speed=speed)
+            words = transcribe_fn(audio)
+            wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
-    words = transcribe_fn(audio)
     transcript_ok, missing = transcript_matches(text, words)
 
     transcript_retried = False
@@ -124,12 +185,24 @@ def _generate_line_audio(
             break
         transcript_retried = True
         attempts += 1
-        audio = _synthesize_and_trim(engine, text, seed=_MAX_RETRIES + retry)
-        wpm = words_per_minute(text, _duration(audio))
+        retry_speed = _with_tiny_jitter(speed, retry)
+        audio = _synthesize_and_trim(engine, text, seed=retry, speed=retry_speed)
         words = transcribe_fn(audio)
+        if pace_checked:
+            wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
         transcript_ok, missing = transcript_matches(text, words)
 
-    return audio, wpm, transcript_ok, missing, words, attempts, pace_retried, transcript_retried
+    return (
+        audio,
+        wpm,
+        pace_checked,
+        transcript_ok,
+        missing,
+        words,
+        attempts,
+        pace_retried,
+        transcript_retried,
+    )
 
 
 def _load_existing(timings_path: Path) -> dict[str, LineReport]:
@@ -156,6 +229,7 @@ def _load_existing(timings_path: Path) -> dict[str, LineReport]:
             wpm=line_raw["wpm"],
             transcript_ok=line_raw["transcript_ok"],
             attempts=line_raw["attempts"],
+            pace_checked=bool(line_raw.get("pace_checked", True)),
         )
         existing[f"{report.scene}/{report.line}"] = report
     return existing
@@ -215,13 +289,14 @@ def generate(
             (
                 audio,
                 wpm,
+                pace_checked,
                 transcript_ok,
                 missing,
                 words,
                 attempts,
                 pace_retried,
                 transcript_retried,
-            ) = _generate_line_audio(active_engine, transcribe_fn, text)
+            ) = _generate_line_audio(active_engine, transcribe_fn, text, spec.voice.speed)
 
             bounds = phrase_bounds([phrase.text for phrase in line.phrases], words, audio)
             phrase_timings = [
@@ -247,6 +322,7 @@ def generate(
                     missing_words=missing,
                     pace_retried=pace_retried,
                     transcript_retried=transcript_retried,
+                    pace_checked=pace_checked,
                 )
             )
 

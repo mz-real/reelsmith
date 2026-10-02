@@ -88,6 +88,18 @@ def test_result_for_warns_on_a_line_that_still_fails_pace() -> None:
     assert any("pace" in detail for detail in result.details)
 
 
+def test_result_for_ignores_pace_on_a_line_where_pace_was_not_checked() -> None:
+    report = VoiceReport(
+        engine="kokoro",
+        voice="af_heart",
+        lines=[_line(wpm=400.0, pace_checked=False)],
+    )
+
+    result = _result_for(report)
+
+    assert result.status == Status.OK
+
+
 def test_result_for_never_ok_when_a_line_still_fails() -> None:
     report = VoiceReport(
         engine="kokoro",

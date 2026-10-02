@@ -143,6 +143,46 @@ def test_run_qa_backs_up_an_existing_report(tmp_path: Path) -> None:
     assert backups[0].read_text(encoding="utf-8") == "old report"
 
 
+def _build_preview_demo(root: Path, pin_event_out: float = 0.0) -> None:
+    (root / "build").mkdir(parents=True)
+    (root / "voice").mkdir(parents=True)
+    (root / "spec.yaml").write_text(yaml.safe_dump(SPEC), encoding="utf-8")
+    (root / "script.yaml").write_text(yaml.safe_dump(SCRIPT), encoding="utf-8")
+    (root / "voice" / "timings.json").write_text(json.dumps(TIMINGS), encoding="utf-8")
+    (root / "build" / "timeline_16x9_preview.json").write_text(
+        json.dumps(_timeline(pin_event_out)), encoding="utf-8"
+    )
+    master = root / "build" / "master_16x9_preview.mp4"
+    build_video(
+        master,
+        [
+            "sine=frequency=440:duration=1.0,loudnorm=I=-16:TP=-1.0:LRA=11",
+            "anullsrc=channel_layout=mono:sample_rate=44100:duration=1.0",
+        ],
+        duration=2.0,
+    )
+
+
+def test_run_qa_preview_checks_the_preview_master_and_timeline(tmp_path: Path) -> None:
+    _build_preview_demo(tmp_path, pin_event_out=0.0)
+
+    result = run_qa(tmp_path, "16x9", transcriber=_fake_transcriber, preview=True)
+
+    assert result.status == Status.OK
+    report = (tmp_path / "qa" / "report.md").read_text(encoding="utf-8")
+    assert "# QA report (preview check)" in report
+    assert "master_16x9_preview.mp4" in report
+
+
+def test_run_qa_preview_raises_when_the_preview_master_is_missing(tmp_path: Path) -> None:
+    (tmp_path / "spec.yaml").write_text(yaml.safe_dump(SPEC), encoding="utf-8")
+    (tmp_path / "script.yaml").write_text(yaml.safe_dump(SCRIPT), encoding="utf-8")
+
+    with pytest.raises(ReelsmithError) as info:
+        run_qa(tmp_path, "16x9", preview=True)
+    assert "--preview" in str(info.value.fix)
+
+
 def test_run_qa_raises_when_master_is_missing(tmp_path: Path) -> None:
     (tmp_path / "spec.yaml").write_text(yaml.safe_dump(SPEC), encoding="utf-8")
     (tmp_path / "script.yaml").write_text(yaml.safe_dump(SCRIPT), encoding="utf-8")
