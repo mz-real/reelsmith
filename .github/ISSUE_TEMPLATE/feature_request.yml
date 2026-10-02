@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first. A clear use case helps us say yes or no faster.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Who is stuck today, and what are they trying to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      description: Your idea. CLI flags, workflow change, or docs are all fine
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Workarounds, other tools, or a smaller scope that might be enough
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Does this relate to a mode?
+      options:
+        - Both narrate and produce
+        - Narrate only
+        - Produce only
+        - Neither / tooling or docs
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: I read the design spec and this still fits the local-only, no-upload model
+          required: true

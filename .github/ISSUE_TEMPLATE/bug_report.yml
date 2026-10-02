@@ -1,0 +1,84 @@
+name: Bug report
+description: Something broke when running reelsmith
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please fill in what you can. The `reelsmith doctor` output saves a lot of back and forth.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version` or `uv run python --version`
+      placeholder: "3.12.4"
+    validations:
+      required: true
+
+  - type: input
+    id: reelsmith_version
+    attributes:
+      label: reelsmith version
+      description: Output of `reelsmith --version`
+      placeholder: "reelsmith 0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Full `reelsmith doctor` output
+      description: Paste the complete terminal output, including warnings
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      description: The exact reelsmith command and flags
+      placeholder: reelsmith capture web --spec spec.yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result block and any errors
+      description: Paste the `[OK]`, `[WARN]` or `[ERROR]` block and traceback if present
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did before the command, in order
+      placeholder: |
+        1. uv sync
+        2. reelsmith init my-demo
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Logs, screenshots, or a minimal demo folder if relevant
