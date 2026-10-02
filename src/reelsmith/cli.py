@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import pkgutil
 import sys
 
 import typer
@@ -10,11 +11,6 @@ import typer
 from reelsmith import __version__
 from reelsmith.errors import ReelsmithError
 from reelsmith.result import Result, Status, emit
-
-# Later tasks add commands by creating src/reelsmith/commands/<name>.py with
-# a `def register(app: typer.Typer) -> None` function, then listing the
-# module name here.
-COMMANDS: list[str] = ["doctor", "init", "setup", "schema", "script_check", "capture", "slides"]
 
 app = typer.Typer(
     name="reelsmith",
@@ -43,10 +39,23 @@ def main_callback(
     """reelsmith: turn an app into a narrated demo video, all local."""
 
 
+def command_modules() -> list[str]:
+    """Names of every module in reelsmith.commands, in a stable order.
+
+    A command is added by creating src/reelsmith/commands/<name>.py with a
+    `def register(app: typer.Typer) -> None` function. No list to edit.
+    """
+    import reelsmith.commands
+
+    return sorted(m.name for m in pkgutil.iter_modules(reelsmith.commands.__path__))
+
+
 def _register_commands() -> None:
-    for name in COMMANDS:
+    for name in command_modules():
         module = importlib.import_module(f"reelsmith.commands.{name}")
-        module.register(app)
+        register = getattr(module, "register", None)
+        if callable(register):
+            register(app)
 
 
 _register_commands()
