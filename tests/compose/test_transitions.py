@@ -4,7 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from reelsmith.compose.transitions import XFADE, padded_lengths, scene_starts, xfade_filters
+from reelsmith.compose.transitions import (
+    XFADE,
+    boundary_transitions,
+    ffmpeg_transition,
+    padded_lengths,
+    scene_starts,
+    xfade_filters,
+)
 
 
 def test_scene_starts_add_up_timeline_durations() -> None:
@@ -29,3 +36,27 @@ def test_xfade_offsets_are_the_scene_starts() -> None:
 
 def test_one_scene_needs_no_xfade() -> None:
     assert xfade_filters([5.0], XFADE, "vout") == ["[0:v]null[vout]"]
+
+
+def test_ffmpeg_transition_names() -> None:
+    assert ffmpeg_transition("fade") == "fade"
+    assert ffmpeg_transition("slide") == "slideleft"
+    assert ffmpeg_transition("push") == "smoothleft"
+    assert ffmpeg_transition("zoom") == "zoomin"
+
+
+def test_boundary_transitions_use_incoming_scene_or_default() -> None:
+    names = boundary_transitions([None, "slide", "zoom"], "fade")
+    assert names == ["slideleft", "zoomin"]
+    assert boundary_transitions([None], "push") == []
+
+
+def test_xfade_chain_uses_per_boundary_names() -> None:
+    chains = xfade_filters(
+        [2.0, 3.0, 1.0],
+        XFADE,
+        "vout",
+        ["slideleft", "zoomin"],
+    )
+    assert "transition=slideleft" in chains[0]
+    assert "transition=zoomin" in chains[1]

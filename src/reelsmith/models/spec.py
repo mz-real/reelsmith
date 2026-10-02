@@ -12,6 +12,7 @@ CLONE_CONSENT_MESSAGE = "Cloning needs a voice sample and consent."
 
 Layout = Literal["slide", "phone", "browser", "full"]
 VideoFormat = Literal["16:9", "9:16", "1:1"]
+TransitionKind = Literal["fade", "slide", "push", "zoom"]
 
 
 def _default_formats() -> list[VideoFormat]:
@@ -39,6 +40,7 @@ class Options(StrictModel):
     speed_up_waits: bool = False
     captions: Literal["none", "burned", "srt", "both"] = "burned"
     highlight_clicks: bool = True
+    transition: TransitionKind = "fade"
 
 
 class SceneSpec(StrictModel):
@@ -46,6 +48,7 @@ class SceneSpec(StrictModel):
     layout: Layout
     slide: str | None = None
     clip: str | None = None
+    transition: TransitionKind | None = None
 
     @model_validator(mode="after")
     def _source_matches_layout(self) -> Self:

@@ -82,6 +82,7 @@ def test_defaults_match_the_plan() -> None:
     assert spec.voice.kokoro_voice == "af_heart"
     assert spec.options.allow_holds is True
     assert spec.options.speed_up_waits is False
+    assert spec.options.transition == "fade"
 
 
 def test_chatterbox_without_consent_fails_with_a_clear_message(tmp_path: Path) -> None:
