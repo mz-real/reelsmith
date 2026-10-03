@@ -23,6 +23,8 @@ Write the words the viewer hears and reads: script.yaml for every scene, and sli
 
 ## Commands
 
+Scene, line and slide ids must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 **script.yaml.** One entry per spec.yaml scene, same ids. Each line is split into phrases. A phrase with `pin:` starts on that event of the scene's clip.
 
 ```yaml

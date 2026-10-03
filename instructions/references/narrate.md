@@ -47,7 +47,7 @@ blur: []
 
 Run these from inside the demo folder, or add the demo folder `DIR` as the last argument to each command.
 
-1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml:
+1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml, and (like every id) can only use letters, numbers, `-` or `_`, starting with a letter or number (see docs/formats.md):
 
    ```
    reelsmith capture import ~/Movies/invoice.mov --id main
