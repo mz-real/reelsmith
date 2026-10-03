@@ -21,7 +21,7 @@ from reelsmith.compose.inputs import slide_images
 from reelsmith.compose.layouts import format_slug
 from reelsmith.compose.project import master_path
 from reelsmith.errors import ReelsmithError
-from reelsmith.export import demo_name
+from reelsmith.export import demo_name, expected_outputs
 from reelsmith.models import ClipModel, ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.pipeline import _line_hash
@@ -455,10 +455,8 @@ def _export_step(demo: _Demo) -> Step:
         return _needs("export", "a valid spec.yaml")
     out = demo.paths.out
     name = _export_name(demo, format_slug(spec.formats[0]))
-    expected = [out / f"{name}_narration.wav", out / f"{name}.srt"]
-    for fmt in spec.formats:
-        slug = format_slug(fmt)
-        expected += [out / f"{name}_{slug}.mp4", out / f"{name}_{slug}_silent.mp4"]
+    narrated = spec.voice.engine != "none"
+    expected = expected_outputs(out, name, spec.formats, narrated)
     command = demo.cmd("reelsmith export")
     present = [path for path in expected if path.is_file()]
     summary = f"{len(present)}/{len(expected)} files in out/"
