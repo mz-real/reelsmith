@@ -61,3 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web capture finds its sync marker on slow machines
 - doctor uses distro Java packages and the real model cache paths
 - `status` and `init` quote paths for the user's shell on Windows
+- `status` reports slides as stale when their size does not match the spec's quality
+- `script check` warns while brand.yaml still has the starter product name
+- Web capture times clicks, typing and keys when they land, not before Playwright's actionability wait
+- Mobile capture drives and records the one booted simulator or device (or asks for `--device`), reads Maestro 2's command log, times taps when they land, and keeps the position of percent point taps
