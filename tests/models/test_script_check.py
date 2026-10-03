@@ -180,3 +180,34 @@ def test_say_that_reads_differently_is_a_warning_not_an_error(
     assert out.startswith("[WARN]")
     assert "Scene 'intro', line 'l1', phrase 1" in out
     assert "say" in out
+
+
+def test_the_starter_brand_name_is_flagged_when_there_are_slides(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith.commands.script_check import STARTER_BRAND_NAME
+
+    make_demo(tmp_path)
+    (tmp_path / "brand.yaml").write_text(
+        f"version: 1\nname: {STARTER_BRAND_NAME}\n", encoding="utf-8"
+    )
+
+    code = run(app, ["script", "check", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert out.startswith("[WARN]")
+    assert "starter name 'My product'" in out
+
+    (tmp_path / "brand.yaml").write_text("version: 1\nname: Recipe Box\n", encoding="utf-8")
+    run(app, ["script", "check", str(tmp_path)])
+    assert capsys.readouterr().out.startswith("[OK]")
+
+
+def test_the_starter_template_uses_the_flagged_name() -> None:
+    import yaml
+
+    from reelsmith.commands.script_check import STARTER_BRAND_NAME
+
+    template = Path(__file__).resolve().parents[2] / "src/reelsmith/templates/starter/brand.yaml"
+    assert yaml.safe_load(template.read_text(encoding="utf-8"))["name"] == STARTER_BRAND_NAME

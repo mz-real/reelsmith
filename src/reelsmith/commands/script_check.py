@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 
 from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
 from reelsmith.errors import ReelsmithError
@@ -81,6 +82,26 @@ def _clip_loader(paths: DemoPaths) -> ClipLoader:
     return load
 
 
+STARTER_BRAND_NAME = "My product"
+"""The name in the starter brand.yaml. It shows in every slide footer."""
+
+
+def brand_warning(paths: DemoPaths, spec: SpecModel) -> str | None:
+    """A warning when slides would show the starter product name."""
+    if not paths.brand.is_file() or not any(scene.slide for scene in spec.scenes):
+        return None
+    try:
+        data = yaml.safe_load(paths.brand.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return None
+    if isinstance(data, dict) and data.get("name") == STARTER_BRAND_NAME:
+        return (
+            f"brand.yaml still has the starter name '{STARTER_BRAND_NAME}', which shows in"
+            " every slide footer. Set name to the product's name."
+        )
+    return None
+
+
 def run_check(root: Path) -> Result:
     paths = DemoPaths.at(root)
     for path in (paths.spec, paths.script):
@@ -89,6 +110,9 @@ def run_check(root: Path) -> Result:
     spec = load_model(paths.spec, SpecModel)
     script = load_model(paths.script, ScriptModel)
     report = check_script(spec, script, _clip_loader(paths))
+    brand = brand_warning(paths, spec)
+    if brand is not None:
+        report.warnings.append(brand)
     counts = (
         f"{report.scenes} scenes, {report.lines} lines, "
         f"{report.pins} pin{'' if report.pins == 1 else 's'}"

@@ -45,7 +45,7 @@ Before you ask, look at the project: read the README, the routes or screens, and
 2. Who is watching, and how long should it be? Suggest: team, customers or social, and 30 s, 90 s, 3 min or 5 min.
 3. Where does the footage come from? Suggest: your own recordings (import), automated web capture, or automated mobile capture. Web capture needs a URL or a local file the browser can open. Mobile capture needs an iOS simulator (macOS only) or an Android emulator or device.
 4. Which voice? Suggest: a Kokoro stock voice (default), your own voice (Chatterbox), or silent with captions. For Kokoro, start with `af_heart` (US female, default) and `am_michael` (US male, calm), then mention `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Offer `reelsmith voice preview` so they can hear them.
-5. Format, branding and anything to blur. Suggest: `16:9` (default), `9:16`, `1:1`, or several. Theme `dark` (default), `light` or `minimal`. Ask whether they have a logo, colours or a font for brand.yaml. Ask whether any emails, names, keys or prices on screen must be hidden.
+5. Format, branding and anything to blur. Suggest: `16:9` (default), `9:16`, `1:1`, or several. Theme `dark` (default), `light` or `minimal`. Ask whether they have a logo, colours or a font for brand.yaml. Always set `name` in brand.yaml to the product's name: it shows in every slide footer, and `reelsmith script check` warns while it still says `My product`. Ask whether any emails, names, keys or prices on screen must be hidden.
 6. Optional: a sample of how they talk (a past video, a blog post, a README they wrote). Use it for the script's tone.
 
 **Consent gate for your own voice (Chatterbox).** If the user picks their own voice, ask this before anything else about the voice:
