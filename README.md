@@ -12,8 +12,6 @@ https://github.com/user-attachments/assets/f8cad838-b6bf-4ef9-8fef-a250751d1a61
 
 Both videos were made with reelsmith itself. The full walkthrough has chapters and captions.
 
-> **Status:** reelsmith 0.1.0 is not released yet. It is not on PyPI and the plugin is not in a published release. You can try it from source today (see [Install](#install)).
-
 ## Who it is for
 
 - Developers and small product teams who ship features faster than they can record demos for them.
@@ -126,13 +124,11 @@ The answers become `spec.yaml` (approval point 1). The narration becomes `script
 
 You need [uv](https://docs.astral.sh/uv/) and ffmpeg 6 or newer. Python 3.11 to 3.13 is fine, and uv can install it for you.
 
-Until 0.1.0 is on PyPI, install from source:
-
 ```
-uv tool install git+https://github.com/mz-real/reelsmith
+uv tool install reelsmith
 ```
 
-Once it is on PyPI this becomes `uv tool install reelsmith`.
+To try the latest unreleased code instead: `uv tool install git+https://github.com/mz-real/reelsmith`.
 
 Then set up the rest:
 
@@ -175,10 +171,8 @@ reelsmith voice preview --text "Type a dish into the search box." --voices af_he
 **Your own voice (Chatterbox).** Optional, through the `clone` extra. It needs PyTorch and Python 3.11 or 3.12:
 
 ```
-uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"
+uv tool install --python 3.12 "reelsmith[clone]"
 ```
-
-Once on PyPI: `uv tool install --python 3.12 "reelsmith[clone]"`.
 
 The consent policy, stated plainly:
 

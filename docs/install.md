@@ -2,8 +2,6 @@
 
 reelsmith runs on Windows, macOS and Linux. CI runs the test suite on all three.
 
-> 0.1.0 is not released yet, so reelsmith is not on PyPI. The commands below install it from source. Once it is published, swap `git+https://github.com/mz-real/reelsmith` for `reelsmith`.
-
 ## What you need
 
 | Piece | Needed for | Notes |
@@ -23,14 +21,16 @@ Web capture and Narrate mode need only the first four rows.
 ## Install the CLI
 
 ```
-uv tool install git+https://github.com/mz-real/reelsmith
+uv tool install reelsmith
 reelsmith --version
 ```
+
+To try the latest unreleased code, install from GitHub instead: `uv tool install git+https://github.com/mz-real/reelsmith`.
 
 With own voice cloning (see [voices.md](voices.md)):
 
 ```
-uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"
+uv tool install --python 3.12 "reelsmith[clone]"
 ```
 
 Open a new terminal afterwards if `reelsmith` is not found, so the PATH picks up the uv tool folder. `uv tool update-shell` adds that folder to your PATH if it is missing.

@@ -50,7 +50,7 @@ This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line 
 
 After you rename or split a line in script.yaml, run `reelsmith voice generate` for every line, or `--only` once per new scene/line id. Entries for ids that are no longer in the script are dropped from timings.json and their wav files are set aside as backups.
 
-Own voice (needs `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
+Own voice (needs `uv tool install --python 3.12 "reelsmith[clone]"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
 
 ```
 reelsmith voice pick-reference long-recording.wav --out ref.wav
@@ -113,7 +113,7 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | Problem | Fix |
 |---|---|
 | `Could not download ...` | The machine is offline or the download failed. The `Next:` line has the retry command and a manual download link. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone]"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
 | `Nothing to voice: spec.yaml sets voice.engine to none` | Not a problem: the video is silent by design. Run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
