@@ -8,6 +8,7 @@ import pytest
 
 from reelsmith.doctor.checks import Check
 from reelsmith.doctor.fixes import apply_fixes
+from reelsmith.doctor.profiles import DoctorProfile
 from reelsmith.result import Status
 
 
@@ -27,7 +28,13 @@ def test_apply_fixes_skips_when_user_declines(monkeypatch: pytest.MonkeyPatch) -
     def ask(_prompt: str) -> bool:
         return False
 
-    result = apply_fixes(checks, spec_path=None, yes=False, ask_confirm=ask)
+    result = apply_fixes(
+        checks,
+        spec_path=None,
+        profile=DoctorProfile.WEB,
+        yes=False,
+        ask_confirm=ask,
+    )
     run_mock.assert_not_called()
     assert result
 
@@ -46,10 +53,16 @@ def test_apply_fixes_runs_brew_on_darwin(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr("subprocess.run", run_mock)
     monkeypatch.setattr(
         "reelsmith.doctor.checks.run_all_checks",
-        lambda spec_path=None: checks,
+        lambda spec_path=None, profile=None: checks,
     )
 
-    apply_fixes(checks, spec_path=None, yes=True, ask_confirm=lambda _p: True)
+    apply_fixes(
+        checks,
+        spec_path=None,
+        profile=DoctorProfile.WEB,
+        yes=True,
+        ask_confirm=lambda _p: True,
+    )
     run_mock.assert_called_once()
     assert run_mock.call_args[0][0] == ["brew", "install", "ffmpeg"]
 
@@ -68,10 +81,16 @@ def test_apply_fixes_runs_openjdk_on_darwin_java(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr("subprocess.run", run_mock)
     monkeypatch.setattr(
         "reelsmith.doctor.checks.run_all_checks",
-        lambda spec_path=None: checks,
+        lambda spec_path=None, profile=None: checks,
     )
 
-    apply_fixes(checks, spec_path=None, yes=True, ask_confirm=lambda _p: True)
+    apply_fixes(
+        checks,
+        spec_path=None,
+        profile=DoctorProfile.MOBILE,
+        yes=True,
+        ask_confirm=lambda _p: True,
+    )
     run_mock.assert_called_once()
     assert run_mock.call_args[0][0] == ["brew", "install", "openjdk@17"]
 
@@ -91,10 +110,16 @@ def test_apply_fixes_chromium_uses_playwright_module(
     monkeypatch.setattr("subprocess.run", run_mock)
     monkeypatch.setattr(
         "reelsmith.doctor.checks.run_all_checks",
-        lambda spec_path=None: [],
+        lambda spec_path=None, profile=None: [],
     )
 
-    apply_fixes(checks, spec_path=None, yes=True, ask_confirm=lambda _p: True)
+    apply_fixes(
+        checks,
+        spec_path=None,
+        profile=DoctorProfile.WEB,
+        yes=True,
+        ask_confirm=lambda _p: True,
+    )
     cmd = run_mock.call_args[0][0]
     assert cmd[-2:] == ["install", "chromium"]
     assert "playwright" in cmd

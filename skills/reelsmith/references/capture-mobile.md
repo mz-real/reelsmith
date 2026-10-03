@@ -21,7 +21,7 @@ Record each mobile scene as a clip on an iOS simulator or an Android emulator or
 - Does it need a login? Ask for a test account. Put private data in the blur list.
 - Which spec.yaml scenes use `phone` layout? Write one flow per clip id.
 - Read the app's screens for the exact visible text or ids to tap. Only tap things that exist.
-- Run `reelsmith doctor`. Mobile capture needs Java 17 or newer and Maestro. It also checks `xcrun simctl` on macOS and `adb`. Doctor prints the install command for anything missing.
+- Run `reelsmith doctor` (or `reelsmith doctor --profile mobile`). Mobile capture needs Java 17 or newer and Maestro. It also checks `xcrun simctl` on macOS and `adb`. Doctor prints the install command for anything missing.
 
 ## Commands
 

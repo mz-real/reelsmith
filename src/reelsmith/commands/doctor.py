@@ -7,7 +7,7 @@ from typing import Annotated
 
 import typer
 
-from reelsmith.doctor import run_doctor
+from reelsmith.doctor import DoctorProfile, run_doctor
 
 
 def register(app: typer.Typer) -> None:
@@ -28,11 +28,18 @@ def register(app: typer.Typer) -> None:
                 exists=True,
                 dir_okay=False,
                 readable=True,
-                help="spec.yaml path (enables Chatterbox check when engine is chatterbox).",
+                help="spec.yaml path (used to pick checks when --profile is omitted).",
+            ),
+        ] = None,
+        profile: Annotated[
+            DoctorProfile | None,
+            typer.Option(
+                "--profile",
+                help="Which tools to check: web, mobile, narrate, voice, clone, or all.",
             ),
         ] = None,
     ) -> None:
-        """Check Python, ffmpeg, browser, mobile tools, models and GPU."""
+        """Check the tools your workflow needs."""
 
         def ask_confirm(prompt: str) -> bool:
             answer = typer.prompt(prompt, default="n")
@@ -41,6 +48,7 @@ def register(app: typer.Typer) -> None:
         raise typer.Exit(
             run_doctor(
                 spec_path=spec,
+                profile=profile,
                 apply_fix=fix,
                 yes=yes,
                 ask_confirm=ask_confirm,

@@ -11,7 +11,7 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 ## What to ask or check
 
 - Read the whole result block and anything printed above it. Quote the error to the user in plain words.
-- Run `reelsmith doctor`. It checks Python, ffmpeg, the browser, Java and Maestro, the simulators, the voice models, Chatterbox and the GPU, and prints a fix for this OS.
+- Run `reelsmith doctor`. It checks the tools your `spec.yaml` needs (or the default web set). It skips mobile tools when you only capture in the browser. Use `reelsmith doctor --profile all` only for full machine troubleshooting.
 - Check the version: `reelsmith --version`. These instructions expect reelsmith {{version}}.
 - Ask before you install anything, and say when a fix needs admin rights (`sudo`, or an admin terminal on Windows).
 
@@ -20,7 +20,9 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 ```
 reelsmith --version
 REELSMITH_EXPECTED_VERSION={{version}} reelsmith doctor
-reelsmith doctor --spec spec.yaml        # also checks Chatterbox if spec.yaml asks for it
+reelsmith doctor --spec spec.yaml        # derive checks from that spec
+reelsmith doctor --profile mobile        # force mobile capture checks
+reelsmith doctor --profile all           # every check, for troubleshooting only
 reelsmith setup browser                  # installs the Chromium build reelsmith uses
 reelsmith script check                   # finds pin and scene id problems
 ```
@@ -39,7 +41,7 @@ uv tool upgrade reelsmith
 
 ## Reading the output
 
-doctor prints one detail line per check and ends like this:
+doctor prints the profile, any skipped checks, then one detail line per check that ran:
 
 ```
 [ERROR] 1 check(s) failed.
@@ -47,7 +49,7 @@ doctor prints one detail line per check and ends like this:
 Next: brew install ffmpeg
 ```
 
-`[WARN]` from doctor means something optional is missing (for example Maestro when you only capture web). You can carry on unless you need that piece. `[OK] All checks passed.` means the machine is ready.
+`[WARN]` from a check in the active profile means something is missing for this demo. Fix it or explain it to the user before you continue. Voice models not cached yet are OK: doctor notes they download on first use. `[OK] All checks passed.` means the machine is ready for this profile.
 
 Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exits 1, and `Next:` is the step to take. Errors never print a traceback on purpose, so if you see one, that is a bug: ask the user to report it at https://github.com/mz-real/reelsmith/issues with the command and the output.
 

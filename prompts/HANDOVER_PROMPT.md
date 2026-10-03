@@ -19,7 +19,8 @@ Help the user get a finished, narrated demo video of their app that they are hap
 2. Run `reelsmith doctor` with the expected version set, so it warns if the CLI and these instructions do not match:
    - macOS and Linux: `REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor`
    - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="0.1.0"; reelsmith doctor`
-3. Fix any ERROR with the user before going on. Ask before installing anything. `reelsmith doctor --fix` asks yes or no in the terminal for each fix, so ask the user to run it themselves, or get their yes and run `reelsmith doctor --fix --yes`.
+   Doctor checks what the demo needs. In a project folder it reads `spec.yaml` and only runs the matching checks. Fix any ERROR before going on. A WARN from a check in that profile must be fixed or explained before you continue. Use `reelsmith doctor --profile all` only when you are troubleshooting the whole machine.
+3. Ask before installing anything. `reelsmith doctor --fix` asks yes or no in the terminal for each fix, so ask the user to run it themselves, or get their yes and run `reelsmith doctor --fix --yes`.
 
 ## How every command reports back
 
@@ -522,7 +523,7 @@ Record each mobile scene as a clip on an iOS simulator or an Android emulator or
 - Does it need a login? Ask for a test account. Put private data in the blur list.
 - Which spec.yaml scenes use `phone` layout? Write one flow per clip id.
 - Read the app's screens for the exact visible text or ids to tap. Only tap things that exist.
-- Run `reelsmith doctor`. Mobile capture needs Java 17 or newer and Maestro. It also checks `xcrun simctl` on macOS and `adb`. Doctor prints the install command for anything missing.
+- Run `reelsmith doctor` (or `reelsmith doctor --profile mobile`). Mobile capture needs Java 17 or newer and Maestro. It also checks `xcrun simctl` on macOS and `adb`. Doctor prints the install command for anything missing.
 
 ## Commands
 
@@ -1052,7 +1053,7 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 ## What to ask or check
 
 - Read the whole result block and anything printed above it. Quote the error to the user in plain words.
-- Run `reelsmith doctor`. It checks Python, ffmpeg, the browser, Java and Maestro, the simulators, the voice models, Chatterbox and the GPU, and prints a fix for this OS.
+- Run `reelsmith doctor`. It checks the tools your `spec.yaml` needs (or the default web set). It skips mobile tools when you only capture in the browser. Use `reelsmith doctor --profile all` only for full machine troubleshooting.
 - Check the version: `reelsmith --version`. These instructions expect reelsmith 0.1.0.
 - Ask before you install anything, and say when a fix needs admin rights (`sudo`, or an admin terminal on Windows).
 
@@ -1061,7 +1062,9 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 ```
 reelsmith --version
 REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor
-reelsmith doctor --spec spec.yaml        # also checks Chatterbox if spec.yaml asks for it
+reelsmith doctor --spec spec.yaml        # derive checks from that spec
+reelsmith doctor --profile mobile        # force mobile capture checks
+reelsmith doctor --profile all           # every check, for troubleshooting only
 reelsmith setup browser                  # installs the Chromium build reelsmith uses
 reelsmith script check                   # finds pin and scene id problems
 ```
@@ -1080,7 +1083,7 @@ uv tool upgrade reelsmith
 
 ## Reading the output
 
-doctor prints one detail line per check and ends like this:
+doctor prints the profile, any skipped checks, then one detail line per check that ran:
 
 ```
 [ERROR] 1 check(s) failed.
@@ -1088,7 +1091,7 @@ doctor prints one detail line per check and ends like this:
 Next: brew install ffmpeg
 ```
 
-`[WARN]` from doctor means something optional is missing (for example Maestro when you only capture web). You can carry on unless you need that piece. `[OK] All checks passed.` means the machine is ready.
+`[WARN]` from a check in the active profile means something is missing for this demo. Fix it or explain it to the user before you continue. Voice models not cached yet are OK: doctor notes they download on first use. `[OK] All checks passed.` means the machine is ready for this profile.
 
 Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exits 1, and `Next:` is the step to take. Errors never print a traceback on purpose, so if you see one, that is a bug: ask the user to report it at https://github.com/mz-real/reelsmith/issues with the command and the output.
 
