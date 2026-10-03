@@ -325,3 +325,38 @@ def test_no_cli_option_touches_consent_or_the_watermark() -> None:
     options = walk(typer.main.get_command(app))
     assert "--refs" in options, "the walk reaches nested voice commands"
     assert not [o for o in options if "watermark" in o or "consent" in o]
+
+
+def _one_second_tone(self: FakeModel, text: str, audio_prompt_path: str) -> np.ndarray:
+    t = np.arange(24000) / 24000
+    return (0.2 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+
+
+@pytest.mark.parametrize(("speed", "seconds"), [(0.9, 1 / 0.9), (0.5, 1 / 0.75), (1.4, 1 / 1.25)])
+def test_speed_slows_or_speeds_the_cloned_audio(
+    monkeypatch: pytest.MonkeyPatch, sample: Path, speed: float, seconds: float
+) -> None:
+    """Chatterbox has no speed setting, so the audio is time-stretched after.
+
+    The stretch keeps the pitch and the Perth watermark (checked on real
+    output at 0.85 to 0.95), and is clamped to 0.75 to 1.25.
+    """
+    _install_fakes(monkeypatch, cuda=True)
+    monkeypatch.setattr(FakeModel, "generate", _one_second_tone)
+    engine = ChatterboxEngine(sample=sample, consent="own")
+
+    audio = engine.synthesize("Hello there.", seed=0, speed=speed)
+
+    assert audio.sample_rate == 24000
+    assert audio.samples.dtype == np.float32
+    assert audio.samples.size / 24000 == pytest.approx(seconds, rel=0.03)
+
+
+@pytest.mark.parametrize("speed", [None, 1.0])
+def test_normal_speed_leaves_the_audio_untouched(
+    monkeypatch: pytest.MonkeyPatch, sample: Path, speed: float | None
+) -> None:
+    _install_fakes(monkeypatch, cuda=True)
+    monkeypatch.setattr(FakeModel, "generate", _one_second_tone)
+    audio = ChatterboxEngine(sample=sample, consent="own").synthesize("Hi.", seed=0, speed=speed)
+    assert audio.samples.size == 24000

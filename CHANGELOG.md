@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `uv tool install "reelsmith[clone]"` failed to build `pkuseg`, a dependency of chatterbox-tts 0.1.3 and later whose setup.py imports numpy without declaring it. The clone extra now pins chatterbox-tts 0.1.2, which does not need it.
+- `voice.speed` and pace retries had no effect on a cloned voice, because Chatterbox has no speed setting, so a line read too fast could never pass the pace check. Cloned audio is now time-stretched by speed (0.75 to 1.25), keeping the pitch and the watermark.
 
 ## [0.1.0] - 2026-10-03
 

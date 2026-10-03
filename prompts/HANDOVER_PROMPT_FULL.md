@@ -843,7 +843,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
   - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
-- Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
+- Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower). It works for Chatterbox too: the cloned audio is slowed or sped up afterwards, from 0.75 to 1.25, keeping the pitch and the watermark.
 - The first run downloads models into the user's cache folder: the Kokoro model (about 114 MB plus 28 MB of voices) and the Whisper model used to check the words (about 145 MB). Tell the user before the first run.
 
 ## Commands
