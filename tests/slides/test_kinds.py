@@ -24,6 +24,7 @@ from reelsmith.slides.code import highlight_line
 from reelsmith.slides.diagram import tick_step
 from reelsmith.slides.render import element_boxes, render_slide_html, render_slides_to_dir
 from reelsmith.slides.themes import SlideTheme, resolve_theme
+from tests.slides.png_compare import assert_render_pair_equal
 
 SIZES = [(1920, 1080), (1080, 1920), (1080, 1080)]
 
@@ -349,7 +350,22 @@ def test_renders_are_deterministic(tmp_path: Path) -> None:
     render_slides_to_dir(slides, theme, first, width=480, height=270, clips=False)
     render_slides_to_dir(slides, theme, second, width=480, height=270, clips=False)
     for name in ("t.png", "a.png", "s.png", "a_step1.png"):
-        assert (first / name).read_bytes() == (second / name).read_bytes(), name
+        assert_render_pair_equal(first / name, second / name, name=name)
+
+
+def test_architecture_layout_change_differs_from_baseline(tmp_path: Path) -> None:
+    theme = _theme(tmp_path)
+    baseline = SlidesModel.model_validate({"slides": [{"id": "a", **ARCH}]})
+    shifted_layout = [["you", "ai"], ["cli"], ["engine"]]
+    shifted = SlidesModel.model_validate(
+        {"slides": [{"id": "a", **ARCH, "layout": shifted_layout}]}
+    )
+    base_dir = tmp_path / "base"
+    shift_dir = tmp_path / "shift"
+    render_slides_to_dir(baseline, theme, base_dir, width=480, height=270, clips=False)
+    render_slides_to_dir(shifted, theme, shift_dir, width=480, height=270, clips=False)
+    with pytest.raises(AssertionError, match="bytes differ"):
+        assert_render_pair_equal(base_dir / "a.png", shift_dir / "a.png", name="a.png")
 
 
 def test_gallery_names_a_missing_image(tmp_path: Path) -> None:

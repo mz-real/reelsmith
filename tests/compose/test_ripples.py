@@ -27,7 +27,9 @@ SEGMENTS = [
 
 
 def event(t: float, kind: str = "tap", x: float | None = 0.5, y: float | None = 0.25) -> Event:
-    return Event.model_validate({"id": f"e{t}", "t": t, "type": kind, "x": x, "y": y})
+    return Event.model_validate(
+        {"id": f"e{t:g}".replace(".", "_"), "t": t, "type": kind, "x": x, "y": y}
+    )
 
 
 def test_out_time_inside_a_normal_segment() -> None:

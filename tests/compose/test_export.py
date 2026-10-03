@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from reelsmith.compose.inputs import load_project
 from reelsmith.errors import ReelsmithError
@@ -107,6 +108,22 @@ def test_export_writes_every_file_and_backs_up_old_ones(demo: Path) -> None:
     assert report.backups[0].read_bytes() == b"old video"
     assert (out / "recipes.srt").read_text(encoding="utf-8").startswith("1\n00:00:00,000 --> ")
     assert len(fake.calls) == 3
+
+
+def test_export_skips_silent_copy_and_narration_when_voice_is_none(demo: Path) -> None:
+    spec = yaml.safe_load((demo / "spec.yaml").read_text(encoding="utf-8"))
+    spec["voice"] = {"engine": "none"}
+    (demo / "spec.yaml").write_text(yaml.safe_dump(spec), encoding="utf-8")
+    (demo / "build").mkdir()
+    (demo / "build" / "master_16x9.mp4").write_bytes(b"master")
+    fake = FakeFfmpeg()
+
+    report = export_project(DemoPaths.at(demo), "recipes", fake)
+
+    names = sorted(p.name for p in report.written)
+    assert names == ["recipes.srt", "recipes_16x9.mp4"]
+    assert len(fake.calls) == 1
+    assert any("skipped" in note for note in report.notes)
 
 
 def test_export_without_a_master_says_to_compose(demo: Path) -> None:

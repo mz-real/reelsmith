@@ -24,6 +24,8 @@ Record each web scene as a clip with Playwright, with every click logged at its 
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.py`. It must define `async def flow(page, log)`. `page` is a Playwright page that starts blank, so open the app first. `log` performs an action and records it as an event:
 
 | Call | What it does | Event |

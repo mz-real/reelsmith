@@ -8,6 +8,7 @@ from typing import Annotated
 import typer
 
 from reelsmith.errors import ReelsmithError
+from reelsmith.models.common import check_identifier
 
 DEMO_DIR_HELP = "The demo folder (default: current folder)."
 
@@ -35,3 +36,15 @@ def demo_dir(positional: Path | None, option: Path | None) -> Path:
     if option is not None:
         return option.resolve()
     return Path(".").resolve()
+
+
+def validate_id_option(value: str) -> str:
+    """Validate a CLI id option (--id, --clip) before it is used in a path.
+
+    Raises ReelsmithError with the same message load_model would give, so
+    a bad id is refused before anything is written or read.
+    """
+    try:
+        return check_identifier(value)
+    except ValueError as exc:
+        raise ReelsmithError(str(exc)) from None

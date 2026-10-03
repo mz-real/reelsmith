@@ -25,6 +25,8 @@ Record each mobile scene as a clip on an iOS simulator or an Android emulator or
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.yaml` in Maestro's format:
 
 ```yaml

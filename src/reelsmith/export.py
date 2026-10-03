@@ -38,6 +38,7 @@ class SrtCue:
 class ExportReport:
     written: list[Path] = field(default_factory=list)
     backups: list[Path] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
 
 def srt_cues(project: ProjectInputs) -> list[SrtCue]:
@@ -105,7 +106,13 @@ def narration_args(master: Path, out: Path) -> list[str]:
 
 
 def export_project(paths: DemoPaths, name: str, run: Runner = run_ffmpeg) -> ExportReport:
-    """Write the voiced and silent video per format, the narration and the srt."""
+    """Write the voiced video per format, the narration and the srt.
+
+    With voice.engine set to none the master already carries no narration
+    (compose fills the audio track with silence), so a second, separate
+    silent copy would be an identical duplicate and a narration.wav would
+    just be recorded silence. Both are left out, and a note says why.
+    """
     project = load_project(paths)
     masters = [(fmt, master_path(paths, fmt)) for fmt in project.spec.formats]
     missing = [str(path) for _, path in masters if not path.is_file()]
@@ -115,6 +122,7 @@ def export_project(paths: DemoPaths, name: str, run: Runner = run_ffmpeg) -> Exp
         )
     paths.out.mkdir(parents=True, exist_ok=True)
     report = ExportReport()
+    narrated = project.spec.voice.engine != "none"
 
     def write(out: Path, args_for: Callable[[Path], list[str]] | None = None) -> Path:
         backup = backup_existing(out)
@@ -128,8 +136,15 @@ def export_project(paths: DemoPaths, name: str, run: Runner = run_ffmpeg) -> Exp
     for fmt, master in masters:
         slug = format_slug(fmt)
         write(paths.out / f"{name}_{slug}.mp4", partial(voiced_args, master))
-        write(paths.out / f"{name}_{slug}_silent.mp4", partial(silent_args, master))
-    write(paths.out / f"{name}_narration.wav", partial(narration_args, masters[0][1]))
+        if narrated:
+            write(paths.out / f"{name}_{slug}_silent.mp4", partial(silent_args, master))
+    if narrated:
+        write(paths.out / f"{name}_narration.wav", partial(narration_args, masters[0][1]))
+    else:
+        report.notes.append(
+            "voice.engine is none, so the video already has no narration: skipped the"
+            " silent copy and narration.wav"
+        )
     srt = write(paths.out / f"{name}.srt")
     srt.write_text(format_srt(srt_cues(project)), encoding="utf-8")
     return report

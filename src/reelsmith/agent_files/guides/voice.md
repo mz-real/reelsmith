@@ -18,7 +18,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
 
 - Is script.yaml approved? If not, stop. Nothing is voiced before approval point 2.
 - Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
-  - `none` means a silent video with captions. Skip this step and go to compose.
+  - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
@@ -50,7 +50,7 @@ This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line 
 
 After you rename or split a line in script.yaml, run `reelsmith voice generate` for every line, or `--only` once per new scene/line id. Entries for ids that are no longer in the script are dropped from timings.json and their wav files are set aside as backups.
 
-Own voice (needs `uv tool install "reelsmith[clone]"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
+Own voice (needs `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
 
 ```
 reelsmith voice pick-reference long-recording.wav --out ref.wav
@@ -113,9 +113,9 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | Problem | Fix |
 |---|---|
 | `Could not download ...` | The machine is offline or the download failed. The `Next:` line has the retry command and a manual download link. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
-| `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
+| `Nothing to voice: spec.yaml sets voice.engine to none` | Not a problem: the video is silent by design. Run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
 | A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
 | `say:` still reads a word wrong, on Kokoro | Set `voice.pronounce` in spec.yaml to the word's phonemes. See "Fixing a word that sounds wrong" above. |

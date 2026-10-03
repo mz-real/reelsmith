@@ -131,6 +131,12 @@ def run_generate(directory: Path, only: list[str] | None = None) -> Result:
     paths = DemoPaths.at(directory)
     spec = load_model(paths.spec, SpecModel)
     script = load_model(paths.script, ScriptModel)
+    if spec.voice.engine == "none":
+        return Result(
+            status=Status.OK,
+            message="Nothing to voice: spec.yaml sets voice.engine to none",
+            next_step="reelsmith compose --preview",
+        )
     only_set = set(only) if only else None
     return _result_for(generate(paths, spec, script, only_set))
 

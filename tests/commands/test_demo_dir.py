@@ -12,7 +12,7 @@ from typer.core import TyperArgument
 from typer.main import get_command
 
 from reelsmith.cli import app, run
-from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir
+from reelsmith.commands._common import DEMO_DIR_HELP, demo_dir, validate_id_option
 from reelsmith.errors import ReelsmithError
 
 
@@ -40,6 +40,15 @@ def test_demo_dir_rejects_conflicting_paths(tmp_path: Path) -> None:
     second.mkdir()
     with pytest.raises(ReelsmithError, match="Give the demo folder once"):
         demo_dir(first, second)
+
+
+def test_validate_id_option_accepts_a_safe_id() -> None:
+    assert validate_id_option("search-1") == "search-1"
+
+
+def test_validate_id_option_rejects_a_path_escape() -> None:
+    with pytest.raises(ReelsmithError, match="Ids may use letters, numbers, - and _"):
+        validate_id_option("../escape")
 
 
 def _ffmpeg_source(tmp_path: Path) -> Path:
@@ -123,6 +132,33 @@ def test_capture_import_rejects_two_demo_paths(
     out = capsys.readouterr().out
     assert code == 1
     assert "[ERROR] Give the demo folder once, either as DIR or --demo." in out
+
+
+def test_capture_import_rejects_an_unsafe_id_before_writing_anything(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    demo = tmp_path / "demo"
+    demo.mkdir()
+    source = _ffmpeg_source(tmp_path)
+
+    code = run(app, ["capture", "import", str(source), str(demo), "--id", "../escape"])
+
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "Ids may use letters, numbers, - and _" in out
+    assert not (demo / "capture").exists()
+
+
+def test_detect_rejects_an_unsafe_clip_id(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code = run(app, ["detect", str(tmp_path), "--clip", "a/b"])
+
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "Ids may use letters, numbers, - and _" in out
 
 
 def _iter_click_commands(

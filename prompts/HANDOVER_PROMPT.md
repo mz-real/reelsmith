@@ -15,7 +15,7 @@ Help the user get a finished, narrated demo video of their app that they are hap
 
 ## Before you start
 
-1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install reelsmith` (or `uv tool install "reelsmith[clone]"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
+1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install git+https://github.com/mz-real/reelsmith` (or `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
 2. Run `reelsmith doctor` with the expected version set, so it warns if the CLI and these instructions do not match:
    - macOS and Linux: `REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor`
    - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="0.1.0"; reelsmith doctor`
@@ -137,7 +137,7 @@ Before you ask, look at the project: read the README, the routes or screens, and
 
 - Own voice: set `consent: own`. Permission: set `consent: permission`.
 - Neither, or no clear answer: do not clone. Offer a Kokoro voice instead. No consent, no cloning.
-- Cloning also needs the optional install: `uv tool install "reelsmith[clone]"` (Python 3.11 or 3.12).
+- Cloning also needs the optional install: `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` (Python 3.11 or 3.12).
 
 ## Commands
 
@@ -294,7 +294,7 @@ blur: []
 
 Run these from inside the demo folder, or add the demo folder `DIR` as the last argument to each command.
 
-1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml:
+1. Import the recording as a clip. The clip id must match `clip:` in spec.yaml, and (like every id) can only use letters, numbers, `-` or `_`, starting with a letter or number (see docs/formats.md):
 
    ```
    reelsmith capture import ~/Movies/invoice.mov --id main
@@ -425,6 +425,8 @@ Record each web scene as a clip with Playwright, with every click logged at its 
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.py`. It must define `async def flow(page, log)`. `page` is a Playwright page that starts blank, so open the app first. `log` performs an action and records it as an event:
 
 | Call | What it does | Event |
@@ -525,6 +527,8 @@ Record each mobile scene as a clip on an iOS simulator or an Android emulator or
 
 ## Commands
 
+A clip id (the `--id` you pass below) must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
+
 Write the flow to `capture/flows/<clip id>.yaml` in Maestro's format:
 
 ```yaml
@@ -609,6 +613,8 @@ Write the words the viewer hears and reads: script.yaml for every scene, and sli
 - Check the length against `target_seconds` in spec.yaml. Narration runs at about 150 to 170 words per minute, so 90 seconds is about 230 words in total.
 
 ## Commands
+
+Scene, line and slide ids must be letters, numbers, `-` or `_`, starting with a letter or number (see the id rule in docs/formats.md).
 
 **script.yaml.** One entry per spec.yaml scene, same ids. Each line is split into phrases. A phrase with `pin:` starts on that event of the scene's clip.
 
@@ -814,7 +820,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
 
 - Is script.yaml approved? If not, stop. Nothing is voiced before approval point 2.
 - Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
-  - `none` means a silent video with captions. Skip this step and go to compose.
+  - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
@@ -846,7 +852,7 @@ This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line 
 
 After you rename or split a line in script.yaml, run `reelsmith voice generate` for every line, or `--only` once per new scene/line id. Entries for ids that are no longer in the script are dropped from timings.json and their wav files are set aside as backups.
 
-Own voice (needs `uv tool install "reelsmith[clone]"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
+Own voice (needs `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` on Python 3.11 or 3.12, and consent in spec.yaml). Check `reelsmith voice --help` for these commands:
 
 ```
 reelsmith voice pick-reference long-recording.wav --out ref.wav
@@ -909,9 +915,9 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | Problem | Fix |
 |---|---|
 | `Could not download ...` | The machine is offline or the download failed. The `Next:` line has the retry command and a manual download link. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
-| `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
+| `Nothing to voice: spec.yaml sets voice.engine to none` | Not a problem: the video is silent by design. Run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
 | A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
 | `say:` still reads a word wrong, on Kokoro | Set `voice.pronounce` in spec.yaml to the word's phonemes. See "Fixing a word that sounds wrong" above. |
@@ -975,6 +981,8 @@ reelsmith export                # after qa passes: writes out/
 | Blur | listed regions covered on every frame they apply to |
 | Contact sheets | frames at each scene start, event and transition, for you to look at |
 
+With `voice.engine: none` there is no narration, so Transcript vs script, End of line noise and Loudness are skipped (a note in the report says why) instead of failing. The rest still run.
+
 **Do these yourself too, every time:**
 
 1. **View the frames.** Open every image in `qa/sheets/`. Check that each frame shows what the narration says at that moment, the captions fit, and the layout is right.
@@ -982,7 +990,7 @@ reelsmith export                # after qa passes: writes out/
 3. **Check the blur, including held frames.** Every listed region must be covered on every frame, including frames that are held while the voice finishes and the last frame of each scene. Look for private data the blur list missed: emails, names, tokens, prices, notifications.
 4. **Ask the user to watch it.** You cannot hear the audio. Ask them to listen to the full render before export.
 
-`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
+`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. With `voice.engine: none` the silent copy and the narration wav are left out, since the main video already carries no narration. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
 
 ## Reading the output
 
@@ -1068,8 +1076,8 @@ On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="
 Install or update reelsmith:
 
 ```
-uv tool install reelsmith
-uv tool install "reelsmith[clone]"        # with own voice cloning, Python 3.11 or 3.12
+uv tool install git+https://github.com/mz-real/reelsmith
+uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"        # with own voice cloning, Python 3.11 or 3.12
 uv tool upgrade reelsmith
 ```
 
@@ -1091,7 +1099,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 
 | Problem | Fix |
 |---|---|
-| `reelsmith: command not found` | `uv tool install reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
+| `reelsmith: command not found` | `uv tool install git+https://github.com/mz-real/reelsmith`. If uv itself is missing, see https://docs.astral.sh/uv/. Open a new terminal afterwards so the PATH updates. |
 | doctor warns the plugin version does not match | Upgrade the CLI with `uv tool upgrade reelsmith`, or update the plugin or instruction files to match. |
 | ffmpeg missing or older than 6 | macOS `brew install ffmpeg`, Windows `winget install ffmpeg`, Debian or Ubuntu `sudo apt install ffmpeg`, Fedora `sudo dnf install ffmpeg`. |
 | Chromium missing | `reelsmith setup browser` |
@@ -1102,7 +1110,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 | `... not found` with `Next: reelsmith init` | You are not in the demo folder. `cd` into it or pass the folder to the command. |
 | `... is not empty. Use --force to init anyway.` | Use a new folder for the demo. |
 | `Could not download ...` | Check the network and retry. The `Next:` line has a manual download link. Models are cached after the first download. |
-| `Chatterbox voice cloning is not installed.` | `uv tool install "reelsmith[clone]"` with Python 3.11 or 3.12, or use a Kokoro voice. |
+| `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"` with Python 3.11 or 3.12, or use a Kokoro voice. |
 | compose says `slides/<id>.png, which is missing` | `reelsmith slides` |
 | compose says a wav is missing | `reelsmith voice generate` |
 | compose `[WARN]` with lines some seconds over | Shorten those lines, then `reelsmith voice generate` and `reelsmith compose`. |

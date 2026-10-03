@@ -230,7 +230,7 @@ def test_entry_states_version_and_install_and_doctor() -> None:
         text = (REPO_ROOT / path).read_text(encoding="utf-8")
         assert f"reelsmith {version}" in text, path
         assert "reelsmith --version" in text
-        assert "uv tool install reelsmith" in text
+        assert "uv tool install git+https://github.com/mz-real/reelsmith" in text
         assert f"REELSMITH_EXPECTED_VERSION={version}" in text
         assert "reelsmith doctor" in text
         assert "{{" not in text
@@ -272,3 +272,29 @@ def test_no_dashes_or_attribution_in_sources_and_outputs() -> None:
     for path, text in texts.items():
         assert not any(char in text for char in bad_chars), path
         assert not attribution.search(text), path
+
+
+def test_install_commands_use_the_git_url_until_published() -> None:
+    import importlib.util
+    from pathlib import Path
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "gen_instructions.py"
+    spec = importlib.util.spec_from_file_location("gen_instructions_install", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    before, before_clone = module.install_commands(published=False)
+    after, after_clone = module.install_commands(published=True)
+    assert before == "uv tool install git+https://github.com/mz-real/reelsmith"
+    assert "git+https://github.com/mz-real/reelsmith" in before_clone
+    assert after == "uv tool install reelsmith"
+    assert "git+" not in after_clone
+
+
+def test_generated_skill_never_offers_an_unpublished_pypi_install() -> None:
+    from pathlib import Path
+
+    skill = (Path(__file__).resolve().parents[1] / "skills" / "reelsmith" / "SKILL.md").read_text()
+    assert "uv tool install git+https://github.com/mz-real/reelsmith" in skill
+    assert "{{install" not in skill

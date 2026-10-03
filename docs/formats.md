@@ -2,6 +2,10 @@
 
 Everything reelsmith knows about a demo lives in one folder of plain YAML and JSON files. You can read and edit any of them by hand. Unknown fields are an error, so a typo shows up at the next command with the field named.
 
+## Ids
+
+A scene, line, clip, event or slide id (and a `--id` or `--clip` option on the command line) must match `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`: letters, numbers, `-` and `_`, starting with a letter or number, at most 64 characters. Ids end up directly in file and folder names (`voice/<scene>__<line>.wav`, `slides/<id>_step<n>.png`, `capture/clips/<id>/`), so this rule is also what keeps an id from turning into a path such as `../elsewhere`. An id with a space, a dot, a slash or any other character outside that set is rejected before anything is read or written, with the message "Ids may use letters, numbers, - and _ and start with a letter or number."
+
 ## The demo folder
 
 `reelsmith init demo` creates the files and empty folders. The files inside the folders appear as each step runs.
@@ -39,6 +43,8 @@ out/
 ```
 
 There is one pair of videos per format in spec.yaml (`16x9`, `9x16`, `1x1`).
+
+With `voice.engine: none` the video already has no narration, so `demo_16x9_silent.mp4` and `demo_narration.wav` would only duplicate it or record silence. Export leaves both out and notes why; you get `demo_16x9.mp4` and `demo.srt` only.
 
 reelsmith never overwrites output silently. The previous file is kept next to the new one as `<name>.bak-<date>-<time>`.
 

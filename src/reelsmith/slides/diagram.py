@@ -25,13 +25,16 @@ from reelsmith.slides.themes import SlideTheme
 
 # Architecture --------------------------------------------------------------
 
-# Edges are laid out in the page, from where the boxes really are. Offsets
-# (not bounding boxes) are used, so a box that is still moving in does not
-# bend its arrow. It runs again once fonts are ready, before any capture.
+# Edge geometry is measured from node boxes in the page. The renderer calls
+# __reelsmithRelayout before each capture so arrows match the current frame.
 _WIRES_JS = """
 (() => {
+  window.__reelsmithReady = false;
   const root = document.querySelector('.arch');
-  if (!root) return;
+  if (!root) {
+    document.fonts.ready.then(() => { window.__reelsmithReady = true; });
+    return;
+  }
   const pos = (el) => {
     let x = 0, y = 0, node = el;
     while (node && node !== root) { x += node.offsetLeft; y += node.offsetTop;
@@ -79,9 +82,32 @@ _WIRES_JS = """
         label.classList.add(flat === across ? 'over' : 'beside');
       }
     }
+    return root.querySelector('.edge .draw')?.getAttribute('d') || '';
   };
-  layout();
-  document.fonts.ready.then(layout);
+  window.__reelsmithRelayout = layout;
+  const stableKey = () => {
+    const bits = [];
+    for (const cell of root.querySelectorAll('.cell')) {
+      bits.push(cell.offsetLeft, cell.offsetTop, cell.offsetWidth, cell.offsetHeight);
+    }
+    bits.push(layout());
+    return bits.join(',');
+  };
+  const waitStable = () => new Promise((resolve) => {
+    let last = '', streak = 0;
+    const tick = () => {
+      const key = stableKey();
+      streak = key === last ? streak + 1 : 0;
+      last = key;
+      if (streak >= 2) resolve();
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  document.fonts.ready.then(() => waitStable().then(() => {
+    layout();
+    window.__reelsmithReady = true;
+  }));
 })();
 """
 

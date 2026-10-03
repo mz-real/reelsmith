@@ -19,6 +19,7 @@ def run_export(root: Path, name: str | None) -> Result:
     report = export_project(paths, name or demo_name(root))
     details = [str(path) for path in report.written]
     details += [f"Kept the old file as {path.name}" for path in report.backups]
+    details += report.notes
     return Result(
         Status.OK,
         f"Exported {len(report.written)} files to {paths.out}",
