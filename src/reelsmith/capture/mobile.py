@@ -88,12 +88,79 @@ def require_mobile_tools(target: Platform) -> None:
             raise ReelsmithError(f"adb: {adb.found}", fix=adb.fix)
 
 
-def ios_record_command(output: Path) -> list[str]:
+def _booted_simulators() -> list[tuple[str, str]]:
+    """(udid, name) of every booted iOS simulator."""
+    completed = subprocess_runner(
+        ["xcrun", "simctl", "list", "devices", "booted", "-j"], check=True
+    )
+    stdout = completed.stdout if isinstance(completed.stdout, str) else ""
+    try:
+        runtimes = json.loads(stdout).get("devices", {})
+    except json.JSONDecodeError:
+        return []
+    return [
+        (str(device["udid"]), str(device.get("name", "")))
+        for devices in runtimes.values()
+        for device in devices
+        if device.get("state") == "Booted"
+    ]
+
+
+def _android_devices() -> list[str]:
+    """Serials of every Android device or emulator adb can use."""
+    completed = subprocess_runner(["adb", "devices"], check=True)
+    stdout = completed.stdout if isinstance(completed.stdout, str) else ""
+    serials: list[str] = []
+    for line in stdout.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) >= 2 and parts[1] == "device":
+            serials.append(parts[0])
+    return serials
+
+
+def resolve_device(target: Platform, device: str | None) -> str:
+    """The one simulator or device to record, so Maestro never picks another.
+
+    Maestro drives whichever device it finds first. With an iOS simulator and
+    an Android emulator both running, a flow meant for one would run on the
+    other, so the device is always named explicitly.
+    """
+    if device:
+        return device
+    if target == "ios":
+        booted = _booted_simulators()
+        if not booted:
+            raise ReelsmithError(
+                "No iOS simulator is booted.",
+                fix="Open the Simulator app and boot a device, then run the command again.",
+            )
+        if len(booted) > 1:
+            names = ", ".join(f"{name} ({udid})" for udid, name in booted)
+            raise ReelsmithError(
+                f"More than one iOS simulator is booted: {names}.",
+                fix="Pick one with --device <udid>, or shut down the others.",
+            )
+        return booted[0][0]
+    serials = _android_devices()
+    if not serials:
+        raise ReelsmithError(
+            "adb sees no Android device or emulator.",
+            fix="Start an emulator, or plug in the phone with USB debugging on.",
+        )
+    if len(serials) > 1:
+        raise ReelsmithError(
+            f"More than one Android device is connected: {', '.join(serials)}.",
+            fix="Pick one with --device <serial>.",
+        )
+    return serials[0]
+
+
+def ios_record_command(output: Path, udid: str = "booted") -> list[str]:
     return [
         "xcrun",
         "simctl",
         "io",
-        "booted",
+        udid,
         "recordVideo",
         "--codec=h264",
         "--force",
@@ -141,9 +208,12 @@ def maestro_test_command(
     *,
     junit_path: Path,
     debug_dir: Path,
+    device: str | None = None,
 ) -> list[str]:
+    target = ["--device", device] if device else []
     return [
         "maestro",
+        *target,
         "test",
         str(flow_path),
         "--format",
@@ -202,10 +272,20 @@ def _event_time(
     *,
     recorder_mono: float,
     maestro_timing: MaestroTiming,
+    at_end: bool = False,
 ) -> float | None:
+    """Seconds into the recording for a Maestro command.
+
+    `timestamp` is when the command started. A tap first looks for its
+    element, which can take seconds, and only then taps, so with at_end the
+    time is when the command finished, which is when the screen changed.
+    """
     timestamp = metadata.get("timestamp")
     if not isinstance(timestamp, (int, float)):
         return None
+    duration = metadata.get("duration")
+    if at_end and isinstance(duration, (int, float)):
+        timestamp = float(timestamp) + float(duration)
     maestro_wall0, maestro_mono0, _ = maestro_timing
     wall_t = float(timestamp) / 1000.0
     mono_t = (wall_t - maestro_wall0) + maestro_mono0
@@ -238,7 +318,7 @@ def _command_entry(
         label = body.get("label") or "tap"
         point = body.get("point")
         if isinstance(point, str):
-            pair = _parse_pixel_pair(point, width, height)
+            pair = _parse_percent_pair(point) or _parse_pixel_pair(point, width, height)
             if pair is not None:
                 return "tap", str(label), pair[0], pair[1]
         return "screen", str(label), None, None
@@ -316,13 +396,21 @@ def parse_maestro_commands(
         if not isinstance(command, dict) or not isinstance(metadata, dict):
             continue
         status = metadata.get("status")
-        if status == "FAILED":
+        # WARNED is an optional step that did not run (its element never
+        # appeared), so nothing happened on screen.
+        if status in ("FAILED", "WARNED", "SKIPPED"):
             continue
         parsed = _command_entry(command, width=width, height=height)
         if parsed is None:
             continue
         event_type, label, x, y = parsed
-        t = _event_time(metadata, recorder_mono=recorder_mono, maestro_timing=maestro_timing)
+        is_tap = any(name.startswith("tapOn") for name in command)
+        t = _event_time(
+            metadata,
+            recorder_mono=recorder_mono,
+            maestro_timing=maestro_timing,
+            at_end=is_tap,
+        )
         if t is None:
             continue
         counter += 1
@@ -360,12 +448,19 @@ def parse_maestro_commands_file(
 
 
 def find_commands_json(debug_dir: Path, flow_path: Path) -> Path | None:
+    """Maestro's per-command log for this flow.
+
+    Maestro 1.x writes a flat `commands-(<flow>).json`. Maestro 2.x ignores
+    --flatten-debug-output and writes `<flow>/commands.json` instead.
+    """
     stem = flow_path.stem.replace("/", "_")
-    exact = list(debug_dir.glob(f"commands-*({stem}).json"))
-    if exact:
-        return exact[0]
-    any_file = list(debug_dir.glob("commands-*.json"))
-    return any_file[0] if any_file else None
+    candidates = [
+        *debug_dir.glob(f"commands-*({stem}).json"),
+        debug_dir / stem / "commands.json",
+        *debug_dir.glob("commands-*.json"),
+        *debug_dir.glob("*/commands.json"),
+    ]
+    return next((path for path in candidates if path.is_file()), None)
 
 
 def parse_junit_flow_duration(path: Path) -> float | None:
@@ -451,6 +546,7 @@ def _stop_android_recorder(device: str | None) -> None:
 def _run_maestro(
     flow_path: Path,
     work_dir: Path,
+    device: str | None = None,
 ) -> tuple[Path, Path, MaestroTiming]:
     flow_path = flow_path.resolve()
     if not flow_path.is_file():
@@ -463,7 +559,7 @@ def _run_maestro(
     maestro_wall0 = time.time()
     maestro_mono0 = time.monotonic()
     completed = subprocess_runner(
-        maestro_test_command(flow_path, junit_path=junit_path, debug_dir=debug_dir),
+        maestro_test_command(flow_path, junit_path=junit_path, debug_dir=debug_dir, device=device),
         check=False,
     )
     maestro_timing = (maestro_wall0, maestro_mono0, time.monotonic())
@@ -520,6 +616,7 @@ def run_mobile_flow(
 ) -> MobileCaptureResult:
     """Record a Maestro flow and write clips/<id>/video.mp4 and clip.json."""
     require_mobile_tools(platform_name)
+    device = resolve_device(platform_name, device)
     flow_path = flow_path.resolve()
     clip_dir = clips_root / clip_id
     clip_dir.mkdir(parents=True, exist_ok=True)
@@ -538,7 +635,7 @@ def run_mobile_flow(
     maestro_error: ReelsmithError | None = None
 
     if platform_name == "ios":
-        recorder = _start_background_recorder(ios_record_command(raw_video), label="iOS")
+        recorder = _start_background_recorder(ios_record_command(raw_video, device), label="iOS")
     else:
         subprocess_runner(android_rm_remote_command(device), check=False)
         recorder = _start_background_recorder(
@@ -547,7 +644,7 @@ def run_mobile_flow(
         )
 
     try:
-        junit_path, debug_dir, maestro_timing = _run_maestro(flow_path, work_dir)
+        junit_path, debug_dir, maestro_timing = _run_maestro(flow_path, work_dir, device)
     except ReelsmithError as exc:
         maestro_error = exc
     finally:

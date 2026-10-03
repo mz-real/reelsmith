@@ -50,7 +50,7 @@ reelsmith capture mobile capture/flows/checkout.yaml --platform ios --id checkou
 reelsmith capture mobile capture/flows/checkout.yaml --platform android --id checkout
 ```
 
-`--platform` is `ios` or `android`. `--id` is the clip id from spec.yaml. The result is `capture/clips/checkout/video.mp4` and `capture/clips/checkout/clip.json` with a `tap` event for each step and a `back` event for the Android Back key.
+`--platform` is `ios` or `android`. `--id` is the clip id from spec.yaml. reelsmith records the one booted simulator or connected device for that platform. If more than one is running, add `--device` with the simulator UDID (`xcrun simctl list devices booted`) or the adb serial (`adb devices`). The result is `capture/clips/checkout/video.mp4` and `capture/clips/checkout/clip.json` with a `tap` event for each step and a `back` event for the Android Back key.
 
 If automation is not possible (a game, a hardware feature), ask the user to record the screen themselves and import it with `reelsmith capture import FILE --id ID`, then mark events as in `references/narrate.md`.
 
@@ -72,6 +72,9 @@ Open clip.json and check that the events match the steps in the flow, in order. 
 |---|---|
 | Java or Maestro missing | Run `reelsmith doctor` and use the fix it prints. Maestro needs Java 17 or newer. |
 | No booted simulator | Ask the user to open the Simulator app and boot a device, then retry. |
+| `More than one ... is booted` or `connected` | Add `--device` with the UDID or serial the error lists. |
+| `iOS driver not ready in time` | Maestro installs its driver on the simulator the first time, which can be slow. Set `MAESTRO_DRIVER_STARTUP_TIMEOUT=240000` and retry. |
+| A tap event has no position | Maestro reports where it tapped only for point taps (`tapOn: {point: "50%,17%"}`). Taps on text or ids are still timed and labelled, but get no ripple. |
 | `adb` sees no device | Start an emulator, or plug in the phone with USB debugging on and accept the prompt on the phone. |
 | Maestro cannot find an element | The text or id is wrong, or the screen is still loading. Check the app's code, then add `- waitForAnimationToEnd` before the tap. |
 | The app is not installed | Ask the user to build and install it on the simulator or device first. |

@@ -196,7 +196,7 @@ Most commands take the demo folder as an argument and default to the current fol
 | `reelsmith status` | Show which steps are done, stale or missing, and the next command. `--json` for agents. |
 | `reelsmith capture import <video> --id <id>` | Normalise a recording into `capture/clips/<id>/`. |
 | `reelsmith capture web <flow.py> --id <id>` | Record a Playwright flow. `--size`, `--headed`. |
-| `reelsmith capture mobile <flow.yaml> --id <id> --platform ios\|android` | Record a Maestro flow. `--device` picks an Android device. |
+| `reelsmith capture mobile <flow.yaml> --id <id> --platform ios\|android` | Record a Maestro flow. `--device` picks the simulator or device when more than one runs. |
 | `reelsmith detect --clip <id>` | Find screen changes in a clip and write contact sheets. |
 | `reelsmith script check` | Check that scenes match spec.yaml and pins name real clip events. |
 | `reelsmith voice preview --text "..."` | Read one line in a few Kokoro voices. |
