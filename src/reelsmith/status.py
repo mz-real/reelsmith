@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shlex
+import struct
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,7 @@ from reelsmith.errors import ReelsmithError
 from reelsmith.export import demo_name, expected_outputs
 from reelsmith.models import ClipModel, ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
+from reelsmith.slides.themes import frame_size
 from reelsmith.voice.pipeline import _line_hash
 
 State = Literal["done", "stale", "missing", "failed"]
@@ -310,11 +312,19 @@ def _slides_step(demo: _Demo) -> Step:
     parts: list[str] = []
     complete = True
     stale_against: Path | None = None
+    wrong_size: str | None = None
     for fmt in spec.formats:
         found = _slides_for(demo, spec, fmt, slide_ids)
         parts.append(f"{format_slug(fmt)}: {len(found)}/{len(slide_ids)} rendered")
         complete = complete and len(found) == len(slide_ids)
         images = [image for group in found.values() for image in group]
+        want = frame_size(spec, fmt)
+        have = _png_size(images[0]) if images else None
+        if have is not None and have != want and wrong_size is None:
+            wrong_size = (
+                f"{format_slug(fmt)} slides are {have[0]}x{have[1]},"
+                f" {spec.quality} needs {want[0]}x{want[1]}"
+            )
         if images and newest_source is not None:
             oldest = min(_mtime(image) for image in images)
             if _mtime(newest_source) > oldest:
@@ -322,9 +332,24 @@ def _slides_step(demo: _Demo) -> Step:
     detail = "; ".join(parts)
     if not complete:
         return Step("slides", "missing", detail, command)
+    if wrong_size is not None:
+        return Step("slides", "stale", f"{detail}; {wrong_size}", command)
     if stale_against is not None:
         return Step("slides", "stale", f"{detail}, older than {stale_against.name}", command)
     return Step("slides", "done", detail)
+
+
+def _png_size(path: Path) -> tuple[int, int] | None:
+    """Width and height from a PNG header, or None if it is not a readable PNG."""
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(24)
+    except OSError:
+        return None
+    if len(header) < 24 or not header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+    width, height = struct.unpack(">II", header[16:24])
+    return int(width), int(height)
 
 
 def _slides_for(

@@ -366,3 +366,23 @@ def test_counts_use_the_singular_for_one(tmp_path: Path) -> None:
     _touch(root / "spec.yaml", yaml.safe_dump(spec))
     detail = {step.name: step for step in demo_status(root).steps}["spec"].detail
     assert ", 1 scene," in detail
+
+
+def _png(path: Path, width: int, height: int) -> None:
+    from PIL import Image
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (width, height)).save(path)
+
+
+def test_slides_at_the_wrong_size_for_the_quality_are_stale(tmp_path: Path) -> None:
+    root = _demo(tmp_path, upto="slides")
+    for name in ("intro_step0.png", "intro.png"):
+        _png(root / "slides" / "16x9" / name, 1920, 1080)
+    assert _states(root)["slides"] == "done"
+
+    _touch(root / "spec.yaml", yaml.safe_dump(dict(SPEC, quality="4k")))
+    slides = {step.name: step for step in demo_status(root).steps}["slides"]
+    assert slides.state == "stale"
+    assert "16x9 slides are 1920x1080, 4k needs 3840x2160" in slides.detail
+    assert slides.next == f"reelsmith slides {root}"
