@@ -7,12 +7,15 @@ from typing import Annotated
 
 import typer
 
+from reelsmith.commands._common import DemoDirArgument
 from reelsmith.doctor import DoctorProfile, run_doctor
+from reelsmith.errors import ReelsmithError
 
 
 def register(app: typer.Typer) -> None:
     @app.command("doctor")
     def doctor_cmd(
+        directory: DemoDirArgument = None,
         fix: Annotated[
             bool,
             typer.Option("--fix", help="Offer to install missing tools."),
@@ -40,6 +43,11 @@ def register(app: typer.Typer) -> None:
         ] = None,
     ) -> None:
         """Check the tools your workflow needs."""
+        if directory is not None:
+            if not directory.is_dir():
+                raise ReelsmithError(f"No demo folder at {directory}", fix="reelsmith init <dir>")
+            if spec is None and (directory / "spec.yaml").is_file():
+                spec = directory / "spec.yaml"
 
         def ask_confirm(prompt: str) -> bool:
             answer = typer.prompt(prompt, default="n")
