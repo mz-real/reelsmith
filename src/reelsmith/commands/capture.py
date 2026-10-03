@@ -91,7 +91,10 @@ def register(app: typer.Typer) -> None:
         ],
         device: Annotated[
             str | None,
-            typer.Option("--device", help="adb device serial for Android."),
+            typer.Option(
+                "--device",
+                help="Simulator UDID (iOS) or adb serial (Android), when more than one runs.",
+            ),
         ] = None,
         directory: DemoDirArgument = None,
         demo_option: DemoDirOption = None,

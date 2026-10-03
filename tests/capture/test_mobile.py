@@ -147,8 +147,11 @@ def test_parse_maestro_commands_json() -> None:
     assert events[0].label == "Search box"
     assert events[0].x == pytest.approx(0.5)
     assert events[0].y == pytest.approx(0.5)
-    assert events[0].t == pytest.approx(0.5)
+    # A tap is timed when its command ends (500 ms start + 400 ms finding the
+    # element), which is when the screen changes. Keys keep their start time.
+    assert events[0].t == pytest.approx(0.9)
     assert events[1].type == "back"
+    assert events[1].t == pytest.approx(1.2)
     assert events[2].type == "scroll"
 
 
@@ -294,7 +297,7 @@ def test_run_mobile_flow_orchestration_android(
         run_calls.append(args)
         if background:
             raise AssertionError("use _start_background_recorder in tests")
-        if args[0:2] == ["maestro", "test"]:
+        if args[0] == "maestro" and "test" in args:
             junit = Path(args[args.index("--output") + 1])
             junit.write_text(SAMPLE_JUNIT, encoding="utf-8")
             debug_dir = Path(args[args.index("--debug-output") + 1])
@@ -330,9 +333,108 @@ def test_run_mobile_flow_orchestration_android(
 
     assert popen_calls
     assert popen_calls[0][0:3] == ["adb", "-s", "emulator-5554"]
+    maestro = next(call for call in run_calls if call[0] == "maestro")
+    assert maestro[1:4] == ["--device", "emulator-5554", "test"]
     assert "screenrecord" in popen_calls[0]
     assert any("pkill" in " ".join(c) for c in run_calls)
     assert result.clip.id == "demo"
     assert len(result.clip.events) >= 2
     loaded = load_model(clips / "demo" / "clip.json", ClipModel)
     assert loaded.events == result.clip.events
+
+
+def _completed(stdout: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess([], 0, stdout=stdout, stderr="")
+
+
+def _simulators(*devices: tuple[str, str]) -> str:
+    booted = [{"udid": udid, "name": name, "state": "Booted"} for udid, name in devices]
+    return json.dumps({"devices": {"com.apple.CoreSimulator.SimRuntime.iOS-26-0": booted}})
+
+
+def test_ios_uses_the_one_booted_simulator(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = _simulators(("UDID-1", "iPhone 16"))
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", lambda args, **kw: _completed(out))
+    assert mobile_mod.resolve_device("ios", None) == "UDID-1"
+
+
+def test_ios_with_two_booted_simulators_asks_for_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = _simulators(("UDID-1", "iPhone 16"), ("UDID-2", "iPad"))
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", lambda args, **kw: _completed(out))
+    with pytest.raises(ReelsmithError, match="More than one iOS simulator") as caught:
+        mobile_mod.resolve_device("ios", None)
+    assert caught.value.fix is not None and "--device" in caught.value.fix
+
+
+def test_ios_without_a_booted_simulator_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = _simulators()
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", lambda args, **kw: _completed(out))
+    with pytest.raises(ReelsmithError, match="No iOS simulator is booted"):
+        mobile_mod.resolve_device("ios", None)
+
+
+def test_android_uses_the_one_connected_device(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = "List of devices attached\nemulator-5554\tdevice\nZX1\toffline\n\n"
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", lambda args, **kw: _completed(out))
+    assert mobile_mod.resolve_device("android", None) == "emulator-5554"
+
+
+def test_android_with_two_devices_asks_for_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    out = "List of devices attached\nemulator-5554\tdevice\nR58M\tdevice\n"
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", lambda args, **kw: _completed(out))
+    with pytest.raises(ReelsmithError, match="More than one Android device"):
+        mobile_mod.resolve_device("android", None)
+
+
+def test_an_explicit_device_is_used_as_given(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(args: list[str], **kw: Any) -> None:
+        raise AssertionError("no lookup when --device is given")
+
+    monkeypatch.setattr(mobile_mod, "subprocess_runner", fail)
+    assert mobile_mod.resolve_device("ios", "UDID-9") == "UDID-9"
+
+
+def test_maestro_and_the_ios_recorder_target_the_same_simulator() -> None:
+    cmd = mobile_mod.maestro_test_command(
+        Path("flow.yaml"), junit_path=Path("r.xml"), debug_dir=Path("d"), device="UDID-1"
+    )
+    assert cmd[:4] == ["maestro", "--device", "UDID-1", "test"]
+    assert mobile_mod.ios_record_command(Path("o.mov"), "UDID-1")[3] == "UDID-1"
+
+
+def test_commands_json_is_found_in_the_maestro_2_layout(tmp_path: Path) -> None:
+    flow = Path("capture/flows/checkout.yaml")
+    nested = tmp_path / "checkout" / "commands.json"
+    nested.parent.mkdir()
+    nested.write_text("[]", encoding="utf-8")
+    assert mobile_mod.find_commands_json(tmp_path, flow) == nested
+
+
+def test_commands_json_is_found_in_the_maestro_1_layout(tmp_path: Path) -> None:
+    flat = tmp_path / "commands-(checkout).json"
+    flat.write_text("[]", encoding="utf-8")
+    assert mobile_mod.find_commands_json(tmp_path, Path("checkout.yaml")) == flat
+
+
+def test_a_percent_point_tap_keeps_its_position() -> None:
+    entry = mobile_mod._command_entry(
+        {"tapOnPointV2Command": {"point": "50%,17%"}}, width=1080, height=2400
+    )
+    assert entry == ("tap", "tap", pytest.approx(0.5), pytest.approx(0.17))
+
+
+def test_an_optional_step_that_did_not_run_is_not_an_event() -> None:
+    payload = [
+        {
+            "command": {"tapOnElement": {"selector": {"textRegex": "No thanks"}}},
+            "metadata": {"status": "WARNED", "timestamp": 1000500, "duration": 5000},
+        }
+    ]
+    events = mobile_mod.parse_maestro_commands(
+        payload,
+        width=1080,
+        height=2400,
+        recorder_mono=20.0,
+        maestro_timing=(1000.0, 20.0, 25.0),
+    )
+    assert events == []
