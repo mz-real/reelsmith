@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated
 
@@ -47,4 +48,12 @@ def validate_id_option(value: str) -> str:
     try:
         return check_identifier(value)
     except ValueError as exc:
-        raise ReelsmithError(str(exc)) from None
+        raise ReelsmithError(
+            str(exc), fix=f"Use an id such as {_suggest_id(value)} and run the command again"
+        ) from None
+
+
+def _suggest_id(value: str) -> str:
+    """A safe id close to what the user typed, for the error's Next line."""
+    cleaned = "-".join(part for part in re.split(r"[^A-Za-z0-9_]+", value) if part)
+    return cleaned[:64] or "clip-1"

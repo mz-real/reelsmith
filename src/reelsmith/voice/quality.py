@@ -100,3 +100,23 @@ def transcript_matches(
 
     missing = [token for token in expected_tokens if not was_heard(token)]
     return (len(missing) == 0, missing)
+
+
+def transcript_matches_any(
+    expected: Sequence[str], words: list[Word], vocabulary: Sequence[str] = ()
+) -> tuple[bool, list[str]]:
+    """Check a transcript against several acceptable texts.
+
+    A line can be written one way and voiced from a say text. A take is
+    right if it matches either, so a respelling such as "uh demo" for
+    "a demo" passes when the audio says "a demo". Returns the best result:
+    a match if any text matches, otherwise the one with fewest missing words.
+    """
+    best: tuple[bool, list[str]] | None = None
+    for text in dict.fromkeys(expected):
+        ok, missing = transcript_matches(text, words, vocabulary)
+        if ok:
+            return True, []
+        if best is None or len(missing) < len(best[1]):
+            best = (ok, missing)
+    return best if best is not None else (True, [])
