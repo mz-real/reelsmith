@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shlex
 import shutil
 from pathlib import Path
 from typing import Annotated
@@ -13,6 +12,7 @@ from reelsmith.errors import ReelsmithError
 from reelsmith.fsutil import backup_existing
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
+from reelsmith.status import shell_arg
 
 PRESETS: tuple[str, ...] = ("quick", "tour", "mobile", "release-notes", "narrate")
 PRESET_NAMES = {
@@ -110,7 +110,7 @@ def init_demo(root: Path, *, force: bool, preset: str | None = None) -> int:
     if preset is not None:
         next_step = (
             f"Fill in {paths.spec} from the interview, then run: "
-            f"reelsmith status {shlex.quote(str(root))}"
+            f"reelsmith status {shell_arg(str(root))}"
         )
     return emit(
         Result(

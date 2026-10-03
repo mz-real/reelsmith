@@ -8,6 +8,7 @@ the demo folder, renders or loads a model, so it is cheap to run often.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
 from collections.abc import Callable, Iterable
@@ -484,8 +485,23 @@ STEPS: tuple[Callable[[_Demo], Step], ...] = (
 )
 
 
+WINDOWS_SPECIAL = set(" \t&()[]{}^=;!'+,`~%|<>\"")
+
+
+def shell_arg(value: str, *, windows: bool | None = None) -> str:
+    """Quote a path so it can be pasted into the user's shell.
+
+    POSIX shells get shlex quoting. cmd and PowerShell do not understand
+    single quotes, so on Windows a path is wrapped in double quotes, and
+    only when it needs them.
+    """
+    if windows if windows is not None else os.name == "nt":
+        return f'"{value}"' if WINDOWS_SPECIAL.intersection(value) else value
+    return shlex.quote(value)
+
+
 def _dir_arg(root: Path, cwd: Path) -> str:
-    return "" if root == cwd else " " + shlex.quote(str(root))
+    return "" if root == cwd else " " + shell_arg(str(root))
 
 
 def demo_status(root: Path, cwd: Path | None = None) -> StatusReport:

@@ -339,3 +339,12 @@ def test_status_with_stale_steps_warns(capsys: pytest.CaptureFixture[str], tmp_p
     _touch(root / "voice" / "intro__l1.wav", b"new take")
     run(app, ["status", str(root)])
     assert capsys.readouterr().out.startswith("[WARN]")
+
+
+def test_shell_arg_quotes_for_each_platform() -> None:
+    from reelsmith.status import shell_arg
+
+    assert shell_arg("/tmp/demo", windows=False) == "/tmp/demo"
+    assert shell_arg("/tmp/my demo", windows=False) == "'/tmp/my demo'"
+    assert shell_arg(r"C:\Users\me\demo", windows=True) == r"C:\Users\me\demo"
+    assert shell_arg(r"C:\Users\me\my demo", windows=True) == r'"C:\Users\me\my demo"'
