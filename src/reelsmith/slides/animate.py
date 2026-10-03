@@ -123,12 +123,27 @@ class SlidePage:
         encode_frames(frames, path)
 
 
+# Software raster, no LCD text and one compositor pass per frame, so the
+# same slide renders to the same bytes on every run and every machine.
+DETERMINISTIC_ARGS = [
+    "--disable-gpu",
+    "--disable-lcd-text",
+    "--disable-partial-raster",
+    "--disable-threaded-animation",
+    "--disable-threaded-scrolling",
+    "--disable-checker-imaging",
+    "--force-color-profile=srgb",
+    "--font-render-hinting=none",
+    "--run-all-compositor-stages-before-draw",
+]
+
+
 @contextmanager
 def slide_page(width: int, height: int) -> Iterator[SlidePage]:
     """Open a headless browser page at the given size."""
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch()
+            browser = playwright.chromium.launch(args=DETERMINISTIC_ARGS)
             try:
                 page = browser.new_page(
                     viewport={"width": width, "height": height}, device_scale_factor=1
