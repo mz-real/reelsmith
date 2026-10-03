@@ -13,7 +13,13 @@ if TYPE_CHECKING:
 
 
 class CaptureLog:
-    """Helper passed into a web capture flow to log clicks and screens."""
+    """Helper passed into a web capture flow to log clicks and screens.
+
+    Each event is timed when its action has landed, after Playwright's
+    actionability checks, which can take hundreds of milliseconds on a busy
+    machine. The sync marker is timed the same way, once its change is on the
+    page, so both clocks line up with the video.
+    """
 
     def __init__(self, page: Page, started_at: float, width: int, height: int) -> None:
         self._page = page
@@ -42,8 +48,8 @@ class CaptureLog:
 
     async def click(self, locator: Locator, label: str) -> None:
         x, y = await self._centre(locator)
-        t = self.elapsed()
         await locator.click()
+        t = self.elapsed()
         self.events.append(
             Event(
                 id=self._next_id(),
@@ -58,8 +64,8 @@ class CaptureLog:
     async def type(self, locator: Locator, text: str, label: str, delay_ms: int = 55) -> None:
         """Type text one key at a time, so the viewer sees it being typed."""
         x, y = await self._centre(locator)
-        t = self.elapsed()
         await locator.click()
+        t = self.elapsed()
         await locator.press_sequentially(text, delay=delay_ms)
         self.events.append(
             Event(
@@ -73,8 +79,8 @@ class CaptureLog:
         )
 
     async def key(self, name: str) -> None:
-        t = self.elapsed()
         await self._page.keyboard.press(name)
+        t = self.elapsed()
         self.events.append(
             Event(
                 id=self._next_id(),
