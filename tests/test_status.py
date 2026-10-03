@@ -348,3 +348,11 @@ def test_shell_arg_quotes_for_each_platform() -> None:
     assert shell_arg("/tmp/my demo", windows=False) == "'/tmp/my demo'"
     assert shell_arg(r"C:\Users\me\demo", windows=True) == r"C:\Users\me\demo"
     assert shell_arg(r"C:\Users\me\my demo", windows=True) == r'"C:\Users\me\my demo"'
+
+
+def test_counts_use_the_singular_for_one(tmp_path: Path) -> None:
+    root = _demo(tmp_path, upto="spec")
+    spec = dict(SPEC, scenes=[SPEC["scenes"][0]])
+    _touch(root / "spec.yaml", yaml.safe_dump(spec))
+    detail = {step.name: step for step in demo_status(root).steps}["spec"].detail
+    assert ", 1 scene," in detail
