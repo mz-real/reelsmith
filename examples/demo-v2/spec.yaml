@@ -1,5 +1,171 @@
 version: 1
 mode: produce
 goal: Narrated demo videos, made on your machine
+audience: developers who use an AI coding tool
+target_seconds: 390
+formats:
+- '16:9'
+quality: 1080p
 theme: studio
-formats: ["16:9"]
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  vocabulary:
+  - reelsmith
+  - Kokoro
+  - Chatterbox
+  - Maestro
+  - Playwright
+  - Whisper
+  - Codex
+  - Cursor
+  - Gemini
+  - Copilot
+  - YAML
+  - narrate
+  - pace
+  - one
+  pronounce:
+    reelsmith: ɹˈiːl smɪθ
+options:
+  allow_holds: true
+  speed_up_waits: true
+  captions: srt
+  highlight_clicks: true
+  transition: fade
+scenes:
+- id: open
+  layout: phone
+  clip: open-phone
+  eyebrow: A finished demo
+  title: Made with *reelsmith*
+  points:
+  - text: Narrated, with *captions*
+    line: open-1
+  - text: Clicks that line up with the voice
+    line: open-1
+  - text: Made from *one request*
+    line: open-2
+- id: overview
+  layout: slide
+  slide: overview
+- id: ch1
+  layout: slide
+  slide: ch1
+  transition: push
+- id: architecture
+  layout: slide
+  slide: architecture
+- id: result-block
+  layout: slide
+  slide: result-block
+- id: ch2
+  layout: slide
+  slide: ch2
+  transition: push
+- id: interview
+  layout: slide
+  slide: interview
+- id: ch3
+  layout: slide
+  slide: ch3
+  transition: push
+- id: approvals
+  layout: slide
+  slide: approvals
+- id: ch4
+  layout: slide
+  slide: ch4
+  transition: push
+- id: capture-web
+  layout: browser
+  clip: capture-web
+  eyebrow: Capture
+  title: Every click, *logged*
+  points:
+  - text: A real browser, driven by *Playwright*
+    line: cap-1
+  - text: Time and position for every click
+    line: cap-1
+  zoom:
+  - box:
+    - 0.05
+    - 0.22
+    - 0.6
+    - 0.35
+    at: e5
+    hold: 2.0
+- id: clip-json
+  layout: slide
+  slide: clip-json
+- id: capture-modes
+  layout: slide
+  slide: capture-modes
+- id: ch5
+  layout: slide
+  slide: ch5
+  transition: push
+- id: timeline
+  layout: slide
+  slide: timeline
+- id: before-now-timing
+  layout: slide
+  slide: before-now-timing
+- id: ch6
+  layout: slide
+  slide: ch6
+  transition: push
+- id: voice-checks
+  layout: slide
+  slide: voice-checks
+- id: say
+  layout: slide
+  slide: say
+- id: own-voice
+  layout: slide
+  slide: own-voice
+- id: ch7
+  layout: slide
+  slide: ch7
+  transition: push
+- id: formats
+  layout: slide
+  slide: formats
+- id: ch8
+  layout: slide
+  slide: ch8
+  transition: push
+- id: nine-checks
+  layout: slide
+  slide: nine-checks
+- id: real-bugs
+  layout: slide
+  slide: real-bugs
+- id: ch9
+  layout: slide
+  slide: ch9
+  transition: push
+- id: every-tool
+  layout: slide
+  slide: every-tool
+- id: one-source
+  layout: slide
+  slide: one-source
+- id: ch10
+  layout: slide
+  slide: ch10
+  transition: push
+- id: ch10-install
+  layout: full
+  clip: ch10-install
+- id: ch10-firstrun
+  layout: full
+  clip: ch10-firstrun
+- id: ch10-othertools
+  layout: full
+  clip: ch10-othertools
+- id: get-started
+  layout: slide
+  slide: get-started

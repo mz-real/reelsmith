@@ -152,6 +152,12 @@ def check_transcript(ctx: QAContext) -> CheckRow:
                 end = min(end, ctx.master_duration)
             heard = _transcribe_window(ctx, start, end)
             result = compare_text(expected, heard, vocabulary)
+            if line.text != expected:
+                # A say text can be a respelling ("uh demo" for "a demo"), so
+                # a take that matches the written text is right too.
+                written = compare_text(line.text, heard, vocabulary)
+                if not written.missing and all(_is_plural_only(*p) for p in written.changed):
+                    result = written
             missing, changed = result.missing, result.changed
             real_changed = [pair for pair in changed if not _is_plural_only(*pair)]
             plural_notes = [pair for pair in changed if _is_plural_only(*pair)]

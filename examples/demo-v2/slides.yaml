@@ -387,6 +387,15 @@ slides:
       - title: Checked in CI
         detail: The build fails when a file is out of date
 
+  # Chapter 10. Install and use
+  - id: ch10
+    kind: title
+    chapter: 10
+    eyebrow: Chapter 10
+    title: Install and *use*
+    subtitle: Two commands in Claude Code, then just ask.
+    coming_up: [Plugin, First run, Other tools]
+
   # Close
   - id: get-started
     kind: code
