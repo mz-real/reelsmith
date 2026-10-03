@@ -1,0 +1,280 @@
+version: 1
+scenes:
+- id: open
+  caption: A finished demo
+  lines:
+  - id: open-1
+    phrases:
+    - text: This is a product demo.
+    - text: A narrated walkthrough, with captions, clicks that line up with the voice, and three video formats.
+  - id: open-2
+    phrases:
+    - text: It was made by reelsmith, from a single request to an AI coding tool.
+- id: overview
+  caption: What reelsmith is
+  lines:
+  - id: ov-1
+    phrases:
+    - text: reelsmith runs on your own machine. Nothing is uploaded.
+    - text: Your AI tool drives it.
+    - text: You approve the plan and the words.
+    - text: And every video is checked before you share it.
+- id: ch1
+  caption: How it works
+  lines:
+  - id: ch1-1
+    phrases:
+    - text: It starts with you, asking your AI tool for a demo.
+- id: architecture
+  caption: How it works
+  lines:
+  - id: arch-1
+    phrases:
+    - text: In Claude Code, that request loads the reelsmith skill.
+    - text: The skill is a short set of instructions, with a guide for each step.
+    - text: 'The AI follows those guides, and calls one command line tool: reelsmith.'
+    - text: The AI never writes video code.
+    - text: It writes small YAML files, runs commands, and reads the result at the end of each one.
+- id: result-block
+  caption: Every command ends the same way
+  lines:
+  - id: res-1
+    phrases:
+    - text: 'Every command ends the same way: OK, WARN or ERROR, then the next step.'
+    - text: That is how any AI tool stays on track.
+  - id: res-2
+    phrases:
+    - text: 'The engine does the real work, one step at a time: capture, voice, slides, compose, and QA.'
+      say: 'The engine does the real work, one step at a time: capture, voice, slides, compose, and Q A.'
+    - text: Any step can be run again on its own.
+- id: ch2
+  caption: The interview
+  lines:
+  - id: ch2-1
+    phrases:
+    - text: First, the AI interviews you.
+- id: interview
+  caption: One question at a time
+  lines:
+  - id: int-1
+    phrases:
+    - text: One question at a time, with suggested answers. The first question picks the mode. Narrate adds a voice to a recording you already have. Produce builds the full demo, with slides and device
+        frames.
+    - text: Then it asks what to show,
+    - text: who is watching, how long it should be,
+    - text: which voice,
+    - text: and which formats.
+  - id: int-2
+    phrases:
+    - text: Your answers become spec.yaml. That is the plan.
+      say: Your answers become spec dot yaml. That is the plan.
+- id: ch3
+  caption: Two approvals
+  lines:
+  - id: ch3-1
+    phrases:
+    - text: reelsmith has two approval points, and they are always there.
+- id: approvals
+  caption: Two approval points
+  lines:
+  - id: app-1
+    phrases:
+    - text: First
+    - text: you approve the plan.
+    - text: Then the AI writes the narration against the real recording,
+    - text: and you approve the script.
+    - text: Nothing is voiced or rendered before you agree to the words.
+- id: ch4
+  caption: Capture
+  lines:
+  - id: ch4-1
+    phrases:
+    - text: For a web app, the AI writes a short Playwright flow for each scene.
+- id: capture-web
+  caption: Every click, logged
+  lines:
+  - id: cap-1
+    phrases:
+    - text: reelsmith runs it in a real browser,
+      pin: e2
+    - text: records the screen,
+      pin: e3
+    - text: and logs every click with its time and position.
+      pin: e5
+- id: clip-json
+  caption: Every click, with its time and position
+  lines:
+  - id: cj-1
+    phrases:
+    - text: Those events
+    - text: are what the narration pins to.
+- id: capture-modes
+  caption: Three ways to get footage
+  lines:
+  - id: cm-1
+    phrases:
+    - text: For mobile apps,
+    - text: Maestro taps through the app on a simulator or a device, and reelsmith records the screen itself. Nothing goes to a cloud service.
+    - text: And if you already have a recording, detect finds the changes on screen, down to a single button, so each click can be pinned to the exact frame.
+- id: ch5
+  caption: Words that land on clicks
+  lines:
+  - id: ch5-1
+    phrases:
+    - text: Each line of the script is split into phrases, and a phrase can be pinned to a click.
+- id: timeline
+  caption: Each phrase starts on its click
+  lines:
+  - id: tl-1
+    phrases:
+    - text: The timing engine places every phrase so it starts just as its click happens.
+    - text: The voice never runs ahead of the screen.
+    - text: When a line is too long for the gap before its click, reelsmith holds the frame for a moment, up to three seconds.
+    - text: If even that is not enough, it does not drift.
+- id: before-now-timing
+  caption: No more drift
+  lines:
+  - id: bn-1
+    phrases:
+    - text: It reports the line, and how many seconds it is over,
+    - text: so the script can be fixed.
+- id: ch6
+  caption: The voice
+  lines:
+  - id: ch6-1
+    phrases:
+    - text: The voice you are hearing is Kokoro, a small open model that runs on a laptop.
+- id: voice-checks
+  caption: Every line is checked
+  lines:
+  - id: vc-1
+    phrases:
+    - text: Every line is checked as it is made.
+    - text: Pace stays between 130 and 210 words a minute.
+    - text: Then the line is read back by a speech model, Whisper, and compared word by word with the script, so a dropped word is caught before it reaches the video.
+- id: say
+  caption: Written one way, said another
+  lines:
+  - id: say-1
+    phrases:
+    - text: Product names can be hard to say, so a phrase can carry a spoken form.
+    - text: The caption shows spec.yaml, and the voice says spec dot yaml.
+      say: The caption shows spec dot yaml, and the voice says spec dot yaml.
+- id: own-voice
+  caption: Your own voice, only with consent
+  lines:
+  - id: own-1
+    phrases:
+    - text: You can also clone your own voice with Chatterbox.
+    - text: 'Only with consent: your own voice, or one you have permission to use.'
+      say: 'Only with consent: your own voice, or one, you have permission to use.'
+    - text: The watermark always stays on.
+- id: ch7
+  caption: Compose and formats
+  lines:
+  - id: ch7-1
+    phrases:
+    - text: 'Compose builds every scene: device and browser frames, these slides, captions, zooms, and click highlights.'
+- id: formats
+  caption: One script, three formats
+  lines:
+  - id: fmt-1
+    phrases:
+    - text: Narration is mixed and levelled to one steady loudness. One script gives you a wide video,
+    - text: a vertical one,
+    - text: and a square one, plus a silent version, the narration track, and a captions file.
+- id: ch8
+  caption: Quality checks
+  lines:
+  - id: ch8-1
+    phrases:
+    - text: Before you share it, reelsmith runs nine checks on the finished video.
+- id: nine-checks
+  caption: Nine checks
+  lines:
+  - id: nc-1
+    phrases:
+    - text: It reads every word back against the script.
+    - text: It checks that each phrase lands on its click, that nothing is cut off, and that no frame is held too long. It checks loudness, caption reading time, and that blurred areas stay blurred.
+- id: real-bugs
+  caption: Real bugs, caught and fixed
+  lines:
+  - id: rb-1
+    phrases:
+    - text: 'These checks found real problems while reelsmith was being built: a click pinned more than a second late,'
+    - text: and last syllables cut from lines. Both are fixed, and both are now tested.
+  - id: rb-2
+    phrases:
+    - text: The report says what failed and how to fix it, and the AI clears every failure before it calls the video done.
+- id: ch9
+  caption: Every AI tool
+  lines:
+  - id: ch9-1
+    phrases:
+    - text: In Claude Code, reelsmith is a plugin.
+- id: every-tool
+  caption: Works in the tool you already use
+  lines:
+  - id: et-1
+    phrases:
+    - text: Add the marketplace and install it.
+    - text: For Codex,
+    - text: Cursor,
+    - text: Gemini CLI
+    - text: and GitHub Copilot, one command writes the same instructions into your project, in the format each tool reads.
+    - text: For any other tool, there is a single prompt to paste.
+- id: one-source
+  caption: One source, every format
+  lines:
+  - id: os-1
+    phrases:
+    - text: All of them come from one source,
+    - text: so every tool follows the same steps
+    - text: and makes the same quality of video.
+- id: ch10
+  caption: Install and use
+  lines:
+  - id: ch10-1
+    phrases:
+    - text: Here is how you start.
+- id: ch10-install
+  caption: Install the plugin
+  lines:
+  - id: ins-1
+    phrases:
+    - text: In a terminal, add the reelsmith marketplace to Claude Code.
+    - text: Then install the plugin.
+    - text: Claude Code confirms it is installed and enabled.
+- id: ch10-firstrun
+  caption: First run
+  lines:
+  - id: fr-1
+    phrases:
+    - text: Now open your project and ask for a demo.
+      say: Now open your project and ask for uh demo.
+    - text: Claude loads the reelsmith skill and reads your app first.
+  - id: fr-2
+    phrases:
+    - text: If the reelsmith command is missing, it offers to install it, with one command.
+  - id: fr-3
+    phrases:
+    - text: 'Then it checks your setup with doctor, and asks the first question: narrate a recording, or produce a full demo.'
+  - id: fr-4
+    phrases:
+    - text: From here you answer, approve the plan and the script, and reelsmith makes the video.
+- id: ch10-othertools
+  caption: Other tools
+  lines:
+  - id: ot-1
+    phrases:
+    - text: Using Codex, Cursor, Gemini CLI or Copilot?
+    - text: Run reelsmith agent install in your project, then ask your tool the same way.
+- id: get-started
+  caption: Get started
+  lines:
+  - id: gs-1
+    phrases:
+    - text: reelsmith is open source.
+  - id: gs-2
+    phrases:
+    - text: Add the marketplace, install the plugin, and ask for a demo of your app.
