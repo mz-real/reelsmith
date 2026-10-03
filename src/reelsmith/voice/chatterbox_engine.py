@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import subprocess
 import sys
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -21,6 +22,7 @@ import numpy as np
 import typer
 
 from reelsmith.errors import ReelsmithError
+from reelsmith.media.ffmpeg import require_ffmpeg
 from reelsmith.voice.base import Audio
 
 CONSENT_VALUES = ("own", "permission")
@@ -99,6 +101,34 @@ def _to_mono_float32(wav: Any) -> np.ndarray:
     return np.asarray(wav, dtype=np.float32).reshape(-1)
 
 
+SPEED_RANGE = (0.75, 1.25)
+"""How far speed may stretch cloned audio before it starts to sound wrong."""
+
+
+def time_stretch(samples: np.ndarray, sample_rate: int, speed: float) -> np.ndarray:
+    """Play samples at speed (0.9 is slower) without changing the pitch.
+
+    Chatterbox has no setting for how fast it reads, so this is how
+    voice.speed and the pace retries reach a cloned voice. ffmpeg's atempo
+    keeps the pitch, and the Perth watermark survives it.
+    """
+    speed = min(max(speed, SPEED_RANGE[0]), SPEED_RANGE[1])
+    if abs(speed - 1.0) < 0.005:
+        return samples
+    require_ffmpeg()
+    raw = ["-f", "f32le", "-ar", str(sample_rate), "-ac", "1"]
+    completed = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", *raw, "-i", "pipe:0"]
+        + ["-af", f"atempo={speed:.4f}", *raw, "pipe:1"],
+        input=np.ascontiguousarray(samples, dtype=np.float32).tobytes(),
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", "replace").strip()[-300:]
+        raise ReelsmithError(f"Could not change the speed of the cloned audio: {detail}")
+    return np.frombuffer(completed.stdout, dtype=np.float32).copy()
+
+
 def _sample_digest(sample: Path) -> str:
     return hashlib.sha256(sample.read_bytes()).hexdigest()[:12]
 
@@ -122,12 +152,15 @@ class ChatterboxEngine:
             typer.echo(PRONOUNCE_WARNING, err=True)
 
     def synthesize(self, text: str, seed: int, speed: float | None = None) -> Audio:
-        # Chatterbox has no setting for how fast it reads a cloned voice,
-        # so speed is accepted for a common interface with other engines
-        # and otherwise ignored.
+        # Chatterbox has no setting for how fast it reads a cloned voice, so
+        # speed is applied afterwards with a pitch keeping time stretch.
         check_consent(self.consent, self.sample)
         torch, tts_class = _import_chatterbox()
         model = _load_model(torch, tts_class)
         torch.manual_seed(seed)
         wav = model.generate(text, audio_prompt_path=str(self.sample))
-        return Audio(samples=_to_mono_float32(wav), sample_rate=int(model.sr))
+        samples = _to_mono_float32(wav)
+        rate = int(model.sr)
+        if speed is not None:
+            samples = time_stretch(samples, rate, speed)
+        return Audio(samples=samples, sample_rate=rate)
