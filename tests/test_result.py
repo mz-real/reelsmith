@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from reelsmith.result import Result, Status, emit
@@ -60,3 +62,83 @@ def test_emit_multiple_details_each_on_own_line(capsys: pytest.CaptureFixture[st
         "  - 16:9 written",
         "  - 9:16 written",
     ]
+
+
+def test_emit_json_prints_one_compact_object(capsys: pytest.CaptureFixture[str]) -> None:
+    import json
+
+    from reelsmith.result import set_json_mode
+
+    set_json_mode(True)
+    try:
+        code = emit(
+            Result(
+                status=Status.WARN,
+                message="Loudness is slightly off",
+                details=["-18 LUFS"],
+                next_step="reelsmith qa",
+            )
+        )
+    finally:
+        set_json_mode(False)
+    out = capsys.readouterr().out
+    assert out.count("\n") == 1
+    data = json.loads(out)
+    assert data == {
+        "status": "WARN",
+        "message": "Loudness is slightly off",
+        "details": ["-18 LUFS"],
+        "next": "reelsmith qa",
+    }
+    assert code == 0
+
+
+def test_emit_json_error_keeps_exit_code(capsys: pytest.CaptureFixture[str]) -> None:
+    import json
+
+    from reelsmith.result import set_json_mode
+
+    set_json_mode(True)
+    try:
+        code = emit(Result(status=Status.ERROR, message="ffmpeg not found"))
+    finally:
+        set_json_mode(False)
+    data = json.loads(capsys.readouterr().out)
+    assert data["next"] is None
+    assert data["details"] == []
+    assert code == 1
+
+
+def test_global_json_flag_switches_any_command(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    import json
+
+    from reelsmith.cli import app, run
+    from reelsmith.result import json_mode
+
+    code = run(app, ["--json", "init", str(tmp_path / "demo")])
+    out = capsys.readouterr().out
+    assert code == 0
+    data = json.loads(out)
+    assert data["status"] == "OK"
+    assert data["message"].startswith("Demo folder ready")
+    # The mode never leaks into the next run.
+    assert json_mode() is False
+    run(app, ["init", str(tmp_path / "other")])
+    assert capsys.readouterr().out.startswith("[OK]")
+
+
+def test_global_json_flag_covers_errors(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    import json
+
+    from reelsmith.cli import app, run
+
+    root = tmp_path / "demo"
+    root.mkdir()
+    (root / "notes.txt").write_text("hi", encoding="utf-8")
+    code = run(app, ["--json", "init", str(root)])
+    data = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert data["status"] == "ERROR"
+    assert "--force" in data["next"]

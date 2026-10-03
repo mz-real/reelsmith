@@ -1,0 +1,27 @@
+# Narration for the mobile demo. About 140 to 170 words in total.
+# Write the phone scenes after their footage is recorded, and pin phrases to
+# tap events from capture/clips/<clip>/clip.json, for example pin: e2.
+# Run reelsmith script check, then show the whole script to the user.
+# This is approval point 2.
+version: 1
+scenes:
+  - id: intro
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Replace this with who the app is for and what it helps them do.
+  - id: flow-1
+    lines:
+      - id: flow-1-1
+        phrases:
+          - text: Replace this with the first tap, as the footage shows it.
+  - id: flow-2
+    lines:
+      - id: flow-2-1
+        phrases:
+          - text: Replace this with the result on screen and why it matters.
+  - id: outro
+    lines:
+      - id: outro-1
+        phrases:
+          - text: Replace this with where to download the app.

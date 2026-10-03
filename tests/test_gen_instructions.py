@@ -42,6 +42,7 @@ NON_CLAUDE_ENTRIES = (
     "src/reelsmith/agent_files/GEMINI.md",
     "src/reelsmith/agent_files/copilot-instructions.md",
     "prompts/HANDOVER_PROMPT.md",
+    "prompts/HANDOVER_PROMPT_FULL.md",
 )
 
 
@@ -298,3 +299,28 @@ def test_generated_skill_never_offers_an_unpublished_pypi_install() -> None:
     skill = (Path(__file__).resolve().parents[1] / "skills" / "reelsmith" / "SKILL.md").read_text()
     assert "uv tool install git+https://github.com/mz-real/reelsmith" in skill
     assert "{{install" not in skill
+
+
+def test_compact_handover_is_short_and_points_to_the_guides() -> None:
+    text = (REPO_ROOT / "prompts/HANDOVER_PROMPT.md").read_text(encoding="utf-8")
+    assert len(text.split()) < 2500
+    assert "reelsmith agent install" in text
+    assert gen.GUIDES_URL in text
+    assert "reelsmith status --json" in text
+    assert "HANDOVER_PROMPT_FULL.md" in text
+    # The entry and the rules are in, the guides themselves are not.
+    assert "Approval point 2" in text
+    assert "Truth rule" in text
+    assert "## Done when" not in text
+
+
+def test_full_handover_has_every_guide() -> None:
+    text = (REPO_ROOT / "prompts/HANDOVER_PROMPT_FULL.md").read_text(encoding="utf-8")
+    for name in GUIDES:
+        assert f"The guide below is `reelsmith-guides/{name}.md`." in text
+    assert text.count("## Done when") == len(GUIDES)
+
+
+def test_guides_url_points_at_rendered_guides() -> None:
+    assert gen.GUIDES_URL.startswith("https://raw.githubusercontent.com/mz-real/reelsmith/")
+    assert gen.GUIDES_URL.endswith("src/reelsmith/agent_files/guides")

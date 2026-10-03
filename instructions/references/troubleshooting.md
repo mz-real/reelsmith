@@ -66,6 +66,7 @@ Every other command works the same way: `[OK]` or `[WARN]` exit 0, `[ERROR]` exi
 | `xcrun simctl` missing (iOS only) | Install Xcode from the App Store, then `xcode-select --install`. |
 | `... is not valid: ...` for a YAML or JSON file | The message names the field. Fix that field and rerun. |
 | `... not found` with `Next: reelsmith init` | You are not in the demo folder. `cd` into it or pass the folder to the command. |
+| You are not sure which step comes next | Run `reelsmith status --json` and follow its `next`. |
 | `... is not empty. Use --force to init anyway.` | Use a new folder for the demo. |
 | `Could not download ...` | Check the network and retry. The `Next:` line has a manual download link. Models are cached after the first download. |
 | `Chatterbox voice cloning is not installed.` | `{{install_clone}}` with Python 3.11 or 3.12, or use a Kokoro voice. |

@@ -1,0 +1,16 @@
+# Narration for the recording. One line per action, in the order they happen.
+# Pin each phrase to the event it describes, for example pin: e1, using the
+# event ids in capture/clips/main/clip.json. A line must fit the gap before
+# the next event, so keep lines short.
+# Run reelsmith script check, then show the whole script to the user.
+# This is approval point 2.
+version: 1
+scenes:
+  - id: main
+    lines:
+      - id: l1
+        phrases:
+          - text: Replace this with what the first action does and why.
+      - id: l2
+        phrases:
+          - text: Replace this with the next action, as the recording shows it.

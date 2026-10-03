@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
+from reelsmith import progress
 from reelsmith.errors import ReelsmithError
 from reelsmith.fsutil import cache_dir
 
@@ -71,6 +74,18 @@ def _manual_fix(spec: ModelSpec, dest: Path) -> str:
     return f"curl -L -o {dest} {spec.url}"
 
 
+_CHUNK = 1 << 20
+
+
+def _copy_with_progress(response: BinaryIO, out: BinaryIO, spec: ModelSpec) -> None:
+    label = f"Downloading {spec.filename}"
+    done = 0
+    while chunk := response.read(_CHUNK):
+        out.write(chunk)
+        done += len(chunk)
+        progress.transfer(label, done, max(spec.size_bytes, done))
+
+
 def ensure_model(name: str) -> Path:
     """Return the local path to a model file, downloading it if needed.
 
@@ -92,7 +107,8 @@ def ensure_model(name: str) -> Path:
         return dest
 
     size_mb = spec.size_bytes / (1024 * 1024)
-    print(f"Downloading {spec.filename} ({size_mb:.0f} MB) to {dest_dir}")
+    # stderr, so the result block on stdout stays clean.
+    print(f"Downloading {spec.filename} ({size_mb:.0f} MB) to {dest_dir}", file=sys.stderr)
 
     tmp_path = dest.with_name(dest.name + ".part")
     try:
@@ -100,7 +116,7 @@ def ensure_model(name: str) -> Path:
             urllib.request.urlopen(spec.url, timeout=30) as response,
             tmp_path.open("wb") as out,
         ):
-            shutil.copyfileobj(response, out)
+            _copy_with_progress(response, out, spec)
     except (urllib.error.URLError, OSError, ValueError) as exc:
         tmp_path.unlink(missing_ok=True)
         raise ReelsmithError(

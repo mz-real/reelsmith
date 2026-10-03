@@ -31,6 +31,7 @@ from pathlib import Path
 
 import soundfile as sf
 
+from reelsmith import progress
 from reelsmith.fsutil import backup_existing
 from reelsmith.models import Line, ScriptModel, SpecModel
 from reelsmith.paths import DemoPaths
@@ -333,9 +334,13 @@ def generate(
 
     line_reports: list[LineReport] = []
     rerecorded_on_request = 0
+    total = sum(len(scene.lines) for scene in script.scenes)
+    done = 0
     for scene in script.scenes:
         for line in scene.lines:
             key = f"{scene.id}/{line.id}"
+            done += 1
+            progress.count("Voice line", done, total, key)
             if only is not None and key not in only:
                 prior = existing.get(key)
                 if prior is not None:

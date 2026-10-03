@@ -1,0 +1,52 @@
+# Slides for the full tour. Words in *stars* use the accent colour.
+# Keep titles under eight words. Icons come from the built in set, see
+# reelsmith schema for the names. Render with: reelsmith slides
+version: 1
+slides:
+  - id: intro
+    kind: title
+    eyebrow: Product tour
+    # The product name, with the key word in stars.
+    title: A tour of *the app*
+    subtitle: One line on who it is for.
+  - id: overview
+    kind: cards
+    eyebrow: What we will cover
+    title: Three parts, *one goal*
+    # One card per chapter, in the same order as the chapters.
+    cards:
+      - icon: chat
+        title: First area
+        detail: One line on what it does.
+      - icon: check
+        title: Second area
+        detail: One line on what it does.
+      - icon: shield
+        title: Third area
+        detail: One line on what it does.
+  - id: ch1
+    kind: title
+    chapter: 1
+    eyebrow: Chapter 1
+    title: First *area*
+    subtitle: What the viewer will learn here.
+  - id: ch2
+    kind: title
+    chapter: 2
+    eyebrow: Chapter 2
+    title: Second *area*
+    subtitle: What the viewer will learn here.
+  - id: ch3
+    kind: title
+    chapter: 3
+    eyebrow: Chapter 3
+    title: Third *area*
+    subtitle: What the viewer will learn here.
+  - id: recap
+    kind: bullets
+    eyebrow: Recap
+    title: What to *remember*
+    items:
+      - The first thing to remember
+      - The second thing to remember
+      - How to get started

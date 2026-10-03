@@ -1,0 +1,31 @@
+# Slides for the release notes video. Words in *stars* use the accent colour.
+# Keep titles under eight words, they must also fit the 1:1 frame.
+# Render with: reelsmith slides
+version: 1
+slides:
+  - id: intro
+    kind: title
+    eyebrow: Release notes
+    # The version number, with it in stars.
+    title: What is new in *this release*
+    subtitle: One line on the theme of the release.
+  - id: changes
+    kind: cards
+    eyebrow: In this release
+    title: The *changes*
+    # One card per change, two to six cards. Mark the biggest with accent: true.
+    cards:
+      - icon: check
+        title: First change
+        detail: One line on what it means for the user.
+        accent: true
+      - icon: shield
+        title: Second change
+        detail: One line on what it means for the user.
+  - id: outro
+    kind: bullets
+    eyebrow: Update
+    title: Get it *today*
+    items:
+      - How to update
+      - Where the full notes are

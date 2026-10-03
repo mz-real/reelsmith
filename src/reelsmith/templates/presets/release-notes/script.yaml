@@ -1,0 +1,32 @@
+# Narration for the release notes video. About 200 to 300 words in total.
+# Lead with what each change means for the user, then show it.
+# Pin phrases in the browser scenes to clip events, for example pin: e2.
+# Run reelsmith script check, then show the whole script to the user.
+# This is approval point 2.
+version: 1
+scenes:
+  - id: intro
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Replace this with the version number and the theme of the release.
+  - id: changes
+    lines:
+      - id: changes-1
+        phrases:
+          - text: Replace this with a one line summary of every change on the slide.
+  - id: change-1
+    lines:
+      - id: change-1-1
+        phrases:
+          - text: Replace this with the first change and what it means for the user.
+  - id: change-2
+    lines:
+      - id: change-2-1
+        phrases:
+          - text: Replace this with the second change and what it means for the user.
+  - id: outro
+    lines:
+      - id: outro-1
+        phrases:
+          - text: Replace this with how to update and where the full notes are.

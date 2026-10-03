@@ -1,0 +1,82 @@
+# Preset: full app tour, 3 to 5 minutes.
+# A title, an overview, then one chapter per main area of the app, each with
+# a chapter slide and a browser scene, then a recap.
+# Fill in the fields from the interview answers. Add or remove chapters to
+# match the app: copy a chapter slide scene and its browser scene together.
+# Show this file to the user. This is approval point 1.
+version: 1
+mode: produce
+# One sentence: what the viewer understands after the tour.
+goal: Walk through the main parts of the app
+audience: customers
+target_seconds: 240
+formats: ["16:9"]
+quality: 1080p
+theme: studio
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  # Product names and rare words, so the speech checks spell them right.
+  vocabulary: []
+options:
+  allow_holds: true
+  # Long loading waits are sped up so the voice never runs ahead.
+  speed_up_waits: true
+  captions: srt
+  highlight_clicks: true
+  transition: fade
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: overview
+    layout: slide
+    slide: overview
+  # Chapter 1. Name each area after what the user gets from it.
+  - id: ch1
+    layout: slide
+    slide: ch1
+    transition: push
+  - id: area-1
+    layout: browser
+    # Record with: reelsmith capture web capture/flows/area-1.py --id area-1
+    clip: area-1
+    eyebrow: Chapter 1
+    title: The first *main area*
+    points:
+      - text: What you see first
+        line: area-1-1
+      - text: The one action that matters
+        line: area-1-2
+  # Chapter 2.
+  - id: ch2
+    layout: slide
+    slide: ch2
+    transition: push
+  - id: area-2
+    layout: browser
+    clip: area-2
+    eyebrow: Chapter 2
+    title: The second *main area*
+    points:
+      - text: What it is for
+        line: area-2-1
+  # Chapter 3.
+  - id: ch3
+    layout: slide
+    slide: ch3
+    transition: push
+  - id: area-3
+    layout: browser
+    clip: area-3
+    eyebrow: Chapter 3
+    title: The third *main area*
+    points:
+      - text: What it is for
+        line: area-3-1
+  - id: recap
+    layout: slide
+    slide: recap
+blur: []

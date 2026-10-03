@@ -8,9 +8,9 @@ import sys
 
 import typer
 
-from reelsmith import __version__
+from reelsmith import __version__, progress
 from reelsmith.errors import ReelsmithError
-from reelsmith.result import Result, Status, emit
+from reelsmith.result import Result, Status, emit, set_json_mode
 
 app = typer.Typer(
     name="reelsmith",
@@ -35,8 +35,20 @@ def main_callback(
         is_eager=True,
         help="Show the reelsmith version and exit.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Print the result block as one JSON object: status, message, details, next.",
+    ),
+    show_progress: bool = typer.Option(
+        False,
+        "--progress",
+        help="Show progress on stderr even when it is not a terminal.",
+    ),
 ) -> None:
     """reelsmith: turn an app into a narrated demo video, all local."""
+    set_json_mode(json_output)
+    progress.configure(force=show_progress)
 
 
 def command_modules() -> list[str]:
@@ -67,6 +79,14 @@ def run(target: typer.Typer, args: list[str]) -> int:
     Turns a ReelsmithError raised anywhere in a command into an ERROR
     result block instead of a traceback, and returns the process exit code.
     """
+    try:
+        return _run(target, args)
+    finally:
+        set_json_mode(False)
+        progress.reset()
+
+
+def _run(target: typer.Typer, args: list[str]) -> int:
     try:
         result = target(args=args, standalone_mode=False)
     except ReelsmithError as exc:

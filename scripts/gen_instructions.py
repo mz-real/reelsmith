@@ -28,13 +28,25 @@ from pathlib import Path
 
 import yaml
 
-from reelsmith.agent_install import ENTRY_FILES, GUIDES_DIR, PROJECT_GUIDES_DIR, SKILL_DIR
+from reelsmith.agent_install import (
+    ENTRY_FILES,
+    GUIDES_DIR,
+    PROJECT_GUIDES_DIR,
+    PROJECT_SKILL_DIR,
+    SKILL_DIR,
+)
 
 GENERATOR = "scripts/gen_instructions.py"
 PACKAGE_FILES = "src/reelsmith/agent_files"
 PLUGIN_SKILL = "skills/reelsmith"
 REPOSITORY = "https://github.com/mz-real/reelsmith"
 OWNER = "mz-real"
+# The rendered guides, readable by any tool that can fetch a URL.
+GUIDES_URL = (
+    f"https://raw.githubusercontent.com/{OWNER}/reelsmith/main/{PACKAGE_FILES}/{GUIDES_DIR}"
+)
+HANDOVER = "prompts/HANDOVER_PROMPT.md"
+HANDOVER_FULL = "prompts/HANDOVER_PROMPT_FULL.md"
 
 GUIDE_ORDER = (
     "interview",
@@ -179,12 +191,30 @@ def _cursor_rule(src: Sources) -> str:
 
 
 def _handover(src: Sources) -> str:
+    """The short prompt: the entry, the rules and one line per guide."""
     intro = (
         "# reelsmith handover prompt\n\n"
         "Paste everything below this line into any AI coding tool. It tells the tool how to "
+        "make a narrated demo video of your app with the reelsmith CLI. This is the short "
+        f"version. `{HANDOVER_FULL}` has every guide in one file.\n\n---\n\n"
+        "**Getting the guides.** The guides are not included here. If you can run commands, "
+        "run `reelsmith agent install TOOL` in the project first, where TOOL is one of "
+        "`claude`, `codex`, `cursor`, `gemini` or `copilot`. It writes the guides into "
+        f"`{PROJECT_GUIDES_DIR}/`, or into the skill folder `{PROJECT_SKILL_DIR}` for claude. "
+        "Otherwise fetch each guide when you reach its step from "
+        f"`{GUIDES_URL}/NAME.md`, where NAME is the file name in the list at the end. "
+        "Read one guide at a time.\n\n"
+    )
+    return _banner("instructions/") + intro + src.entry_for(PROJECT_GUIDES_DIR)
+
+
+def _handover_full(src: Sources) -> str:
+    intro = (
+        "# reelsmith handover prompt (full)\n\n"
+        "Paste everything below this line into any AI coding tool. It tells the tool how to "
         "make a narrated demo video of your app with the reelsmith CLI. If your project has "
         f"no `{PROJECT_GUIDES_DIR}/` folder, the guides are included at the end of this "
-        "prompt.\n\n---\n\n"
+        f"prompt. `{HANDOVER}` is a much shorter version.\n\n---\n\n"
     )
     parts = [_banner("instructions/") + intro + src.entry_for(PROJECT_GUIDES_DIR)]
     for name in src.guides:
@@ -249,7 +279,8 @@ def build(root: Path) -> dict[str, str]:
         outputs[f"{PACKAGE_FILES}/{GUIDES_DIR}/{name}.md"] = _banner(
             f"instructions/references/{name}.md"
         ) + src.guide_for(name, PROJECT_GUIDES_DIR)
-    outputs["prompts/HANDOVER_PROMPT.md"] = _handover(src)
+    outputs[HANDOVER] = _handover(src)
+    outputs[HANDOVER_FULL] = _handover_full(src)
     return dict(sorted(outputs.items()))
 
 

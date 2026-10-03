@@ -1,0 +1,18 @@
+# Slides for the quick feature clip. Words in *stars* use the accent colour.
+# Keep titles under eight words. Render with: reelsmith slides
+version: 1
+slides:
+  - id: intro
+    kind: title
+    eyebrow: New feature
+    # The feature name, with the key word in stars.
+    title: The feature, *in a minute*
+    subtitle: One line on what it helps the viewer do.
+  - id: outro
+    kind: bullets
+    eyebrow: Try it
+    title: Where to *start*
+    # Two or three short items: where it lives, who can use it, a link.
+    items:
+      - Where to find it
+      - Who can use it

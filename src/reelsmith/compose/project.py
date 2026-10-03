@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 
-from reelsmith import __version__
+from reelsmith import __version__, progress
 from reelsmith.compose.cache import is_cached, scene_key, scene_path
 from reelsmith.compose.captions import find_font
 from reelsmith.compose.graph import Encode, scene_args
@@ -170,6 +170,7 @@ def _compose_format(
     files: list[Path] = []
     last = len(project.scenes) - 1
     for number, scene in enumerate(project.scenes):
+        progress.count(f"Scene {format_slug(fmt)}", number + 1, last + 1, scene.spec.id)
         tail = XFADE if number < last else 0.0
         images = slides[scene.spec.id]
         key = scene_key(

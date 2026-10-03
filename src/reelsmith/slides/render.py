@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from reelsmith import progress
 from reelsmith.errors import ReelsmithError
 from reelsmith.fsutil import backup_existing
 from reelsmith.models.slides import (
@@ -518,8 +519,10 @@ def render_slides_to_dir(
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
     started = time.monotonic()
+    total = len(slides.slides)
     with slide_page(width, height) as page:
-        for slide in slides.slides:
+        for number, slide in enumerate(slides.slides, start=1):
+            progress.count(f"Slides {out_dir.name}", number, total, slide.id)
             written += _render_slide(page, slide, theme, out_dir, clips)
     if stats is not None:
         steps = sum(step_count(slide) for slide in slides.slides)

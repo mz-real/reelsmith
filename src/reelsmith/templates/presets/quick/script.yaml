@@ -1,0 +1,26 @@
+# Narration for the quick feature clip. About 110 to 140 words in total.
+# Write it after the footage is recorded, so every line matches the screen.
+# A phrase can pin to an event id from capture/clips/<clip>/clip.json, for
+# example pin: e2, so it lands on that click. Slides have no pins.
+# Run reelsmith script check, then show the whole script to the user.
+# This is approval point 2.
+version: 1
+scenes:
+  - id: intro
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Replace this with one sentence on the problem the feature solves.
+  - id: feature
+    lines:
+      - id: feature-1
+        phrases:
+          - text: Replace this with what the user does first, as the footage shows it.
+      - id: feature-2
+        phrases:
+          - text: Replace this with what they get back, and why it matters.
+  - id: outro
+    lines:
+      - id: outro-1
+        phrases:
+          - text: Replace this with where to find the feature or how to try it.

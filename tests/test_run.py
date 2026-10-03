@@ -230,3 +230,17 @@ def test_loaders_fall_back_to_the_typer_command(monkeypatch: pytest.MonkeyPatch)
     assert qa is not None
     qa(Path("demo"), "16x9", True)
     assert seen == [["qa", "demo", "--format", "16x9", "--preview"]]
+
+
+def test_json_run_prints_one_json_line_and_steps_go_to_stderr(
+    rec: Recorder, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json
+
+    from reelsmith.cli import app, run
+
+    code = run(app, ["--json", "run", str(tmp_path)])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert json.loads(captured.out)["message"] == "Run finished"
+    assert "Step 1 of" in captured.err

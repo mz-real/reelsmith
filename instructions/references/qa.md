@@ -64,6 +64,8 @@ A `[WARN]` from compose lists timing conflicts, for example a line that is some 
 
 qa ends with `[OK]` when every check passes and `[ERROR]` when any check fails. The details and `qa/report.md` name each FAIL and its fix. Always open the report, even on `[OK]`.
 
+To check whether the report is still current after a change, run `reelsmith status --json` instead of rereading it. Its `qa` step is `stale` when the master is newer than the report, and shows the PASS, WARN and FAIL counts.
+
 ## Common failures and fixes
 
 | FAIL | Fix |
