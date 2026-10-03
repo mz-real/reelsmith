@@ -44,6 +44,8 @@ out/
 
 There is one pair of videos per format in spec.yaml (`16x9`, `9x16`, `1x1`).
 
+With `voice.engine: none` the video already has no narration, so `demo_16x9_silent.mp4` and `demo_narration.wav` would only duplicate it or record silence. Export leaves both out and notes why; you get `demo_16x9.mp4` and `demo.srt` only.
+
 reelsmith never overwrites output silently. The previous file is kept next to the new one as `<name>.bak-<date>-<time>`.
 
 ## spec.yaml

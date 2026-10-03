@@ -336,6 +336,40 @@ def test_loudness_fails_far_from_target(tmp_path: Path) -> None:
     assert "LUFS" in row.details[0]
 
 
+def _none_voice_context(tmp_path: Path, timeline: Timeline) -> QAContext:
+    return QAContext(
+        spec=SpecModel.model_validate({"voice": {"engine": "none"}}),
+        script=ScriptModel.model_validate(SCRIPT),
+        timeline=timeline,
+        master=tmp_path / "missing-master.mp4",
+        master_duration=timeline.duration or 0.0,
+        sheets_dir=tmp_path / "sheets",
+        work_dir=tmp_path,
+        transcriber=_fake_transcriber("unused"),  # type: ignore[arg-type]
+    )
+
+
+def test_transcript_skips_when_voice_engine_is_none(tmp_path: Path) -> None:
+    timeline = Timeline(format="16x9", duration=1.0, scenes=[], transitions=[])
+    row = check_transcript(_none_voice_context(tmp_path, timeline))
+    assert row.status == CheckStatus.PASS
+    assert "none" in row.details[0]
+
+
+def test_end_noise_skips_when_voice_engine_is_none(tmp_path: Path) -> None:
+    timeline = Timeline(format="16x9", duration=1.0, scenes=[], transitions=[])
+    row = check_end_noise(_none_voice_context(tmp_path, timeline))
+    assert row.status == CheckStatus.PASS
+    assert "none" in row.details[0]
+
+
+def test_loudness_skips_when_voice_engine_is_none(tmp_path: Path) -> None:
+    timeline = Timeline(format="16x9", duration=1.0, scenes=[], transitions=[])
+    row = check_loudness(_none_voice_context(tmp_path, timeline))
+    assert row.status == CheckStatus.PASS
+    assert "none" in row.details[0]
+
+
 def _one_line_context(
     tmp_path: Path, phrase: dict[str, str], heard: str, vocabulary: list[str] | None = None
 ) -> QAContext:

@@ -819,7 +819,7 @@ Turn the approved script into clean narration audio, one file per line, with eac
 
 - Is script.yaml approved? If not, stop. Nothing is voiced before approval point 2.
 - Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
-  - `none` means a silent video with captions. Skip this step and go to compose.
+  - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower).
@@ -916,7 +916,7 @@ The transcript check is forgiving in a few narrow ways only: "9" matches "nine",
 | `Could not download ...` | The machine is offline or the download failed. The `Next:` line has the retry command and a manual download link. |
 | `Chatterbox voice cloning is not installed.` | `uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"`, on Python 3.11 or 3.12. Or switch to a Kokoro voice. |
 | `Cloning needs a voice sample and consent.` | Ask the consent question from `reelsmith-guides/interview.md`. Without consent, use Kokoro. |
-| `spec.yaml sets voice.engine to none` | The video is silent. Skip voice and run `reelsmith compose --preview`. |
+| `Nothing to voice: spec.yaml sets voice.engine to none` | Not a problem: the video is silent by design. Run `reelsmith compose --preview`. |
 | A line keeps failing for dropped words | Rewrite it more simply. Spell out numbers, acronyms and symbols as they should be said. |
 | A word is said wrong | Add `say:` to the phrase with the word spelled the way it sounds, then regenerate that line. |
 | `say:` still reads a word wrong, on Kokoro | Set `voice.pronounce` in spec.yaml to the word's phonemes. See "Fixing a word that sounds wrong" above. |
@@ -980,6 +980,8 @@ reelsmith export                # after qa passes: writes out/
 | Blur | listed regions covered on every frame they apply to |
 | Contact sheets | frames at each scene start, event and transition, for you to look at |
 
+With `voice.engine: none` there is no narration, so Transcript vs script, End of line noise and Loudness are skipped (a note in the report says why) instead of failing. The rest still run.
+
 **Do these yourself too, every time:**
 
 1. **View the frames.** Open every image in `qa/sheets/`. Check that each frame shows what the narration says at that moment, the captions fit, and the layout is right.
@@ -987,7 +989,7 @@ reelsmith export                # after qa passes: writes out/
 3. **Check the blur, including held frames.** Every listed region must be covered on every frame, including frames that are held while the voice finishes and the last frame of each scene. Look for private data the blur list missed: emails, names, tokens, prices, notifications.
 4. **Ask the user to watch it.** You cannot hear the audio. Ask them to listen to the full render before export.
 
-`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
+`reelsmith export` writes, per format: `out/<name>_<format>.mp4` (with voice), `out/<name>_<format>_silent.mp4`, plus `out/<name>_narration.wav` and `out/<name>.srt`. With `voice.engine: none` the silent copy and the narration wav are left out, since the main video already carries no narration. The name is the demo folder's name, or set it with `--name`. Existing files are backed up, never overwritten.
 
 ## Reading the output
 

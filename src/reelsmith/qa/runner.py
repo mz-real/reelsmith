@@ -56,6 +56,12 @@ def run_qa(
         timings = load_timings(timings_path)
         engine, voice = timings.engine, timings.voice
         notes.extend(timings.warnings)
+    elif spec.voice.engine == "none":
+        engine = "none"
+        notes.append(
+            "voice.engine is none, so the video is silent: the transcript, end of line"
+            " noise and loudness checks are skipped."
+        )
     else:
         notes.append(f"{timings_path} not found, so voice engine and voice are unknown")
 
