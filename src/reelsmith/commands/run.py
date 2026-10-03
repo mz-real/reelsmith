@@ -171,7 +171,7 @@ def run_steps(steps: list[Step], preview: bool = False) -> Result:
             lines.append(f"[{step.skip_status.value}] {step.name}: {step.skip}")
             warnings += step.skip_status == Status.WARN
             continue
-        typer.echo(f"Step {number} of {len(steps)}: {step.name}")
+        typer.echo(f"Step {number} of {len(steps)}: {step.name}", err=True)
         result = _call(step.fn)
         if result.status == Status.ERROR:
             return Result(
