@@ -40,10 +40,21 @@ class CaptureLog:
         y = (box["y"] + box["height"] / 2) / self._height
         return min(1.0, max(0.0, x)), min(1.0, max(0.0, y))
 
+    async def _timed_click(self, locator: Locator) -> float:
+        """Click and return when it happened.
+
+        Playwright first waits until the element can be clicked, which takes
+        a few hundred milliseconds on a busy machine. A trial click does that
+        wait without clicking, so the time taken right after the real click
+        is when the page saw it, the same way the sync marker is timed.
+        """
+        await locator.click(trial=True)
+        await locator.click()
+        return self.elapsed()
+
     async def click(self, locator: Locator, label: str) -> None:
         x, y = await self._centre(locator)
-        t = self.elapsed()
-        await locator.click()
+        t = await self._timed_click(locator)
         self.events.append(
             Event(
                 id=self._next_id(),
@@ -58,8 +69,7 @@ class CaptureLog:
     async def type(self, locator: Locator, text: str, label: str, delay_ms: int = 55) -> None:
         """Type text one key at a time, so the viewer sees it being typed."""
         x, y = await self._centre(locator)
-        t = self.elapsed()
-        await locator.click()
+        t = await self._timed_click(locator)
         await locator.press_sequentially(text, delay=delay_ms)
         self.events.append(
             Event(
