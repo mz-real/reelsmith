@@ -6,7 +6,11 @@ Narrated product demos, made on your own machine and checked before you share th
 
 You ask your AI coding tool for a demo. It interviews you, writes a plan and drives the `reelsmith` CLI: it records the app, voices the script with a local model, renders slides, puts it all together, then checks the finished video. You approve the plan and the words before anything is voiced or rendered. Nothing is uploaded.
 
-<!-- preview video: added at release -->
+https://github.com/user-attachments/assets/f8cad838-b6bf-4ef9-8fef-a250751d1a61
+
+[![Watch the full 6 minute walkthrough on YouTube](docs/assets/demo-poster.jpg)](https://youtu.be/HNfxU_n8eVc)
+
+Both videos were made with reelsmith itself. The full walkthrough has chapters and captions.
 
 > **Status:** reelsmith 0.1.0 is not released yet. It is not on PyPI and the plugin is not in a published release. You can try it from source today (see [Install](#install)).
 
