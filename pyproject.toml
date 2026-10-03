@@ -20,7 +20,10 @@ dependencies = [
 
 [project.optional-dependencies]
 clone = [
-    "chatterbox-tts; python_version < '3.13'",
+    # 0.1.3 and later need pkuseg, whose setup.py imports numpy without
+    # declaring it, so every isolated install fails to build it. 0.1.2 is the
+    # last release without it and has everything reelsmith uses (English).
+    "chatterbox-tts==0.1.2; python_version < '3.13'",
     "setuptools<81",
 ]
 
