@@ -73,4 +73,4 @@ markers = [
 [tool.reelsmith]
 # Flip to true in the release PR, when the version is on PyPI. The generated
 # instructions then show "uv tool install reelsmith" instead of the Git URL.
-published = false
+published = true

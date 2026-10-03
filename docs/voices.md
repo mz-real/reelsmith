@@ -71,14 +71,6 @@ When an AI tool runs the interview, it asks the consent question itself and neve
 
 Cloning needs the `clone` extra, which brings in PyTorch. Chatterbox runs on Python 3.11 or 3.12, not 3.13 yet.
 
-From source, until 0.1.0 is on PyPI:
-
-```
-uv tool install --python 3.12 "reelsmith[clone] @ git+https://github.com/mz-real/reelsmith"
-```
-
-Once published:
-
 ```
 uv tool install --python 3.12 "reelsmith[clone]"
 ```
