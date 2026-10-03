@@ -139,3 +139,53 @@ def test_skipped_line_for_web_profile() -> None:
     assert line.startswith("skipped for web:")
     assert "java" in line
     assert "maestro" in line
+
+
+def test_doctor_takes_the_demo_folder_and_reads_its_spec(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith.cli import app, run
+
+    seen: list[object] = []
+
+    def fake_checks(spec_path: Path | None, *, profile: DoctorProfile) -> list[object]:
+        seen.append((spec_path, profile))
+        return []
+
+    monkeypatch.setattr("reelsmith.doctor.run_all_checks", fake_checks)
+    spec = _write_spec(tmp_path, "version: 1\nfootage: mobile\n")
+
+    code = run(app, ["doctor", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert seen == [(spec, DoctorProfile.MOBILE)]
+    assert f"spec: {spec}" in out
+    assert "Next: reelsmith status" in out
+
+
+def test_doctor_without_a_spec_suggests_init(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith.cli import app, run
+
+    monkeypatch.setattr("reelsmith.doctor.run_all_checks", lambda spec, *, profile: [])
+    monkeypatch.chdir(tmp_path)
+
+    code = run(app, ["doctor"])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "profile: web" in out
+    assert "Next: reelsmith init my-demo" in out
+
+
+def test_doctor_names_a_missing_demo_folder(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from reelsmith.cli import app, run
+
+    code = run(app, ["doctor", str(tmp_path / "nope")])
+
+    assert code == 1
+    assert "No demo folder at" in capsys.readouterr().out

@@ -83,6 +83,21 @@ def demo_name(root: Path) -> str:
     return slug or "demo"
 
 
+def expected_outputs(out: Path, name: str, formats: Sequence[str], narrated: bool) -> list[Path]:
+    """Every file export writes for these formats. Silent demos skip the
+    silent copy and the narration, which would only repeat the main video."""
+    files: list[Path] = []
+    for fmt in formats:
+        slug = format_slug(fmt)
+        files.append(out / f"{name}_{slug}.mp4")
+        if narrated:
+            files.append(out / f"{name}_{slug}_silent.mp4")
+    if narrated:
+        files.append(out / f"{name}_narration.wav")
+    files.append(out / f"{name}.srt")
+    return files
+
+
 def voiced_args(master: Path, out: Path) -> list[str]:
     return ["-i", str(master), "-map", "0", "-c", "copy", "-movflags", "+faststart", str(out)]
 
@@ -124,7 +139,7 @@ def export_project(paths: DemoPaths, name: str, run: Runner = run_ffmpeg) -> Exp
     paths.out.mkdir(parents=True, exist_ok=True)
     report = ExportReport()
     narrated = project.spec.voice.engine != "none"
-    total = (2 * len(masters) + 2) if narrated else (len(masters) + 1)
+    total = len(expected_outputs(paths.out, name, [fmt for fmt, _ in masters], narrated))
 
     def write(out: Path, args_for: Callable[[Path], list[str]] | None = None) -> Path:
         progress.count("Export file", len(report.written) + 1, total, out.name)

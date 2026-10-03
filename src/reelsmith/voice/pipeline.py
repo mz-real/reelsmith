@@ -40,7 +40,7 @@ from reelsmith.voice.base import Audio, VoiceEngine, get_engine
 from reelsmith.voice.quality import (
     pace_ok,
     speaking_seconds,
-    transcript_matches,
+    transcript_matches_any,
     trim_tail,
     words_per_minute,
 )
@@ -189,6 +189,7 @@ def _generate_line_audio(
     text: str,
     base_speed: float,
     vocabulary: Sequence[str] = (),
+    written: str | None = None,
 ) -> tuple[Audio, float, bool, bool, list[str], list[Word], int, bool, bool]:
     """Synthesize one line, retrying for pace and then for dropped words.
 
@@ -218,7 +219,8 @@ def _generate_line_audio(
             words = transcribe_fn(audio)
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
-    transcript_ok, missing = transcript_matches(text, words, vocabulary)
+    accepted = [text] if written is None else [text, written]
+    transcript_ok, missing = transcript_matches_any(accepted, words, vocabulary)
 
     transcript_retried = False
     for retry in range(1, _MAX_RETRIES + 1):
@@ -231,7 +233,7 @@ def _generate_line_audio(
         words = transcribe_fn(audio)
         if pace_checked:
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
-        transcript_ok, missing = transcript_matches(text, words, vocabulary)
+        transcript_ok, missing = transcript_matches_any(accepted, words, vocabulary)
 
     return (
         audio,
@@ -375,7 +377,12 @@ def generate(
                 pace_retried,
                 transcript_retried,
             ) = _generate_line_audio(
-                active_engine, active_transcribe, text, spec.voice.speed, hints
+                active_engine,
+                active_transcribe,
+                text,
+                spec.voice.speed,
+                hints,
+                written=line.text,
             )
 
             bounds = phrase_bounds([phrase.spoken for phrase in line.phrases], words, audio)

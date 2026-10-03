@@ -21,7 +21,7 @@ from reelsmith.compose.inputs import slide_images
 from reelsmith.compose.layouts import format_slug
 from reelsmith.compose.project import master_path
 from reelsmith.errors import ReelsmithError
-from reelsmith.export import demo_name
+from reelsmith.export import demo_name, expected_outputs
 from reelsmith.models import ClipModel, ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.pipeline import _line_hash
@@ -123,7 +123,7 @@ def _spec_step(demo: _Demo) -> Step:
     if not spec.scenes:
         return Step("spec", "failed", "no scenes", f"Add scenes to spec.yaml, then run: {again}")
     formats = ", ".join(spec.formats)
-    return Step("spec", "done", f"{spec.mode} mode, {len(spec.scenes)} scenes, {formats}")
+    return Step("spec", "done", f"{spec.mode} mode, {_count(len(spec.scenes), 'scene')}, {formats}")
 
 
 # clips
@@ -211,12 +211,10 @@ def _script_step(demo: _Demo) -> Step:
             f"still has starter text in {_short_list(starter)}",
             f"Write the narration in script.yaml, then run: {check}",
         )
-    pins = "pin" if report.pins == 1 else "pins"
-    return Step(
-        "script",
-        "done",
-        f"{report.scenes} scenes, {report.lines} lines, {report.pins} {pins} resolved",
+    counts = ", ".join(
+        (_count(report.scenes, "scene"), _count(report.lines, "line"), _count(report.pins, "pin"))
     )
+    return Step("script", "done", f"{counts} resolved")
 
 
 # voice
@@ -455,10 +453,8 @@ def _export_step(demo: _Demo) -> Step:
         return _needs("export", "a valid spec.yaml")
     out = demo.paths.out
     name = _export_name(demo, format_slug(spec.formats[0]))
-    expected = [out / f"{name}_narration.wav", out / f"{name}.srt"]
-    for fmt in spec.formats:
-        slug = format_slug(fmt)
-        expected += [out / f"{name}_{slug}.mp4", out / f"{name}_{slug}_silent.mp4"]
+    narrated = spec.voice.engine != "none"
+    expected = expected_outputs(out, name, spec.formats, narrated)
     command = demo.cmd("reelsmith export")
     present = [path for path in expected if path.is_file()]
     summary = f"{len(present)}/{len(expected)} files in out/"
@@ -498,6 +494,10 @@ def shell_arg(value: str, *, windows: bool | None = None) -> str:
     if windows if windows is not None else os.name == "nt":
         return f'"{value}"' if WINDOWS_SPECIAL.intersection(value) else value
     return shlex.quote(value)
+
+
+def _count(number: int, noun: str) -> str:
+    return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
 
 
 def _dir_arg(root: Path, cwd: Path) -> str:

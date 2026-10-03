@@ -287,6 +287,16 @@ def test_export_missing_and_custom_name(tmp_path: Path) -> None:
     assert _states(root)["export"] == "done"
 
 
+def test_silent_export_needs_only_the_video_and_captions(tmp_path: Path) -> None:
+    root = _demo(tmp_path, upto="qa")
+    _touch(root / "spec.yaml", yaml.safe_dump(dict(SPEC, voice={"engine": "none"})))
+    for name in ("promo_16x9.mp4", "promo.srt"):
+        _touch(root / "out" / name)
+    export = {step.name: step for step in demo_status(root).steps}["export"]
+    assert export.state == "done"
+    assert export.detail == "2/2 files in out/"
+
+
 def test_status_cli_human_output(capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
     root = _demo(tmp_path, upto="voice")
     code = run(app, ["status", str(root)])
@@ -348,3 +358,11 @@ def test_shell_arg_quotes_for_each_platform() -> None:
     assert shell_arg("/tmp/my demo", windows=False) == "'/tmp/my demo'"
     assert shell_arg(r"C:\Users\me\demo", windows=True) == r"C:\Users\me\demo"
     assert shell_arg(r"C:\Users\me\my demo", windows=True) == r'"C:\Users\me\my demo"'
+
+
+def test_counts_use_the_singular_for_one(tmp_path: Path) -> None:
+    root = _demo(tmp_path, upto="spec")
+    spec = dict(SPEC, scenes=[SPEC["scenes"][0]])
+    _touch(root / "spec.yaml", yaml.safe_dump(spec))
+    detail = {step.name: step for step in demo_status(root).steps}["spec"].detail
+    assert ", 1 scene," in detail
