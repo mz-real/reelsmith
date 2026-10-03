@@ -2,13 +2,58 @@
 
 [![CI](https://github.com/mz-real/reelsmith/actions/workflows/ci.yml/badge.svg)](https://github.com/mz-real/reelsmith/actions/workflows/ci.yml)
 
-Narrated demo videos of your app, made on your own machine.
+Narrated product demos, made on your own machine and checked before you share them.
 
-You tell your AI coding tool "make a demo of my app". It asks you a few short questions, writes a plan, and drives the `reelsmith` CLI. reelsmith records the app, voices the script, renders slides, puts it all together and checks the result. You approve the plan and the script before anything is voiced or rendered. Nothing is uploaded.
+You ask your AI coding tool for a demo. It interviews you, writes a plan and drives the `reelsmith` CLI: it records the app, voices the script with a local model, renders slides, puts it all together, then checks the finished video. You approve the plan and the words before anything is voiced or rendered. Nothing is uploaded.
 
 <!-- preview video: added at release -->
 
 > **Status:** reelsmith 0.1.0 is not released yet. It is not on PyPI and the plugin is not in a published release. You can try it from source today (see [Install](#install)).
+
+## Who it is for
+
+- Developers and small product teams who ship features faster than they can record demos for them.
+- Developer advocates and technical writers who keep walkthroughs and release videos up to date.
+- Founders and indie makers who need a clear product video without a studio, a voice actor or an online voice service.
+- Anyone who already has a screen recording and wants it explained.
+
+It is not a general video editor. It is for demos that follow a product: the clicks, the screens and the reasons behind them.
+
+## Start with Narrate
+
+The quickest win is a recording you already have. reelsmith finds every change on screen, the AI writes a script pinned to those moments, you approve it, and you get the same video back with a voice that explains each click, plus captions.
+
+```
+reelsmith init demo --preset narrate
+reelsmith capture import ~/Movies/invoice.mov demo --id main
+reelsmith detect demo --clip main
+# the AI marks events in clip.json and writes script.yaml, you approve it
+reelsmith run demo
+```
+
+The length stays the same unless you allow held frames or sped up waits. Narrate needs no browser automation and no mobile tools, and `reelsmith doctor` only checks what it uses: Python, ffmpeg and the voice models.
+
+When you want the full package, Produce adds slides, browser and phone frames, and several formats (see [Two modes](#two-modes)).
+
+## Checked before you share it
+
+Making a demo video is the easy part. Making one you can trust is harder: a dropped word, a voice that runs ahead of the click, a caption too quick to read, or a blurred email that shows for one frame. reelsmith checks the finished video every time, and the AI clears every failure before it calls the video done.
+
+| Check | Catches |
+|---|---|
+| Transcript vs script | missing, slurred or changed words |
+| Sync | phrases early or late against their click |
+| Cut off lines | narration running into the next scene or past the end |
+| End of line noise | clicks or breaths after the last word |
+| Loudness | far from -16 LUFS, or clipping |
+| Hold limits | frozen frames longer than allowed |
+| Captions | text overflowing its panel, or on screen too briefly to read |
+| Blur | listed regions covered on every frame they apply to |
+| Contact sheets | frames at each scene start, event and transition, to look at |
+
+Each line is also checked as it is voiced: the pace must stay between 130 and 210 words a minute, and a local Whisper model reads it back and compares it word by word with the script. `reelsmith qa` writes `qa/report.md` with what failed and how to fix it.
+
+These checks caught real problems while reelsmith was being built, such as a click pinned more than a second late and last syllables cut from lines. Both are fixed and covered by tests.
 
 ## Why it exists
 
@@ -42,22 +87,13 @@ The step guides go into `reelsmith-guides/` next to them. Use `--project <path>`
 
 ### Any other tool
 
-Paste [`prompts/HANDOVER_PROMPT.md`](prompts/HANDOVER_PROMPT.md) into the chat. It has the full instructions and guides in one file.
+Paste [`prompts/HANDOVER_PROMPT.md`](prompts/HANDOVER_PROMPT.md) into the chat. It is short: the rules and the steps, with links to each guide. [`prompts/HANDOVER_PROMPT_FULL.md`](prompts/HANDOVER_PROMPT_FULL.md) has every guide in one file, for tools that cannot open links.
 
 ## Two modes
 
 The first interview question picks the mode.
 
-**Narrate.** You already have a recording and want a voice that explains each click. reelsmith finds the screen changes and builds contact sheets, the AI proposes a timeline and a script, and you get the same video back with narration. The length stays the same unless you allow held frames or sped up waits.
-
-```
-reelsmith init demo
-# spec.yaml: mode narrate, one scene with layout full and clip main
-reelsmith capture import ~/Movies/invoice.mov demo --id main
-reelsmith detect demo --clip main
-# the AI marks events in clip.json and writes script.yaml, you approve it
-reelsmith run demo
-```
+**Narrate.** You already have a recording and want a voice that explains each click. See [Start with Narrate](#start-with-narrate).
 
 **Produce.** The full package: slides for the business logic, browser or phone frames, captions, tap ripples, transitions and several formats. The Recipe Box example is a ready made Produce demo:
 
@@ -71,7 +107,7 @@ reelsmith run examples/recipe-box
 
 ## What the interview asks
 
-One question at a time, each with suggested answers. Presets (quick feature clip, full app tour, mobile demo, release notes video) skip most of them.
+One question at a time, each with suggested answers. Presets skip most of them: `reelsmith init demo --preset quick|tour|mobile|release-notes|narrate` writes a valid starting spec, script and slides.
 
 1. Narrate an existing recording, or produce a full demo?
 2. What should it show? One feature, a full tour, the mobile app, release notes.
@@ -109,7 +145,7 @@ Then check everything:
 reelsmith doctor
 ```
 
-doctor checks Python, ffmpeg, the browser, Java, Maestro, adb, the iOS simulator tools, the voice models and the GPU, and prints the fix for your OS. `reelsmith doctor --fix` offers to run those fixes and asks before each one.
+doctor checks only what your demo needs. In a demo folder (or with `reelsmith doctor DIR`) it reads `spec.yaml` and picks a profile: web, mobile, narrate, voice or clone. A web demo is never asked for Java, Maestro or adb. `--profile all` checks the whole machine. It prints the fix for your OS, and `reelsmith doctor --fix` offers to run those fixes and asks before each one.
 
 More detail per OS, including GPU notes for cloning: [docs/install.md](docs/install.md).
 
@@ -151,12 +187,13 @@ Cloning is supported and covered by tests with stand ins. A real Chatterbox run 
 
 ## Commands
 
-Most commands take the demo folder as an argument and default to the current folder. Every command ends with an `[OK]`, `[WARN]` or `[ERROR]` line and a `Next:` step.
+Most commands take the demo folder as an argument and default to the current folder. Every command ends with an `[OK]`, `[WARN]` or `[ERROR]` line and a `Next:` step. Add `--json` before the command (`reelsmith --json status`) to get that result as one JSON line. Progress for long steps goes to stderr.
 
 | Command | What it does |
 |---|---|
-| `reelsmith doctor` | Check Python, ffmpeg, browser, mobile tools, models and GPU. |
-| `reelsmith init <dir>` | Create a demo folder with starter spec, brand and script files. |
+| `reelsmith doctor [DIR]` | Check the tools this demo needs. `--profile` to pick the set, `--fix` to install. |
+| `reelsmith init <dir>` | Create a demo folder with starter spec, brand and script files. `--preset` for a ready start. |
+| `reelsmith status` | Show which steps are done, stale or missing, and the next command. `--json` for agents. |
 | `reelsmith capture import <video> --id <id>` | Normalise a recording into `capture/clips/<id>/`. |
 | `reelsmith capture web <flow.py> --id <id>` | Record a Playwright flow. `--size`, `--headed`. |
 | `reelsmith capture mobile <flow.yaml> --id <id> --platform ios\|android` | Record a Maestro flow. `--device` picks an Android device. |
