@@ -20,7 +20,7 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 ```
 reelsmith --version
 REELSMITH_EXPECTED_VERSION={{version}} reelsmith doctor
-reelsmith doctor --spec spec.yaml        # derive checks from that spec
+reelsmith doctor demo                    # derive checks from demo/spec.yaml
 reelsmith doctor --profile mobile        # force mobile capture checks
 reelsmith doctor --profile all           # every check, for troubleshooting only
 reelsmith setup browser                  # installs the Chromium build reelsmith uses

@@ -43,7 +43,10 @@ def run_doctor(
 
     errors = [c for c in checks if c.status == Status.ERROR]
     warns = [c for c in checks if c.status == Status.WARN]
+    has_spec = resolved_spec is not None and resolved_spec.is_file()
     details = [f"profile: {resolved_profile.value}"]
+    if has_spec:
+        details.append(f"spec: {resolved_spec}")
     skipped = format_skipped_line(resolved_profile, resolved_spec)
     if skipped is not None:
         details.append(skipped)
@@ -74,7 +77,7 @@ def run_doctor(
             status=Status.OK,
             message="All checks passed.",
             details=details,
-            next_step="reelsmith init my-demo",
+            next_step="reelsmith status" if has_spec else "reelsmith init my-demo",
         )
     )
 

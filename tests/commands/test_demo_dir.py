@@ -47,8 +47,16 @@ def test_validate_id_option_accepts_a_safe_id() -> None:
 
 
 def test_validate_id_option_rejects_a_path_escape() -> None:
-    with pytest.raises(ReelsmithError, match="Ids may use letters, numbers, - and _"):
+    with pytest.raises(ReelsmithError, match="Ids may use letters, numbers, - and _") as caught:
         validate_id_option("../escape")
+    assert caught.value.fix == "Use an id such as escape and run the command again"
+
+
+def test_validate_id_option_suggests_a_safe_id() -> None:
+    with pytest.raises(ReelsmithError) as caught:
+        validate_id_option("with space")
+    assert caught.value.fix is not None
+    assert "with-space" in caught.value.fix
 
 
 def _ffmpeg_source(tmp_path: Path) -> Path:
