@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `reelsmith --version` and doctor reported 0.1.0 on 0.1.1, because the version was hard coded, so doctor warned that the plugin and CLI did not match. The version now comes from the installed package.
+
 ## [0.1.1] - 2026-10-03
 
 ### Fixed
