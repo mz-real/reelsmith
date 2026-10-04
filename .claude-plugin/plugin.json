@@ -1,6 +1,6 @@
 {
   "name": "reelsmith",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Make narrated demo videos of your app on your own machine. The AI interviews you, then reelsmith records, scripts, voices, assembles and checks the video.",
   "author": {
     "name": "mz-real",

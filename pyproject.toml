@@ -1,6 +1,6 @@
 [project]
 name = "reelsmith"
-version = "0.1.0"
+version = "0.1.1"
 description = "A local first CLI that turns an app into a narrated demo video."
 license = "MIT"
 requires-python = ">=3.11,<3.14"

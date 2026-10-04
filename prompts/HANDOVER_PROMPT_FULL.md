@@ -7,7 +7,7 @@ Paste everything below this line into any AI coding tool. It tells the tool how 
 
 # reelsmith: make a narrated demo video
 
-These instructions expect reelsmith 0.1.0.
+These instructions expect reelsmith 0.1.1.
 
 ## Goal
 
@@ -17,8 +17,8 @@ Help the user get a finished, narrated demo video of their app that they are hap
 
 1. Run `reelsmith --version`. If the command is not found, tell the user and offer to install it: `uv tool install reelsmith` (or `uv tool install --python 3.12 "reelsmith[clone]"` if they want to clone their own voice later). If they have no uv, point them to https://docs.astral.sh/uv/ first.
 2. Run `reelsmith doctor` with the expected version set, so it warns if the CLI and these instructions do not match:
-   - macOS and Linux: `REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor`
-   - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="0.1.0"; reelsmith doctor`
+   - macOS and Linux: `REELSMITH_EXPECTED_VERSION=0.1.1 reelsmith doctor`
+   - Windows PowerShell: `$env:REELSMITH_EXPECTED_VERSION="0.1.1"; reelsmith doctor`
    Doctor checks what the demo needs. In a demo folder (or with the folder as `reelsmith doctor DIR`) it reads `spec.yaml` and only runs the matching checks. Fix any ERROR before going on. A WARN from a check in that profile must be fixed or explained before you continue. Use `reelsmith doctor --profile all` only when you are troubleshooting the whole machine.
 3. Ask before installing anything. `reelsmith doctor --fix` asks yes or no in the terminal for each fix, so ask the user to run it themselves, or get their yes and run `reelsmith doctor --fix --yes`.
 
@@ -1076,14 +1076,14 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 
 - Read the whole result block and anything printed above it. Quote the error to the user in plain words.
 - Run `reelsmith doctor`. It checks the tools your `spec.yaml` needs (or the default web set). It skips mobile tools when you only capture in the browser. Use `reelsmith doctor --profile all` only for full machine troubleshooting.
-- Check the version: `reelsmith --version`. These instructions expect reelsmith 0.1.0.
+- Check the version: `reelsmith --version`. These instructions expect reelsmith 0.1.1.
 - Ask before you install anything, and say when a fix needs admin rights (`sudo`, or an admin terminal on Windows).
 
 ## Commands
 
 ```
 reelsmith --version
-REELSMITH_EXPECTED_VERSION=0.1.0 reelsmith doctor
+REELSMITH_EXPECTED_VERSION=0.1.1 reelsmith doctor
 reelsmith doctor demo                    # derive checks from demo/spec.yaml
 reelsmith doctor --profile mobile        # force mobile capture checks
 reelsmith doctor --profile all           # every check, for troubleshooting only
@@ -1091,7 +1091,7 @@ reelsmith setup browser                  # installs the Chromium build reelsmith
 reelsmith script check                   # finds pin and scene id problems
 ```
 
-On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="0.1.0"; reelsmith doctor`.
+On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="0.1.1"; reelsmith doctor`.
 
 `reelsmith doctor --fix` lists each fix and asks yes or no in the terminal before running it. Your tool may not be able to answer those prompts, so either ask the user to run it in their own terminal, or list the fixes to the user, get a yes for all of them, and then run `reelsmith doctor --fix --yes`.
 

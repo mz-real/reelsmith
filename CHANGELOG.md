@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-03
+
 ### Fixed
 
 - `uv tool install "reelsmith[clone]"` failed to build `pkuseg`, a dependency of chatterbox-tts 0.1.3 and later whose setup.py imports numpy without declaring it. The clone extra now pins chatterbox-tts 0.1.2, which does not need it.
