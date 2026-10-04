@@ -18,14 +18,14 @@ Get the user unstuck fast when a command fails. Read the result block first: the
 
 - Read the whole result block and anything printed above it. Quote the error to the user in plain words.
 - Run `reelsmith doctor`. It checks the tools your `spec.yaml` needs (or the default web set). It skips mobile tools when you only capture in the browser. Use `reelsmith doctor --profile all` only for full machine troubleshooting.
-- Check the version: `reelsmith --version`. These instructions expect reelsmith 0.1.1.
+- Check the version: `reelsmith --version`. These instructions expect reelsmith 0.1.2.
 - Ask before you install anything, and say when a fix needs admin rights (`sudo`, or an admin terminal on Windows).
 
 ## Commands
 
 ```
 reelsmith --version
-REELSMITH_EXPECTED_VERSION=0.1.1 reelsmith doctor
+REELSMITH_EXPECTED_VERSION=0.1.2 reelsmith doctor
 reelsmith doctor demo                    # derive checks from demo/spec.yaml
 reelsmith doctor --profile mobile        # force mobile capture checks
 reelsmith doctor --profile all           # every check, for troubleshooting only
@@ -33,7 +33,7 @@ reelsmith setup browser                  # installs the Chromium build reelsmith
 reelsmith script check                   # finds pin and scene id problems
 ```
 
-On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="0.1.1"; reelsmith doctor`.
+On Windows PowerShell, set the version first: `$env:REELSMITH_EXPECTED_VERSION="0.1.2"; reelsmith doctor`.
 
 `reelsmith doctor --fix` lists each fix and asks yes or no in the terminal before running it. Your tool may not be able to answer those prompts, so either ask the user to run it in their own terminal, or list the fixes to the user, get a yes for all of them, and then run `reelsmith doctor --fix --yes`.
 
