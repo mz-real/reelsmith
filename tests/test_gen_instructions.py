@@ -329,3 +329,15 @@ def test_full_handover_has_every_guide() -> None:
 def test_guides_url_points_at_rendered_guides() -> None:
     assert gen.GUIDES_URL.startswith("https://raw.githubusercontent.com/mz-real/reelsmith/")
     assert gen.GUIDES_URL.endswith("src/reelsmith/agent_files/guides")
+
+
+def test_cli_version_is_the_installed_package_version() -> None:
+    """0.1.1 shipped reporting 0.1.0 from a hard coded string."""
+    import tomllib
+
+    import reelsmith
+
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert reelsmith.__version__ == pyproject["project"]["version"]
+    source = (REPO_ROOT / "src/reelsmith/__init__.py").read_text(encoding="utf-8")
+    assert '__version__ = version("reelsmith")' in source
