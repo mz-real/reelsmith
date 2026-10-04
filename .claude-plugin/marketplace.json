@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Make narrated demo videos of your app on your own machine. The AI interviews you, then reelsmith records, scripts, voices, assembles and checks the video.",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "plugins": [
     {
       "name": "reelsmith",
       "source": "./",
       "description": "Make narrated demo videos of your app on your own machine. The AI interviews you, then reelsmith records, scripts, voices, assembles and checks the video.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "mz-real"
       },
