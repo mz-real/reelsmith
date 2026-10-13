@@ -190,12 +190,17 @@ def _compose_format(
         [scene.spec.transition for scene in project.scenes],
         project.spec.options.transition,
     )
+    true_peak = (
+        project.spec.options.true_peak if project.spec.options.true_peak is not None else -1.5
+    )
     join = partial(
         master_args,
         files,
         durations,
         settings.encode,
         transitions=transitions or None,
+        loudness=project.spec.options.loudness,
+        true_peak=true_peak,
     )
     _render_to(report.master, run, join)
     report.duration = sum(durations)

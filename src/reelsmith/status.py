@@ -258,7 +258,14 @@ def _voice_lines(demo: _Demo, spec: SpecModel, script: ScriptModel) -> tuple[lis
     for scene in script.scenes:
         for line in scene.lines:
             key = f"{scene.id}/{line.id}"
-            expected = _line_hash(line, spec.voice.engine, voice_id, spec.voice.speed, pronounce)
+            expected = _line_hash(
+                line,
+                spec.voice.engine,
+                voice_id,
+                spec.voice.speed,
+                pronounce,
+                clean=spec.voice.clean,
+            )
             entry = prior.get(key, {})
             wav = demo.paths.voice / f"{scene.id}__{line.id}.wav"
             if entry.get("hash") == expected and wav.is_file():

@@ -30,6 +30,7 @@ class TimingRules:
     pin_late: float = 0.40  # and must start no later than this after it
     breath: float = 0.35  # gap after the last phrase of a scene
     phrase_gap: float = 0.15
+    line_gap: float = 0.4
     max_speed: float = 4.0
     min_wait_to_speed: float = 2.5
 
@@ -39,6 +40,7 @@ class PhraseInput:
     index: int
     duration: float
     pin_time: float | None  # in clip time
+    new_line: bool = False  # first phrase of a line after the first in the scene
 
 
 @dataclass(frozen=True)
@@ -143,7 +145,11 @@ def plan_scene(scene: SceneInput, rules: TimingRules) -> SceneTimeline:
     conflicts: list[Conflict] = []
     prev_end: float | None = None
     for phrase in scene.phrases:
-        earliest = 0.0 if prev_end is None else prev_end + rules.phrase_gap
+        if prev_end is None:
+            earliest = 0.0
+        else:
+            gap = rules.line_gap if phrase.new_line else rules.phrase_gap
+            earliest = prev_end + gap
         if phrase.pin_time is None:
             start = earliest
         else:
@@ -205,7 +211,11 @@ def _plan_slide(scene: SceneInput, rules: TimingRules) -> SceneTimeline:
     placements: list[Placement] = []
     prev_end: float | None = None
     for phrase in scene.phrases:
-        start = 0.0 if prev_end is None else prev_end + rules.phrase_gap
+        if prev_end is None:
+            start = 0.0
+        else:
+            gap = rules.line_gap if phrase.new_line else rules.phrase_gap
+            start = prev_end + gap
         placements.append(Placement(phrase.index, start, start + phrase.duration))
         prev_end = start + phrase.duration
     duration = (0.0 if prev_end is None else prev_end) + rules.breath

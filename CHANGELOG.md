@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Per-line voice cleanup (high-pass, gentle denoise, soft gate, edge fades) on by default via `voice.clean`, with phrase tail trim from Whisper word times
+- `options.loudness` and optional `options.true_peak` for compose loudnorm and QA loudness
+- `options.line_gap` for spacing between script lines, separate from the phrase gap inside a line
+- QA checks for background noise between words and abrupt line onsets; end of line noise always runs even when the next line is close
+
+### Changed
+
+- Pace retries time-stretch audio in place when an engine sets `controls_rate: false`, instead of resynthesizing
+
 ## [0.1.2] - 2026-10-04
 
 ### Fixed

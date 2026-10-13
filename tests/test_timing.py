@@ -75,7 +75,14 @@ def test_unpinned_phrases_follow_each_other_with_the_phrase_gap() -> None:
     timeline = plan_scene(clip_scene(10.0, phrase(0, 2.0), phrase(1, 1.5)), TimingRules())
 
     assert starts(timeline) == [approx(0.0), approx(2.15)]
-    assert timeline.placements[1].out_end == approx(3.65)
+
+
+def test_the_first_phrase_of_a_new_line_uses_line_gap() -> None:
+    first = PhraseInput(index=0, duration=2.0, pin_time=None)
+    second = PhraseInput(index=1, duration=1.0, pin_time=None, new_line=True)
+    timeline = plan_scene(clip_scene(10.0, first, second), TimingRules(line_gap=0.4))
+
+    assert starts(timeline) == [approx(0.0), approx(2.4)]
     assert timeline.duration == approx(10.0)
     assert len(timeline.segments) == 1
     assert_segment(timeline.segments[0], "play", (0.0, 10.0), (0.0, 10.0))

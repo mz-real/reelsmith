@@ -70,11 +70,15 @@ voice:
   consent: null          # chatterbox only: own or permission
   vocabulary: []         # rare words the voice says, such as product names
   pronounce: {}          # kokoro only: word to phonemes, for a word plain text still says wrong
+  clean: true            # per-line cleanup before timings are saved
 options:
   allow_holds: true      # may hold the last frame when a line needs more time
   speed_up_waits: false  # may speed up long waits
   captions: burned       # none, burned, srt or both
   highlight_clicks: true
+  line_gap: 0.4          # minimum gap between lines (seconds)
+  loudness: -16          # LUFS target for the master (-30 to -10)
+  true_peak: null        # optional dBTP ceiling for loudnorm (default -1.5)
 scenes:                  # in playing order
   - id: intro
     layout: slide        # slide, phone, browser or full

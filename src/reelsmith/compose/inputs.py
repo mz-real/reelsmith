@@ -137,7 +137,9 @@ class ProjectInputs:
 
 def timing_rules(spec: SpecModel) -> TimingRules:
     return TimingRules(
-        allow_holds=spec.options.allow_holds, speed_up_waits=spec.options.speed_up_waits
+        allow_holds=spec.options.allow_holds,
+        speed_up_waits=spec.options.speed_up_waits,
+        line_gap=spec.options.line_gap,
     )
 
 
@@ -167,10 +169,18 @@ def _scene_source(
     clip, clip_dir = _load_clip(paths, spec, scene)
     script_scene = script.scene(scene.id)
     phrases = scene_phrases(scene.id, script_scene, timings, paths.voice, clip)
+    seen_lines: set[str] = set()
+    phrase_inputs: list[PhraseInput] = []
+    for phrase in phrases:
+        new_line = bool(seen_lines) and phrase.line_id not in seen_lines
+        seen_lines.add(phrase.line_id)
+        phrase_inputs.append(
+            PhraseInput(phrase.index, phrase.duration, phrase.pin_time, new_line=new_line)
+        )
     scene_input = SceneInput(
         scene_id=scene.id,
         clip_duration=clip.duration if clip else None,
-        phrases=[PhraseInput(p.index, p.duration, p.pin_time) for p in phrases],
+        phrases=phrase_inputs,
     )
     timeline = plan_scene(scene_input, rules)
     return SceneSource(scene, script_scene, clip, clip_dir, phrases, timeline)

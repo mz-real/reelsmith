@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -17,14 +18,16 @@ from reelsmith.text import compare_text
 from reelsmith.timing import TimingRules, caption_duration
 from reelsmith.voice.transcribe import vocabulary_hints
 
-LOUDNESS_TARGET = -16.0
 LOUDNESS_TOLERANCE = 1.5
-TRUE_PEAK_CEILING = -1.0
+DEFAULT_TRUE_PEAK_CEILING = -1.0
+NOISE_WARN_DB = -50.0
+NOISE_FAIL_DB = -40.0
+ABRUPT_ONSET_S = 0.020
+ABRUPT_ONSET_RATIO = 0.65
 END_NOISE_WINDOW = 0.30
 END_NOISE_RATIO = 0.35
 END_NOISE_FLOOR = 0.01
 END_NOISE_NEXT_GAP = 0.05
-END_NOISE_MIN_GAP = 0.15
 BLUR_RATIO = 0.30
 BLUR_SAMPLES = 3
 # A caption on screen for its whole spoken line is readable: the viewer hears it.
@@ -288,8 +291,8 @@ def check_end_noise(ctx: QAContext) -> CheckRow:
     Only the gap after the last phrase of a line is measured, never the
     whole 300 ms window regardless of what comes next: the next phrase or
     line often starts well inside that window, so a window reaching past
-    it would measure speech, not silence. When the next line starts too
-    soon to leave a real gap, the line is skipped rather than measured.
+    it would measure speech, not silence. When the next line starts soon,
+    only the time up to just before that line is measured.
 
     Skipped entirely when voice.engine is none: there is no narration to
     leave noise after.
@@ -323,14 +326,7 @@ def check_end_noise(ctx: QAContext) -> CheckRow:
             else:
                 boundary = after_start + END_NOISE_WINDOW
             gap = boundary - after_start
-            if gap < END_NOISE_MIN_GAP - EPS:
-                details.append(
-                    f"{_scene_where(scene_tl.id)} line '{line_id}': the next line starts "
-                    f"only {max(gap, 0.0):.2f}s later, too soon to check for leftover "
-                    "noise. Skipped."
-                )
-                continue
-            after_end = after_start + min(gap, END_NOISE_WINDOW)
+            after_end = after_start + min(max(gap, 0.0), END_NOISE_WINDOW)
             if after_end - after_start < 0.02:
                 continue
             speech_level = rms_of_window(ctx.master, first.out_start, last.out_end, ctx.work_dir)
@@ -365,22 +361,27 @@ def check_loudness(ctx: QAContext) -> CheckRow:
     """
     if ctx.spec.voice.engine == "none":
         return _skip_row("Loudness")
+    target = ctx.spec.options.loudness
+    peak_ceiling = (
+        ctx.spec.options.true_peak
+        if ctx.spec.options.true_peak is not None
+        else DEFAULT_TRUE_PEAK_CEILING
+    )
     integrated, true_peak = ebur128_loudness(ctx.master)
     details: list[str] = []
     status = CheckStatus.PASS
-    low, high = LOUDNESS_TARGET - LOUDNESS_TOLERANCE, LOUDNESS_TARGET + LOUDNESS_TOLERANCE
+    low, high = target - LOUDNESS_TOLERANCE, target + LOUDNESS_TOLERANCE
     if not (low - EPS <= integrated <= high + EPS):
         status = worse(status, CheckStatus.FAIL)
         details.append(
             f"Integrated loudness is {integrated:.1f} LUFS, outside "
-            f"{LOUDNESS_TARGET:g} +/-{LOUDNESS_TOLERANCE:g} LUFS. "
-            "Fix: re-run compose or export so loudnorm targets "
-            f"{LOUDNESS_TARGET:g} LUFS."
+            f"{target:g} +/-{LOUDNESS_TOLERANCE:g} LUFS. "
+            "Fix: set options.loudness in spec.yaml and re-run compose or export."
         )
-    if true_peak > TRUE_PEAK_CEILING + EPS:
+    if true_peak > peak_ceiling + EPS:
         status = worse(status, CheckStatus.FAIL)
         details.append(
-            f"True peak is {true_peak:.1f} dBTP, above the {TRUE_PEAK_CEILING:g} dBTP "
+            f"True peak is {true_peak:.1f} dBTP, above the {peak_ceiling:g} dBTP "
             "ceiling. Fix: lower the narration or music gain and recompose."
         )
     if not details:
@@ -388,6 +389,101 @@ def check_loudness(ctx: QAContext) -> CheckRow:
             f"Integrated loudness {integrated:.1f} LUFS, true peak {true_peak:.1f} dBTP."
         )
     return CheckRow("Loudness", status, details)
+
+
+def _rms_db(master: Path, start: float, end: float, work_dir: Path) -> float:
+    linear = rms_of_window(master, start, end, work_dir)
+    if linear <= 1e-10:
+        return -120.0
+    return 20.0 * math.log10(linear)
+
+
+def check_background_noise(ctx: QAContext) -> CheckRow:
+    """Measure the quiet floor between spoken words on the master."""
+    if ctx.spec.voice.engine == "none":
+        return _skip_row("Background noise")
+    status = CheckStatus.PASS
+    details: list[str] = []
+    floor_readings: list[float] = []
+
+    for scene_tl in ctx.timeline.scenes:
+        if scene_tl.placements is None:
+            continue
+        for line_id, placements in _group_by_line(scene_tl.placements).items():
+            ordered = sorted(placements, key=lambda p: p.phrase)
+            start = max(0.0, ordered[0].out_start - TRANSCRIPT_LEAD)
+            end = ordered[-1].out_end + TRANSCRIPT_TRAIL
+            if ctx.master_duration:
+                end = min(end, ctx.master_duration)
+            wav_path = ctx.work_dir / f"bg-{scene_tl.id}-{line_id}.wav"
+            extract_audio_window(ctx.master, start, end, wav_path)
+            words = ctx.transcriber(wav_path)
+            if len(words) < 2:
+                continue
+            offset = start
+            for left, right in zip(words, words[1:], strict=False):
+                gap_start = offset + left.end
+                gap_end = offset + right.start
+                if gap_end - gap_start < 0.02:
+                    continue
+                level = _rms_db(ctx.master, gap_start, gap_end, ctx.work_dir)
+                floor_readings.append(level)
+    if not floor_readings:
+        details.append("No gaps between words were long enough to measure.")
+        return CheckRow("Background noise", status, details)
+    tenth = sorted(floor_readings)[max(0, len(floor_readings) // 10)]
+    if tenth > NOISE_FAIL_DB + EPS:
+        status = CheckStatus.FAIL
+        details.append(
+            f"The noise floor between words sits near {tenth:.1f} dB RMS (10th percentile), "
+            f"above {NOISE_FAIL_DB:g} dB. Fix: turn on voice.clean in spec.yaml, regenerate "
+            "the lines, and recompose."
+        )
+    elif tenth > NOISE_WARN_DB + EPS:
+        status = CheckStatus.WARN
+        details.append(
+            f"The noise floor between words sits near {tenth:.1f} dB RMS (10th percentile), "
+            f"above {NOISE_WARN_DB:g} dB. Fix: regenerate noisy lines or lower options.loudness."
+        )
+    else:
+        details.append(f"The between-word noise floor is about {tenth:.1f} dB RMS.")
+    return CheckRow("Background noise", status, details)
+
+
+def check_abrupt_starts(ctx: QAContext) -> CheckRow:
+    """Warn when a line jumps to nearly full level in the first 20 ms."""
+    if ctx.spec.voice.engine == "none":
+        return _skip_row("Abrupt starts")
+    status = CheckStatus.PASS
+    details: list[str] = []
+
+    for scene_tl in ctx.timeline.scenes:
+        if scene_tl.placements is None:
+            continue
+        for line_id, placements in _group_by_line(scene_tl.placements).items():
+            ordered = sorted(placements, key=lambda p: p.phrase)
+            line_start = ordered[0].out_start
+            line_end = ordered[-1].out_end
+            if line_end - line_start < ABRUPT_ONSET_S + 0.05:
+                continue
+            onset_end = line_start + ABRUPT_ONSET_S
+            speech_end = min(line_start + 0.25, line_end)
+            onset_db = _rms_db(ctx.master, line_start, onset_end, ctx.work_dir)
+            speech_db = _rms_db(ctx.master, line_start + 0.05, speech_end, ctx.work_dir)
+            if abs(speech_db - onset_db) < 1.5:
+                continue
+            linear_onset = 10 ** (onset_db / 20.0)
+            linear_speech = 10 ** (speech_db / 20.0)
+            if linear_onset >= linear_speech * ABRUPT_ONSET_RATIO:
+                status = worse(status, CheckStatus.WARN)
+                details.append(
+                    f"{_scene_where(scene_tl.id)} line '{line_id}' at {line_start:.2f}s: "
+                    "the first 20 ms is almost as loud as the speech that follows. "
+                    "Fix: regenerate this line with voice.clean on."
+                )
+    if not details:
+        details.append("No line starts with an abrupt jump to full level.")
+    return CheckRow("Abrupt starts", status, details)
 
 
 def check_holds(ctx: QAContext) -> CheckRow:
@@ -625,6 +721,8 @@ CHECKS: tuple[tuple[str, Callable[[QAContext], CheckRow]], ...] = (
     ("Cut off lines", check_cutoff),
     ("End of line noise", check_end_noise),
     ("Loudness", check_loudness),
+    ("Background noise", check_background_noise),
+    ("Abrupt starts", check_abrupt_starts),
     ("Hold limits", check_holds),
     ("Captions", check_captions),
     ("Blur", check_blur),

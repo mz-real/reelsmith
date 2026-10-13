@@ -43,6 +43,7 @@ voice:
   engine: kokoro
   kokoro_voice: bf_emma
   speed: 1.0        # 0.9 is a bit slower, 1.1 a bit faster
+  clean: true       # high-pass, denoise, soft gate and edge fades (default on)
 ```
 
 Then voice every line of script.yaml:
@@ -52,7 +53,7 @@ reelsmith voice generate
 reelsmith voice generate --only search/l1 --only intro/l2   # redo some lines
 ```
 
-This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line reelsmith checks the pace (about 130 to 210 words a minute) and transcribes it locally to catch dropped words. A line that fails is tried again. Clicks and breaths after the last word are trimmed. Lines that did not change are skipped on the next run.
+This writes `voice/<scene>__<line>.wav` and `voice/timings.json`. For each line reelsmith checks the pace (about 130 to 210 words a minute) and transcribes it locally to catch dropped words. A line that fails is tried again. With `voice.clean` on (the default), each line is filtered, gently denoised and faded at the edges, then trimmed after the last word using the transcript. Set `options.loudness` in spec.yaml if you want a quieter master (for example -23 for broadcast style). Lines that did not change are skipped on the next run.
 
 The first run downloads the Kokoro model (114 MB), its voices (28 MB) and the Whisper model for the word check (about 145 MB).
 

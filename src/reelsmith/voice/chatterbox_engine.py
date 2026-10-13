@@ -143,6 +143,7 @@ class ChatterboxEngine:
     # take phonemes, so this is ignored, with a warning, by synthesize.
     pronounce: Mapping[str, str] = field(default_factory=dict)
     name: str = "chatterbox"
+    controls_rate: bool = True
     voice_id: str = field(init=False, default="")
 
     def __post_init__(self) -> None:

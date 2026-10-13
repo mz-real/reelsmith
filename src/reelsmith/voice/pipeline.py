@@ -37,6 +37,8 @@ from reelsmith.models import Line, ScriptModel, SpecModel
 from reelsmith.paths import DemoPaths
 from reelsmith.voice.align import phrase_bounds
 from reelsmith.voice.base import Audio, VoiceEngine, get_engine
+from reelsmith.voice.chatterbox_engine import time_stretch
+from reelsmith.voice.clean import CleanSettings, finish_tail, process_body
 from reelsmith.voice.quality import (
     pace_ok,
     speaking_seconds,
@@ -53,6 +55,7 @@ _MIN_SPEED_FACTOR = 0.75
 _MAX_SPEED_FACTOR = 1.25
 _SHORT_LINE_MAX_WORDS = 4
 _WORD_RETRY_JITTER = 0.02
+_PACE_STRETCH_LIMIT = 0.12
 
 TranscribeFn = Callable[[Audio], list[Word]]
 
@@ -123,6 +126,8 @@ def _line_hash(
     voice: str,
     speed: float,
     pronounce: Mapping[str, str] | None = None,
+    *,
+    clean: bool = True,
 ) -> str:
     # The engine name is part of the hash so switching engines, for example
     # from Kokoro to Chatterbox, regenerates every line instead of being
@@ -131,7 +136,7 @@ def _line_hash(
     # they had before say existed and are not voiced again. Only the
     # pronounce entries that actually apply to this line are hashed, so
     # changing an unrelated word in voice.pronounce does not regenerate it.
-    raw = f"{line.text}|{engine_name}|{voice}|{speed}"
+    raw = f"{line.text}|{engine_name}|{voice}|{speed}|clean={int(clean)}"
     if line.has_say:
         raw += f"|say={line.spoken_text}"
     applicable = _applicable_pronunciations(line.spoken_text, pronounce or {})
@@ -151,6 +156,38 @@ def _synthesize_and_trim(
 ) -> Audio:
     audio = engine.synthesize(text, seed, speed)
     return trim_tail(audio)
+
+
+def _engine_controls_rate(engine: VoiceEngine) -> bool:
+    return bool(getattr(engine, "controls_rate", True))
+
+
+def _stretch_to_pace(audio: Audio, wpm: float) -> Audio:
+    factor = min(
+        1.0 + _PACE_STRETCH_LIMIT,
+        max(1.0 - _PACE_STRETCH_LIMIT, _TARGET_WPM / wpm),
+    )
+    if abs(factor - 1.0) < 0.005:
+        return audio
+    samples = time_stretch(audio.samples, audio.sample_rate, factor)
+    return Audio(samples=samples, sample_rate=audio.sample_rate, warning=audio.warning)
+
+
+def _apply_clean(
+    audio: Audio,
+    clean: CleanSettings,
+    transcribe_fn: TranscribeFn,
+    expected: Sequence[str],
+    vocabulary: Sequence[str],
+) -> tuple[Audio, list[Word]]:
+    if not clean.enabled:
+        return audio, transcribe_fn(audio)
+    body = process_body(audio)
+    words = transcribe_fn(body)
+    trimmed, clipped, ok = finish_tail(body, words, expected, vocabulary)
+    if ok:
+        return trimmed, clipped
+    return body, words
 
 
 def _pace_corrected_speed(current_speed: float, wpm: float) -> float:
@@ -190,6 +227,8 @@ def _generate_line_audio(
     base_speed: float,
     vocabulary: Sequence[str] = (),
     written: str | None = None,
+    *,
+    clean: CleanSettings | None = None,
 ) -> tuple[Audio, float, bool, bool, list[str], list[Word], int, bool, bool]:
     """Synthesize one line, retrying for pace and then for dropped words.
 
@@ -200,11 +239,14 @@ def _generate_line_audio(
     the transcript.
     """
     pace_checked = len(text.split()) > _SHORT_LINE_MAX_WORDS
+    clean_settings = clean if clean is not None else CleanSettings()
+    controls_rate = _engine_controls_rate(engine)
+    accepted = [text] if written is None else [text, written]
 
     attempts = 1
     speed = base_speed
     audio = _synthesize_and_trim(engine, text, seed=0, speed=speed)
-    words = transcribe_fn(audio)
+    audio, words = _apply_clean(audio, clean_settings, transcribe_fn, accepted, vocabulary)
     wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
     pace_retried = False
@@ -213,13 +255,18 @@ def _generate_line_audio(
             if pace_ok(wpm):
                 break
             pace_retried = True
-            attempts += 1
-            speed = _pace_corrected_speed(speed, wpm)
-            audio = _synthesize_and_trim(engine, text, seed=0, speed=speed)
-            words = transcribe_fn(audio)
+            if controls_rate:
+                attempts += 1
+                speed = _pace_corrected_speed(speed, wpm)
+                audio = _synthesize_and_trim(engine, text, seed=0, speed=speed)
+                audio, words = _apply_clean(
+                    audio, clean_settings, transcribe_fn, accepted, vocabulary
+                )
+            else:
+                audio = _stretch_to_pace(audio, wpm)
+                words = transcribe_fn(audio)
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
 
-    accepted = [text] if written is None else [text, written]
     transcript_ok, missing = transcript_matches_any(accepted, words, vocabulary)
 
     transcript_retried = False
@@ -230,7 +277,7 @@ def _generate_line_audio(
         attempts += 1
         retry_speed = _with_tiny_jitter(speed, retry)
         audio = _synthesize_and_trim(engine, text, seed=retry, speed=retry_speed)
-        words = transcribe_fn(audio)
+        audio, words = _apply_clean(audio, clean_settings, transcribe_fn, accepted, vocabulary)
         if pace_checked:
             wpm = words_per_minute(text, speaking_seconds(words, _duration(audio)))
         transcript_ok, missing = transcript_matches_any(accepted, words, vocabulary)
@@ -354,7 +401,12 @@ def generate(
             # regenerated when the map changes.
             engine_pronounce = spec.voice.pronounce if active_engine.name == "kokoro" else None
             line_hash = _line_hash(
-                line, active_engine.name, voice_id, spec.voice.speed, engine_pronounce
+                line,
+                active_engine.name,
+                voice_id,
+                spec.voice.speed,
+                engine_pronounce,
+                clean=spec.voice.clean,
             )
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
             forced = only is not None and key in only
@@ -383,6 +435,7 @@ def generate(
                 spec.voice.speed,
                 hints,
                 written=line.text,
+                clean=CleanSettings(enabled=spec.voice.clean),
             )
 
             bounds = phrase_bounds([phrase.spoken for phrase in line.phrases], words, audio)
