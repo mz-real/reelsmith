@@ -13,10 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `options.loudness` and optional `options.true_peak` for compose loudnorm and QA loudness
 - `options.line_gap` for spacing between script lines, separate from the phrase gap inside a line
 - QA checks for background noise between words and abrupt line onsets; end of line noise always runs even when the next line is close
+- `options.hold_motion` (`push` or `none`, default `push`): slow push-in on held frames instead of a frozen picture.
+- QA checks for frozen mid-clip holds and sharp playback speed jumps.
 
 ### Changed
 
 - Pace retries time-stretch audio in place when an engine sets `controls_rate: false`, instead of resynthesizing
+- Speed-up waits ease in and out over about 0.4 s instead of stepping instantly.
+- Scene joins pick a 0.2 s dissolve between similar clips and 0.4 s when a slide is involved (scene `transition` still wins).
+- Blur runs after the timeline so regions line up with output frames, including the first frame of each window.
+- Panel text and eyebrows meet WCAG AA contrast on the brand background.
+- Slide HTML uses `brand.yaml` font family and files on titles and body text.
 
 ## [0.1.2] - 2026-10-04
 

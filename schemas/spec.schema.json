@@ -76,6 +76,15 @@
           "title": "Speed Up Waits",
           "type": "boolean"
         },
+        "hold_motion": {
+          "default": "push",
+          "enum": [
+            "push",
+            "none"
+          ],
+          "title": "Hold Motion",
+          "type": "string"
+        },
         "captions": {
           "default": "burned",
           "enum": [

@@ -49,6 +49,7 @@ from reelsmith.compose.layouts import (
 from reelsmith.compose.ripples import BACK_SECONDS, back_cues, draw_back_badge
 from reelsmith.compose.typeface import Faces
 from reelsmith.models import BlurRegion
+from reelsmith.models.spec import HoldMotion
 from reelsmith.timing import Placement
 
 SLIDE_ZOOM = 0.05
@@ -100,6 +101,7 @@ def plan_for_scene(
     slides: list[Path],
     work: Path,
     tail: float,
+    hold_motion: HoldMotion = "push",
 ) -> ScenePlan:
     """Build the full render plan for one scene, drawing its overlays."""
     timeline = scene.timeline
@@ -147,6 +149,8 @@ def plan_for_scene(
         audio=audio,
         duration=timeline.duration,
         tail=tail,
+        hold_motion=hold_motion,
+        clip=clip,
         backdrop=dressing.backdrop,
         underlays=dressing.underlays,
         view=dressing.view,

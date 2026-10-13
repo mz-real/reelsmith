@@ -9,7 +9,7 @@ from functools import partial
 from pathlib import Path
 
 from reelsmith import __version__, progress
-from reelsmith.compose.cache import is_cached, scene_key, scene_path
+from reelsmith.compose.cache import is_cached, render_code_fingerprint, scene_key, scene_path
 from reelsmith.compose.captions import find_font
 from reelsmith.compose.graph import Encode, scene_args
 from reelsmith.compose.inputs import (
@@ -23,14 +23,14 @@ from reelsmith.compose.layouts import canvas_size, format_slug, theme_colors
 from reelsmith.compose.master import master_args
 from reelsmith.compose.scene import Look, plan_for_scene
 from reelsmith.compose.timeline import timeline_document, write_timeline
-from reelsmith.compose.transitions import XFADE, boundary_transitions
+from reelsmith.compose.transitions import boundary_join_plan
 from reelsmith.compose.typeface import find_faces
 from reelsmith.errors import ReelsmithError
 from reelsmith.media.ffmpeg import run_ffmpeg
 from reelsmith.models import SpecModel
 from reelsmith.paths import DemoPaths
 
-COMPOSE_VERSION = 3  # bump when the look changes, so cached scenes rebuild
+COMPOSE_VERSION = 4  # bump when the look changes, so cached scenes rebuild
 
 Runner = Callable[[list[str]], None]
 
@@ -169,9 +169,15 @@ def _compose_format(
     report = FormatReport(fmt, master_path(paths, fmt, settings.preview), 0.0)
     files: list[Path] = []
     last = len(project.scenes) - 1
+    join_names, fade_lengths = boundary_join_plan(
+        [scene.spec.transition for scene in project.scenes],
+        [scene.spec for scene in project.scenes],
+        project.spec.options.transition,
+    )
+    hold_motion = project.spec.options.hold_motion
     for number, scene in enumerate(project.scenes):
         progress.count(f"Scene {format_slug(fmt)}", number + 1, last + 1, scene.spec.id)
-        tail = XFADE if number < last else 0.0
+        tail = fade_lengths[number] if number < last and number < len(fade_lengths) else 0.0
         images = slides[scene.spec.id]
         key = scene_key(
             _payload(project, scene, look, settings, tail), _inputs(scene, images, look)
@@ -182,14 +188,10 @@ def _compose_format(
             report.reused.append(scene.spec.id)
             continue
         work = base / "work" / format_slug(fmt) / scene.spec.id
-        plan = plan_for_scene(scene, look, images, work, tail)
+        plan = plan_for_scene(scene, look, images, work, tail, hold_motion)
         _render_to(out, run, partial(scene_args, plan, settings.encode))
         report.rendered.append(scene.spec.id)
     durations = [scene.timeline.duration for scene in project.scenes]
-    transitions = boundary_transitions(
-        [scene.spec.transition for scene in project.scenes],
-        project.spec.options.transition,
-    )
     true_peak = (
         project.spec.options.true_peak if project.spec.options.true_peak is not None else -1.5
     )
@@ -198,7 +200,8 @@ def _compose_format(
         files,
         durations,
         settings.encode,
-        transitions=transitions or None,
+        transitions=join_names or None,
+        fade_durations=fade_lengths or None,
         loudness=project.spec.options.loudness,
         true_peak=true_peak,
     )
@@ -244,6 +247,7 @@ def _payload(
     return {
         "compose": COMPOSE_VERSION,
         "reelsmith": __version__,
+        "code": render_code_fingerprint(),
         "look": dataclasses.asdict(look)
         | {"blur": [b.model_dump() for b in look.blur if clip and b.clip == clip.id]},
         "settings": dataclasses.asdict(settings),

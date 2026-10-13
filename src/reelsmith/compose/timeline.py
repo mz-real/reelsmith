@@ -17,6 +17,7 @@ from reelsmith.compose.inputs import ProjectInputs, SceneSource
 from reelsmith.compose.layouts import Box, Layout, even, format_slug
 from reelsmith.compose.ripples import out_time
 from reelsmith.compose.scene import Look, caption_slots, scene_layout
+from reelsmith.compose.speed_ramp import expand_speed_ramps
 from reelsmith.compose.transitions import scene_starts
 from reelsmith.slides.markup import plain_text
 from reelsmith.timing import Segment
@@ -124,8 +125,9 @@ def _blur(scene: SceneSource, layout: Layout, look: Look, start: float) -> list[
     content = footage_box(layout)
     src_w, src_h = even(clip.width), even(clip.height)
     entries = []
+    rendered = expand_speed_ramps(scene.timeline.segments)
     for box in blur_boxes(look.blur, clip.id, src_w, src_h):
-        span = src_range_to_out(scene.timeline.segments, box.start, box.end or clip.duration)
+        span = src_range_to_out(rendered, box.start, box.end or clip.duration)
         if span is None:
             continue
         sx, sy = content.w / src_w, content.h / src_h

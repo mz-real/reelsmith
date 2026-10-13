@@ -1,7 +1,7 @@
 """Blur boxes: crop a region, blur it and lay it back on the clip.
 
-Blur runs on the source clip before the timeline and layout, so its times
-are clip times and every export already has the regions hidden.
+Blur runs on the raw clip, before holds and speed changes, so enable times
+are clip times and every output frame that shows a listed moment is blurred.
 """
 
 from __future__ import annotations
@@ -13,6 +13,10 @@ from reelsmith.compose.layouts import num
 from reelsmith.models import BlurRegion
 
 MAX_RADIUS = 20
+FRAME_PAD = 1.0 / 30.0
+# Start a window two frames early: output frames can trail clip time by one frame,
+# and blurring one extra frame is harmless where showing one sharp frame is not.
+START_PAD = 2.0 / 30.0
 
 
 @dataclass(frozen=True)
@@ -46,14 +50,14 @@ def blur_boxes(
     return boxes
 
 
-def _enable(box: BlurBox) -> str:
-    if box.end is None:
-        return f"gte(t,{num(box.start)})"
-    return f"between(t,{num(box.start)},{num(box.end)})"
+def _enable_window(start: float, end: float) -> str:
+    start_adj = max(0.0, start - START_PAD)
+    end_adj = end + FRAME_PAD
+    return f"between(t,{num(start_adj)},{num(end_adj)})"
 
 
-def blur_filters(boxes: Sequence[BlurBox], src: str, out: str) -> list[str]:
-    """Filter chains that blur each box in turn, from [src] to [out]."""
+def blur_filters_clip(boxes: Sequence[BlurBox], src: str, out: str) -> list[str]:
+    """Blur on a continuous clip timeline (clip times in enable)."""
     if not boxes:
         return [f"[{src}]null[{out}]"]
     chains: list[str] = []
@@ -61,14 +65,18 @@ def blur_filters(boxes: Sequence[BlurBox], src: str, out: str) -> list[str]:
     for number, box in enumerate(boxes):
         last = number == len(boxes) - 1
         target = out if last else f"blur{number}"
-        # The chroma planes are half size and need a radius below half of that.
         radius = max(1, min(MAX_RADIUS, min(box.w, box.h) // 4 - 1))
+        enable = (
+            f"gte(t,{num(max(0.0, box.start - START_PAD))})"
+            if box.end is None
+            else _enable_window(box.start, box.end)
+        )
         chains.append(
             f"[{current}]split[blurbase{number}][blurcut{number}];"
             f"[blurcut{number}]crop={box.w}:{box.h}:{box.x}:{box.y},"
             f"boxblur={radius}:2[blurred{number}];"
             f"[blurbase{number}][blurred{number}]overlay={box.x}:{box.y}:"
-            f"enable='{_enable(box)}'[{target}]"
+            f"enable='{enable}'[{target}]"
         )
         current = target
     return chains

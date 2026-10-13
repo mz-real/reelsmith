@@ -84,6 +84,7 @@ def run_qa(
             timeline=timeline,
             master=master_path,
             master_duration=master_duration,
+            master_fps=info.fps,
             sheets_dir=sheets_dir,
             work_dir=Path(raw_work_dir),
             transcriber=active_transcriber,

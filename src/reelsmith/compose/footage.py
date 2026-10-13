@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from reelsmith.compose.contrast import panel_accent_color, panel_text_color
 from reelsmith.compose.frames import (
     draw_frame,
     draw_mask,
@@ -169,7 +170,11 @@ def dress(scene: SceneSource, layout: Layout, look: Look, work: Path) -> Dressin
     _frame(dressing, layout, look, work, studio)
     unit = layout.unit
     faces = _faces(look)
-    panel_colors = PanelColors(colors.text, colors.accent, colors.background)
+    panel_colors = PanelColors(
+        panel_text_color(colors.text, colors.background),
+        panel_accent_color(colors.accent, colors.background),
+        colors.background,
+    )
     for piece in panel_pieces(scene, layout, look):
         image = draw_piece(piece, faces, panel_colors, unit, work / f"panel_{piece.name}.png")
         rise = round((REVEAL_RISE if piece.kind == "point" else ENTRANCE_RISE) * unit)

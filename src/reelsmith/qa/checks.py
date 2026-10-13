@@ -7,7 +7,10 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
+from reelsmith.compose.speed_ramp import expand_speed_ramps, max_speed_jump
+from reelsmith.compose.transitions import XFADE
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import ScriptModel, SpecModel
 from reelsmith.qa.av import ebur128_loudness, extract_audio_window, extract_frame, rms_of_window
@@ -15,7 +18,8 @@ from reelsmith.qa.image import build_contact_sheet, grayscale_crop, laplacian_va
 from reelsmith.qa.timeline import CaptionOut, PlacementOut, SceneOut, Timeline
 from reelsmith.qa.transcribe import Transcriber
 from reelsmith.text import compare_text
-from reelsmith.timing import TimingRules, caption_duration
+from reelsmith.timing import EPS as TIMING_EPS
+from reelsmith.timing import Segment, TimingRules, caption_duration
 from reelsmith.voice.transcribe import vocabulary_hints
 
 LOUDNESS_TOLERANCE = 1.5
@@ -30,6 +34,10 @@ END_NOISE_FLOOR = 0.01
 END_NOISE_NEXT_GAP = 0.05
 BLUR_RATIO = 0.30
 BLUR_SAMPLES = 3
+FROZEN_WARN = 1.5
+FROZEN_FAIL = 3.0
+SPEED_JUMP_RATIO = 1.5
+SPEED_JUMP_WINDOW = 0.2
 # A caption on screen for its whole spoken line is readable: the viewer hears it.
 CAPTION_READ_GRACE = 0.0
 CAPTION_MIN_ON_SCREEN = 1.0
@@ -69,6 +77,7 @@ class QAContext:
     sheets_dir: Path
     work_dir: Path
     transcriber: Transcriber
+    master_fps: float = 30.0
     rules: TimingRules = field(default_factory=TimingRules)
 
 
@@ -607,6 +616,41 @@ def _caption_spoken_duration(
     return sum(placement.out_end - placement.out_start for placement in covered)
 
 
+def blur_sample_times(start: float, end: float, fps: float) -> list[float]:
+    """Master times for the first and last in-window frames, plus interior samples."""
+    if fps <= EPS:
+        fps = 30.0
+    first_index = max(0, math.ceil(start * fps - 1e-9))
+    last_index = max(first_index, math.floor(end * fps + 1e-9))
+    first_t = first_index / fps
+    last_t = last_index / fps
+    middle = _sample_times(first_t, last_t, BLUR_SAMPLES)
+    return sorted({first_t, last_t, *middle})
+
+
+def _blur_times(start: float, end: float, fps: float) -> list[float]:
+    return blur_sample_times(start, end, fps)
+
+
+def _skip_blur_at_transition(ctx: QAContext, time: float) -> bool:
+    transitions = ctx.timeline.transitions or []
+    if not transitions:
+        return False
+    scenes = ctx.timeline.scenes
+    for index, transition_at in enumerate(transitions):
+        if abs(time - transition_at) > XFADE + FRAME_EPS:
+            continue
+        left = scenes[index] if index < len(scenes) else None
+        right = scenes[index + 1] if index + 1 < len(scenes) else None
+        for scene in (left, right):
+            if scene is None:
+                continue
+            spec_scene = ctx.spec.scene(scene.id)
+            if spec_scene is not None and spec_scene.layout == "slide":
+                return True
+    return False
+
+
 def check_blur(ctx: QAContext) -> CheckRow:
     """8. Blur: listed regions stay blurred for their whole window."""
     status = CheckStatus.PASS
@@ -622,9 +666,11 @@ def check_blur(ctx: QAContext) -> CheckRow:
             status = worse(status, CheckStatus.WARN)
             continue
         for index, region in enumerate(scene_tl.blur):
-            raw_times = _sample_times(region.out_start, region.out_end, BLUR_SAMPLES)
+            raw_times = _blur_times(region.out_start, region.out_end, ctx.master_fps)
             times = [_clamp_to_master(t, ctx.master_duration) for t in raw_times]
             for time in times:
+                if _skip_blur_at_transition(ctx, time):
+                    continue
                 frame_path = ctx.work_dir / f"blur-{scene_tl.id}-{index}-{time:.3f}.png"
                 extract_frame(ctx.master, time, frame_path)
                 box_gray = grayscale_crop(frame_path, region.box)
@@ -646,6 +692,89 @@ def check_blur(ctx: QAContext) -> CheckRow:
     if not details:
         details.append("Every blur region stays blurred for its whole window.")
     return CheckRow("Blur", status, details)
+
+
+def _segments_from_scene(scene_tl: SceneOut) -> list[Segment]:
+    if scene_tl.segments is None:
+        return []
+    out: list[Segment] = []
+    for segment in scene_tl.segments:
+        kind: Literal["play", "hold"] = "hold" if segment.kind == "hold" else "play"
+        out.append(
+            Segment(
+                kind,
+                segment.src_start,
+                segment.src_end,
+                segment.speed,
+                segment.out_start,
+                segment.out_end,
+            )
+        )
+    return out
+
+
+def _clip_end(segments: list[Segment]) -> float:
+    played = [segment.src_end for segment in segments if segment.kind == "play"]
+    return max(played) if played else 0.0
+
+
+def check_frozen_picture(ctx: QAContext) -> CheckRow:
+    """Mid-clip holds without motion should not freeze the picture for long."""
+    if ctx.spec.options.hold_motion != "none":
+        return CheckRow(
+            "Frozen picture",
+            CheckStatus.PASS,
+            ["Hold motion is on, so mid-clip holds keep the picture moving."],
+        )
+    status = CheckStatus.PASS
+    details: list[str] = []
+    for scene_tl in ctx.timeline.scenes:
+        segments = _segments_from_scene(scene_tl)
+        if not segments:
+            continue
+        end_src = _clip_end(segments)
+        for segment in segments:
+            if segment.kind != "hold":
+                continue
+            if segment.src_start >= end_src - TIMING_EPS and segment == segments[-1]:
+                continue
+            length = segment.out_end - segment.out_start
+            if length > FROZEN_FAIL + TIMING_EPS:
+                status = worse(status, CheckStatus.FAIL)
+                details.append(
+                    f"{_scene_where(scene_tl.id)}: holds a frame for {length:.2f}s at "
+                    f"{segment.out_start:.2f}s with no motion (over {FROZEN_FAIL:g} s)."
+                )
+            elif length > FROZEN_WARN + TIMING_EPS:
+                status = worse(status, CheckStatus.WARN)
+                details.append(
+                    f"{_scene_where(scene_tl.id)}: holds a frame for {length:.2f}s at "
+                    f"{segment.out_start:.2f}s with no motion (over {FROZEN_WARN:g} s)."
+                )
+    if not details:
+        details.append("No long frozen holds in the middle of a clip.")
+    return CheckRow("Frozen picture", status, details)
+
+
+def check_speed_jumps(ctx: QAContext) -> CheckRow:
+    """Warn when playback speed changes too sharply in a short window."""
+    status = CheckStatus.PASS
+    details: list[str] = []
+    for scene_tl in ctx.timeline.scenes:
+        segments = _segments_from_scene(scene_tl)
+        if not segments:
+            continue
+        expanded = expand_speed_ramps(segments)
+        jump = max_speed_jump(expanded, SPEED_JUMP_WINDOW)
+        if jump > SPEED_JUMP_RATIO + TIMING_EPS:
+            status = worse(status, CheckStatus.WARN)
+            details.append(
+                f"{_scene_where(scene_tl.id)}: playback speed changes by {jump:.2f}x within "
+                f"{SPEED_JUMP_WINDOW:g} s. Fix: shorten waits or recompose with speed ramps."
+            )
+    if not details:
+        details.append("Playback speed changes are smoothed within each scene.")
+    return CheckRow("Speed jumps", status, details)
 
 
 def _sample_times(start: float, end: float, count: int) -> list[float]:
@@ -726,6 +855,8 @@ CHECKS: tuple[tuple[str, Callable[[QAContext], CheckRow]], ...] = (
     ("Hold limits", check_holds),
     ("Captions", check_captions),
     ("Blur", check_blur),
+    ("Frozen picture", check_frozen_picture),
+    ("Speed jumps", check_speed_jumps),
     ("Contact sheets", check_contact_sheets),
 )
 
