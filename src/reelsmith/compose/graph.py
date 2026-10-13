@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from reelsmith.compose.blur import BlurBox, blur_filters_clip
-from reelsmith.compose.hold_motion import hold_center, hold_push_chain
+from reelsmith.compose.hold_motion import centered_zoom_filter, hold_center, hold_push_chain
 from reelsmith.compose.layouts import Box, Size, even, num
 from reelsmith.compose.motion import Key, track_expr
 from reelsmith.compose.speed_ramp import expand_speed_ramps
@@ -24,6 +24,7 @@ from reelsmith.timing import Segment
 FPS = 30
 STEP_FADE = 0.3
 SAMPLE_RATE = 48000
+PIECE_FADE = 0.04  # each phrase fades in and out, so it crosses into the quiet bed
 BACKGROUND_VEIL = 0.75
 
 
@@ -141,9 +142,11 @@ class _Graph:
 
 
 def _image_input(path: Path, loop_seconds: float | None = None) -> list[str]:
-    args = ["-f", "image2", "-pattern_type", "none"]
+    """Read a still at the scene frame rate: ffmpeg reads images at 25 fps otherwise,
+    and every sixth frame of the overlaid picture is then shown twice."""
+    args = ["-f", "image2", "-pattern_type", "none", "-framerate", str(FPS)]
     if loop_seconds is not None:
-        args += ["-loop", "1", "-framerate", str(FPS), "-t", num(loop_seconds)]
+        args += ["-loop", "1", "-t", num(loop_seconds)]
     return [*args, "-i", str(path)]
 
 
@@ -160,9 +163,13 @@ def segment_filters(
     """Cut the clip into play and hold parts and join them back up."""
     segments = expand_speed_ramps(segments)
     last_frame = max(0, round(clip_duration * fps) - 1)
+    # Each part gets a whole number of output frames from its rounded timeline edges, so
+    # short ramp pieces cannot round on their own and drift the picture off the timeline.
+    sized = [(seg, frame_count(seg, fps)) for seg in segments]
+    kept = [(seg, frames) for seg, frames in sized if frames > 0] or sized[:1]
     parts = [
-        _segment_filter(seg, last_frame, fps, hold_motion, clip, size, number)
-        for number, seg in enumerate(segments)
+        _segment_filter(seg, max(frames, 1), last_frame, fps, hold_motion, clip, size)
+        for seg, frames in kept
     ]
     if len(parts) == 1:
         return [f"[{src}]{parts[0]},fps={fps}[{out}]"]
@@ -174,29 +181,31 @@ def segment_filters(
     return chains
 
 
+def frame_count(seg: Segment, fps: int) -> int:
+    """Output frames for a part: its rounded end frame minus its rounded start frame."""
+    return round(seg.out_end * fps) - round(seg.out_start * fps)
+
+
 def _segment_filter(
     seg: Segment,
+    frames: int,
     last_frame: int,
     fps: int,
     hold_motion: HoldMotion,
     clip: ClipModel | None,
     size: Size | None,
-    number: int,
 ) -> str:
+    exact = f"tpad=stop_mode=clone:stop={frames},trim=end_frame={frames},setpts=PTS-STARTPTS"
     if seg.kind == "hold":
         frame = min(round(seg.src_start * fps), last_frame)
-        length = num(seg.out_end - seg.out_start)
-        base = (
-            f"trim=start_frame={frame}:end_frame={frame + 1},setpts=PTS-STARTPTS,"
-            f"tpad=stop_mode=clone:stop_duration={length},trim=duration={length}"
-        )
+        base = f"trim=start_frame={frame}:end_frame={frame + 1},setpts=PTS-STARTPTS,{exact}"
         if hold_motion != "push" or size is None:
             return base
         cx, cy = hold_center(clip, seg.src_start)
-        push = hold_push_chain(size.width, size.height, float(length), cx, cy)
+        push = hold_push_chain(size.width, size.height, frames / fps, cx, cy, fps=fps)
         return f"{base},{push}"
     pts = "PTS-STARTPTS" if abs(seg.speed - 1.0) < 1e-9 else f"(PTS-STARTPTS)/{num(seg.speed)}"
-    return f"trim=start={num(seg.src_start)}:end={num(seg.src_end)},setpts={pts}"
+    return f"trim=start={num(seg.src_start)}:end={num(seg.src_end)},setpts={pts},fps={fps},{exact}"
 
 
 def _clip_source(graph: _Graph, plan: ScenePlan, source: ClipSource) -> None:
@@ -207,7 +216,8 @@ def _clip_source(graph: _Graph, plan: ScenePlan, source: ClipSource) -> None:
     )
     # Blur in clip time, before holds and speed changes, so every output frame
     # that shows a listed moment of the clip is blurred, ramps included.
-    graph.chains += blur_filters_clip(plan.blur, "raw", "unblurred")
+    max_speed = max((seg.speed for seg in expand_speed_ramps(plan.segments)), default=1.0)
+    graph.chains += blur_filters_clip(plan.blur, "raw", "unblurred", max_speed)
     graph.chains += segment_filters(
         plan.segments,
         "unblurred",
@@ -233,11 +243,8 @@ def _slide_source(graph: _Graph, plan: ScenePlan, source: SlideSource) -> None:
     if plan.zoom <= 0:
         graph.chains.append(f"[{current}]null[src]")
         return
-    grow = f"(1+{num(plan.zoom)}*t/{num(plan.total)})"
-    graph.chains.append(
-        f"[{current}]scale=w='2*trunc({w}*{grow}/2)':h='2*trunc({h}*{grow}/2)':eval=frame,"
-        f"crop={w}:{h},setsar=1[src]"
-    )
+    grow = f"(1+{num(plan.zoom)}*T/{num(plan.total)})"
+    graph.chains.append(f"[{current}]{centered_zoom_filter(grow, fps=FPS)},setsar=1[src]")
 
 
 def _slide_clip_steps(graph: _Graph, plan: ScenePlan, source: SlideSource, fit: str) -> str:
@@ -458,9 +465,13 @@ def audio_filters(indexes: Sequence[int], pieces: Sequence[AudioPiece], total: f
     chains = []
     for number, (index, piece) in enumerate(zip(indexes, pieces, strict=True)):
         delay = round(piece.at * 1000)
+        span = max(piece.end - piece.start, 0.0)
+        fade = num(min(PIECE_FADE, span / 2))
+        fade_out_at = num(max(span - min(PIECE_FADE, span / 2), 0.0))
         chains.append(
             f"[{index}:a]atrim=start={num(piece.start)}:end={num(piece.end)},"
-            f"asetpts=PTS-STARTPTS,aresample={SAMPLE_RATE},"
+            f"asetpts=PTS-STARTPTS,afade=t=in:d={fade},afade=t=out:st={fade_out_at}:d={fade},"
+            f"aresample={SAMPLE_RATE},"
             f"aformat=sample_fmts=fltp:channel_layouts=stereo,"
             f"adelay={delay}:all=1[voice{number}]"
         )

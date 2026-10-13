@@ -17,7 +17,7 @@ from reelsmith.timing import Segment
 
 
 def test_enable_uses_frame_pad_at_window_start() -> None:
-    assert _enable_window(1.0, 2.0) == "between(t,0.933,2.033)"
+    assert _enable_window(1.0, 2.0) == "between(t,0.933,2.067)"
 
 
 STEPPED = [
@@ -74,3 +74,14 @@ def test_every_output_frame_showing_the_region_is_inside_the_timeline_window() -
     for time in inside:
         assert entry["out_start"] - 1e-3 <= time <= entry["out_end"] + 1e-3, time
     assert math.ceil((entry["out_start"] - 1e-3) * FPS) / FPS == pytest.approx(inside[0])
+
+
+def test_clip_blur_pad_grows_with_playback_speed() -> None:
+    from reelsmith.compose.blur import BlurBox, blur_filters_clip
+
+    box = BlurBox(0, 0, 10, 10, 1.0, 2.0)
+    normal = "".join(blur_filters_clip([box], "a", "b"))
+    fast = "".join(blur_filters_clip([box], "a", "b", max_speed=4.0))
+    assert "between(t,0.933,2.067)" in normal
+    # Two output frames at 4x cover eight clip frames.
+    assert "between(t,0.733,2.267)" in fast

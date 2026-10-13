@@ -28,7 +28,7 @@ def test_a_broken_check_becomes_a_warn_row_and_the_rest_still_run(tmp_path: Path
     rows = run_checks(ctx)
 
     by_name = {row.name: row for row in rows}
-    assert len(rows) == 13
+    assert len(rows) == 14
     assert by_name["Loudness"].status == CheckStatus.WARN
     assert "Could not run this check" in by_name["Loudness"].details[0]
     assert by_name["Sync"].status == CheckStatus.PASS

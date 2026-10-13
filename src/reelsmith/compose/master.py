@@ -10,6 +10,7 @@ from reelsmith.compose.layouts import num
 from reelsmith.compose.transitions import XFADE, scene_starts, xfade_filters
 
 DEFAULT_TRUE_PEAK = -1.5
+FLOOR_DB = -90.0  # the steady bed under the whole master, so it is never digital silence
 
 
 def loudnorm_filter(integrated: float = -16.0, true_peak: float = DEFAULT_TRUE_PEAK) -> str:
@@ -17,6 +18,15 @@ def loudnorm_filter(integrated: float = -16.0, true_peak: float = DEFAULT_TRUE_P
 
 
 LOUDNORM = loudnorm_filter()
+
+
+def floor_source(total: float, sample_rate: int) -> str:
+    """A constant, very quiet noise bed as long as the master (white, uniform)."""
+    amplitude = 10 ** (FLOOR_DB / 20.0) * 3**0.5
+    return (
+        f"anoisesrc=c=white:r={sample_rate}:a={amplitude:.3e}:d={num(total)},"
+        f"aformat=sample_fmts=fltp:channel_layouts=stereo[floor]"
+    )
 
 
 def master_args(
@@ -46,7 +56,11 @@ def master_args(
     labels = "".join(f"[sa{k}]" for k in range(len(starts)))
     mix = f"amix=inputs={len(starts)}:normalize=0:duration=longest," if len(starts) > 1 else ""
     norm = loudnorm_filter(loudness, true_peak)
-    chains.append(f"{labels}{mix}{norm},aresample={SAMPLE_RATE},atrim=duration={num(total)}[aout]")
+    chains.append(
+        f"{labels}{mix}{norm},aresample={SAMPLE_RATE},atrim=duration={num(total)}[voiced]"
+    )
+    chains.append(floor_source(total, SAMPLE_RATE))
+    chains.append("[voiced][floor]amix=inputs=2:normalize=0:duration=first[aout]")
     return [
         *inputs,
         "-filter_complex",

@@ -120,6 +120,9 @@ def _applicable_pronunciations(text: str, pronounce: Mapping[str, str]) -> list[
     return sorted(applicable)
 
 
+CLEAN_VERSION = 2
+
+
 def _line_hash(
     line: Line,
     engine_name: str,
@@ -128,6 +131,7 @@ def _line_hash(
     pronounce: Mapping[str, str] | None = None,
     *,
     clean: bool = True,
+    loudness: float = -16.0,
 ) -> str:
     # The engine name is part of the hash so switching engines, for example
     # from Kokoro to Chatterbox, regenerates every line instead of being
@@ -136,7 +140,11 @@ def _line_hash(
     # they had before say existed and are not voiced again. Only the
     # pronounce entries that actually apply to this line are hashed, so
     # changing an unrelated word in voice.pronounce does not regenerate it.
-    raw = f"{line.text}|{engine_name}|{voice}|{speed}|clean={int(clean)}"
+    # Cleanup version 2 is expander, spectral subtraction and per-line levelling.
+    # It also reads the project loudness, so both are part of the hash when
+    # cleanup is on. A line without cleanup keeps the hash it had before.
+    clean_part = f"clean={CLEAN_VERSION}|loudness={loudness:g}" if clean else "clean=0"
+    raw = f"{line.text}|{engine_name}|{voice}|{speed}|{clean_part}"
     if line.has_say:
         raw += f"|say={line.spoken_text}"
     applicable = _applicable_pronunciations(line.spoken_text, pronounce or {})
@@ -182,7 +190,7 @@ def _apply_clean(
 ) -> tuple[Audio, list[Word]]:
     if not clean.enabled:
         return audio, transcribe_fn(audio)
-    body = process_body(audio)
+    body = process_body(audio, clean.loudness)
     words = transcribe_fn(body)
     trimmed, clipped, ok = finish_tail(body, words, expected, vocabulary)
     if ok:
@@ -407,6 +415,7 @@ def generate(
                 spec.voice.speed,
                 engine_pronounce,
                 clean=spec.voice.clean,
+                loudness=spec.options.loudness,
             )
             wav_path = paths.voice / f"{scene.id}__{line.id}.wav"
             forced = only is not None and key in only
@@ -435,7 +444,7 @@ def generate(
                 spec.voice.speed,
                 hints,
                 written=line.text,
-                clean=CleanSettings(enabled=spec.voice.clean),
+                clean=CleanSettings(enabled=spec.voice.clean, loudness=spec.options.loudness),
             )
 
             bounds = phrase_bounds([phrase.spoken for phrase in line.phrases], words, audio)

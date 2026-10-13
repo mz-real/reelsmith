@@ -267,6 +267,7 @@ def _voice_lines(demo: _Demo, spec: SpecModel, script: ScriptModel) -> tuple[lis
                 spec.voice.speed,
                 pronounce,
                 clean=spec.voice.clean,
+                loudness=spec.options.loudness,
             )
             entry = prior.get(key, {})
             wav = demo.paths.voice / f"{scene.id}__{line.id}.wav"
