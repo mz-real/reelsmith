@@ -38,7 +38,7 @@ def register(app: typer.Typer) -> None:
             DoctorProfile | None,
             typer.Option(
                 "--profile",
-                help="Which tools to check: web, mobile, narrate, voice, clone, or all.",
+                help="Which tools to check: web, mobile, narrate, voice, clone, cloud, or all.",
             ),
         ] = None,
     ) -> None:

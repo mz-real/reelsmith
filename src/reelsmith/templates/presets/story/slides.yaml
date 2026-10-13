@@ -1,0 +1,64 @@
+# Slides for the story preset. Logic slides use step_style reveal so each
+# step appears with its phrase. Add a chapter by copying ch1, ch1-logic and
+# matching feat-1 in spec.yaml, slides.yaml and script.yaml together.
+version: 1
+slides:
+  - id: intro
+    kind: title
+    eyebrow: Product demo
+    title: Your *product* name
+    subtitle: One line on who it is for.
+  - id: overview
+    kind: cards
+    eyebrow: What we will cover
+    title: Two features, *one story*
+    cards:
+      - icon: flow
+        title: First feature
+        detail: One line on the outcome.
+      - icon: check
+        title: Second feature
+        detail: One line on the outcome.
+  - id: ch1
+    kind: title
+    chapter: 1
+    eyebrow: Chapter 1
+    title: First *feature*
+    subtitle: What the viewer will see live.
+    coming_up: [The rule, The demo]
+  - id: ch1-logic
+    kind: flow
+    eyebrow: How it works
+    title: The *rule* in plain words
+    step_style: reveal
+    steps:
+      - title: Check the input
+        detail: What must be true before the action runs
+      - title: Apply the rule
+        detail: What the app does with it
+      - title: Show the result
+        detail: What the user gets back
+  - id: ch2
+    kind: title
+    chapter: 2
+    eyebrow: Chapter 2
+    title: Second *feature*
+    subtitle: What the viewer will see live.
+    coming_up: [The rule, The demo]
+  - id: ch2-logic
+    kind: flow
+    eyebrow: How it works
+    title: Another *rule* step by step
+    step_style: reveal
+    steps:
+      - title: Start from here
+      - title: Do the key action
+      - title: Confirm it worked
+  - id: closing
+    kind: bullets
+    eyebrow: Wrap up
+    title: What to *remember*
+    items:
+      - The first takeaway
+      - The second takeaway
+      - Where to start in the app

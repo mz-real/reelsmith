@@ -20,12 +20,15 @@ def _default_formats() -> list[VideoFormat]:
 
 
 class VoiceSettings(StrictModel):
-    engine: Literal["kokoro", "chatterbox", "none"] = "kokoro"
+    engine: Literal["kokoro", "chatterbox", "elevenlabs", "gradium", "none"] = "kokoro"
     kokoro_voice: str = "af_heart"
     speed: float = Field(default=1.0, gt=0.0)
     clean: bool = True
     sample: str | None = None
     consent: Literal["own", "permission"] | None = None
+    provider_voice_id: str | None = None
+    api_key_env: str | None = None
+    model: str = "eleven_multilingual_v2"
     # Product names and other rare words, passed to the speech model as hints.
     vocabulary: list[str] = Field(default_factory=list)
     # A word (case insensitive, whole word) to the Kokoro or espeak phonemes

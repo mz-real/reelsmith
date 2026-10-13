@@ -90,7 +90,7 @@ def test_starter_files_match_the_models(tmp_path: Path, name: str, model: type[A
     load_model(root / name, model)
 
 
-PRESETS = ("quick", "tour", "mobile", "release-notes", "narrate")
+PRESETS = ("quick", "story", "tour", "mobile", "release-notes", "narrate")
 
 
 @pytest.mark.parametrize("preset", PRESETS)
@@ -132,7 +132,12 @@ def test_preset_files_have_no_todo_markers(tmp_path: Path, preset: str) -> None:
 
 @pytest.mark.parametrize(
     ("preset", "low", "high"),
-    [("quick", 30, 60), ("tour", 180, 300), ("release-notes", 60, 120)],
+    [
+        ("quick", 30, 60),
+        ("story", 120, 300),
+        ("tour", 180, 300),
+        ("release-notes", 60, 120),
+    ],
 )
 def test_preset_lengths_match_the_design(
     tmp_path: Path, preset: str, low: float, high: float

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn the approved script into clean narration audio, one file per line, with each phrase timed so it can land on its event. Kokoro stock voices are the default. Chatterbox clones the user's own voice, only with consent.
+Turn the approved script into clean narration audio, one file per line, with each phrase timed so it can land on its event. Kokoro stock voices are the default and stay on the machine. Chatterbox clones locally with consent. ElevenLabs and Gradium are optional cloud engines: every line is sent to the provider you chose.
 
 ## Rules
 
@@ -11,9 +11,10 @@ Turn the approved script into clean narration audio, one file per line, with eac
 ## What to ask or check
 
 - Is script.yaml approved? If not, stop. Nothing is voiced before approval point 2.
-- Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
+- Which engine does spec.yaml name? `kokoro` (default), `chatterbox`, `elevenlabs`, `gradium` or `none`.
   - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
+  - `elevenlabs` or `gradium` need `provider_voice_id` and an API key in the env var named by `api_key_env` (defaults `ELEVENLABS_API_KEY` and `GRADIUM_API_KEY`). Never ask for or log the key. Run `reelsmith doctor --profile cloud` to check the var is set. Clone with `reelsmith voice clone` only after consent. Delete a clone at the provider with `reelsmith voice delete-clone` when the user no longer needs it.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower). It works for Chatterbox too: the cloned audio is slowed or sped up afterwards, from 0.75 to 1.25, keeping the pitch and the watermark.
 - The first run downloads models into the user's cache folder: the Kokoro model (about 114 MB plus 28 MB of voices) and the Whisper model used to check the words (about 145 MB). Tell the user before the first run.

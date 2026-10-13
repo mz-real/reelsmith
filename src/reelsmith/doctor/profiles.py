@@ -18,6 +18,7 @@ _CHECK_KOKORO = "kokoro model"
 _CHECK_WHISPER = "whisper model"
 _CHECK_GPU = "gpu"
 _CHECK_CHATTERBOX = "chatterbox"
+_CHECK_CLOUD = "cloud voice"
 _CHECK_PLUGIN = "plugin version"
 
 _MOBILE_TOOL_CHECKS = (_CHECK_JAVA, _CHECK_MAESTRO, _CHECK_SIMCTL, _CHECK_ADB)
@@ -34,6 +35,7 @@ _CHECK_ORDER: tuple[str, ...] = (
     _CHECK_KOKORO,
     _CHECK_WHISPER,
     _CHECK_CHATTERBOX,
+    _CHECK_CLOUD,
     _CHECK_GPU,
     _CHECK_PLUGIN,
 )
@@ -45,6 +47,7 @@ class DoctorProfile(enum.StrEnum):
     NARRATE = "narrate"
     VOICE = "voice"
     CLONE = "clone"
+    CLOUD = "cloud"
     ALL = "all"
 
 
@@ -63,6 +66,8 @@ def profile_from_spec(spec_path: Path) -> DoctorProfile:
     data = _load_spec_dict(spec_path)
     voice = _voice_dict(data)
     engine = voice.get("engine", "kokoro")
+    if engine in ("elevenlabs", "gradium"):
+        return DoctorProfile.CLOUD
     if engine == "chatterbox":
         return DoctorProfile.CLONE
     if data.get("mode") == "narrate":
@@ -91,7 +96,9 @@ def resolve_profile(
 def active_check_names(profile: DoctorProfile, spec_path: Path | None) -> frozenset[str]:
     """Return check names to run for this profile and optional spec."""
     names = set(_base_checks_for_profile(profile))
-    if profile != DoctorProfile.ALL and _spec_voice_engine_none(spec_path):
+    if profile != DoctorProfile.ALL and (
+        _spec_voice_engine_none(spec_path) or _spec_voice_cloud(spec_path)
+    ):
         names -= set(_VOICE_MODEL_CHECKS)
     if profile in (DoctorProfile.CLONE, DoctorProfile.ALL):
         names.add(_CHECK_CHATTERBOX)
@@ -132,6 +139,8 @@ def _base_checks_for_profile(profile: DoctorProfile) -> frozenset[str]:
     if profile == DoctorProfile.CLONE:
         voice = _base_checks_for_profile(DoctorProfile.VOICE)
         return frozenset(voice | {_CHECK_CHATTERBOX, _CHECK_GPU})
+    if profile == DoctorProfile.CLOUD:
+        return frozenset(common | {_CHECK_FFMPEG, _CHECK_CLOUD})
     if profile == DoctorProfile.ALL:
         return frozenset(_CHECK_ORDER)
     raise ValueError(f"unknown profile: {profile}")
@@ -166,3 +175,10 @@ def _spec_wants_chatterbox(spec_path: Path | None) -> bool:
         return False
     voice = _voice_dict(_load_spec_dict(spec_path))
     return voice.get("engine") == "chatterbox"
+
+
+def _spec_voice_cloud(spec_path: Path | None) -> bool:
+    if spec_path is None or not spec_path.is_file():
+        return False
+    voice = _voice_dict(_load_spec_dict(spec_path))
+    return voice.get("engine") in ("elevenlabs", "gradium")

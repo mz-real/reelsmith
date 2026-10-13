@@ -1,0 +1,57 @@
+# Narration for the story preset. Write one phrase per flow step on logic
+# slides so each step builds with the voice. Pin browser phrases to clip
+# events after footage is recorded.
+version: 1
+scenes:
+  - id: intro
+    lines:
+      - id: intro-1
+        phrases:
+          - text: Replace with who the product is for and the job it does.
+  - id: overview
+    lines:
+      - id: overview-1
+        phrases:
+          - text: Replace with a one line map of the chapters you will show.
+  - id: ch1
+    lines:
+      - id: ch1-1
+        phrases:
+          - text: Replace with the name of the first feature chapter.
+  - id: ch1-logic
+    lines:
+      - id: ch1-logic-1
+        phrases:
+          - text: Replace with the first step of the rule in plain words.
+          - text: Replace with what happens when the rule runs.
+          - text: Replace with what the user sees when it succeeds.
+  - id: feat-1
+    lines:
+      - id: feat-1-1
+        phrases:
+          - text: Replace with the first on screen action as the clip shows it.
+      - id: feat-1-2
+        phrases:
+          - text: Replace with the result the viewer should notice.
+  - id: ch2
+    lines:
+      - id: ch2-1
+        phrases:
+          - text: Replace with the name of the second feature chapter.
+  - id: ch2-logic
+    lines:
+      - id: ch2-logic-1
+        phrases:
+          - text: Replace with the starting point for this rule.
+          - text: Replace with the action that matters.
+          - text: Replace with how you know it worked.
+  - id: feat-2
+    lines:
+      - id: feat-2-1
+        phrases:
+          - text: Replace with what the second feature looks like in the app.
+  - id: closing
+    lines:
+      - id: closing-1
+        phrases:
+          - text: Replace with two things to remember and how to get started.

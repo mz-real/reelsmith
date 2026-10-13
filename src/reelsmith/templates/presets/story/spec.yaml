@@ -1,0 +1,75 @@
+# Preset: chaptered product demo (story), about 2 to 4 minutes.
+# Title, overview, then per chapter: a chapter card, a logic slide, live
+# footage, then a closing slide. Copy one chapter block (chapter slide,
+# logic slide, footage scene) to add another feature chapter.
+# Fill in from the interview. Show this file to the user. Approval point 1.
+version: 1
+mode: produce
+goal: Show how the product solves one job in clear chapters
+audience: customers
+target_seconds: 180
+formats: ["16:9"]
+quality: 1080p
+theme: studio
+footage: web
+voice:
+  engine: kokoro
+  kokoro_voice: af_heart
+  speed: 1.0
+  vocabulary: []
+options:
+  allow_holds: true
+  speed_up_waits: true
+  captions: both
+  highlight_clicks: true
+  transition: fade
+  loudness: -16.0
+scenes:
+  - id: intro
+    layout: slide
+    slide: intro
+  - id: overview
+    layout: slide
+    slide: overview
+  # Chapter 1
+  - id: ch1
+    layout: slide
+    slide: ch1
+    transition: push
+  - id: ch1-logic
+    layout: slide
+    slide: ch1-logic
+  - id: feat-1
+    layout: browser
+    clip: feat-1
+    eyebrow: Chapter 1
+    title: First *feature*
+    points:
+      - text: What you do on screen
+        line: feat-1-1
+      - text: What you get back
+        line: feat-1-2
+    zoom:
+      - box: [0.08, 0.12, 0.45, 0.40]
+        at: e2
+        hold: 1.5
+  # Chapter 2
+  - id: ch2
+    layout: slide
+    slide: ch2
+    transition: push
+  - id: ch2-logic
+    layout: slide
+    slide: ch2-logic
+  - id: feat-2
+    layout: browser
+    clip: feat-2
+    eyebrow: Chapter 2
+    title: Second *feature*
+    points:
+      - text: The main action
+        line: feat-2-1
+  - id: closing
+    layout: slide
+    slide: closing
+blur: []

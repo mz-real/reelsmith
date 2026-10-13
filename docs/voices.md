@@ -1,13 +1,14 @@
 # Voices
 
-reelsmith has two voice engines behind one set of commands:
+reelsmith has local and optional cloud voice engines behind one set of commands:
 
-- **Kokoro** stock voices, the default. Small, fast on a CPU, no PyTorch.
-- **Chatterbox** for your own voice. Optional, and only with consent.
+- **Kokoro** stock voices, the default. Small, fast on a CPU, no PyTorch. Audio stays on your machine.
+- **Chatterbox** for your own voice. Optional, only with consent, fully local.
+- **ElevenLabs** and **Gradium** when you choose a cloud voice. Every script line is sent to that provider. API keys only through environment variables.
 
 You can also make a silent video with captions: set `voice.engine: none` in spec.yaml and skip the voice step.
 
-Everything runs locally. No audio is sent anywhere.
+By default nothing is uploaded. Cloud voices are opt in.
 
 ## Kokoro stock voices
 
@@ -118,6 +119,34 @@ Cloning is supported and covered by tests that use stand ins for the model. A re
    The same pace and word checks run as for Kokoro. Changing the sample file regenerates every line.
 
 To check the install, `reelsmith doctor --spec spec.yaml` adds a Chatterbox check when the spec uses it.
+
+## Cloud voices (ElevenLabs and Gradium)
+
+Use a cloud engine only when you want that provider's voices. Set in spec.yaml:
+
+```yaml
+voice:
+  engine: elevenlabs
+  provider_voice_id: your_voice_id
+  api_key_env: ELEVENLABS_API_KEY
+  model: eleven_multilingual_v2
+```
+
+Put the API key in the named environment variable. reelsmith never prints the key. `reelsmith doctor --profile cloud` checks that the variable is set and that the provider host resolves.
+
+Clone a new voice from a sample (consent required). The sample is uploaded to the provider:
+
+```
+reelsmith voice clone --provider elevenlabs --sample ref.wav --name "Demo voice" --consent own
+```
+
+The command prints the new voice id and writes `provider_voice_id` into spec.yaml. Delete a clone you no longer need:
+
+```
+reelsmith voice delete-clone --yes
+```
+
+Privacy: every narration line and any clone sample go to the provider you picked. Delete clones you do not need. Local Kokoro and Chatterbox do not send audio out.
 
 ## Common problems
 

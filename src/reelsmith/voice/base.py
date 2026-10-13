@@ -63,6 +63,36 @@ def get_engine(spec: SpecModel, root: Path | None = None) -> VoiceEngine:
         return ChatterboxEngine(
             sample=sample, consent=spec.voice.consent, pronounce=spec.voice.pronounce
         )
+    if engine_name == "elevenlabs":
+        from reelsmith.voice.elevenlabs_engine import (
+            ElevenLabsEngine,
+            default_api_key_env,
+        )
+
+        voice_id = spec.voice.provider_voice_id
+        if not voice_id:
+            raise ReelsmithError(
+                "Cloud voice needs voice.provider_voice_id in spec.yaml.",
+                fix="Set an id from your ElevenLabs account or run reelsmith voice clone.",
+            )
+        return ElevenLabsEngine(
+            voice_id=voice_id,
+            api_key_env=spec.voice.api_key_env or default_api_key_env(),
+            model=spec.voice.model,
+        )
+    if engine_name == "gradium":
+        from reelsmith.voice.gradium_engine import GradiumEngine, default_api_key_env
+
+        voice_id = spec.voice.provider_voice_id
+        if not voice_id:
+            raise ReelsmithError(
+                "Cloud voice needs voice.provider_voice_id in spec.yaml.",
+                fix="Set an id from your Gradium account or run reelsmith voice clone.",
+            )
+        return GradiumEngine(
+            voice_id=voice_id,
+            api_key_env=spec.voice.api_key_env or default_api_key_env(),
+        )
     if engine_name == "none":
         raise ReelsmithError(
             "spec.yaml sets voice.engine to none, so there is no narration to generate."

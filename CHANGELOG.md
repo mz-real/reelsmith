@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Guided interview flow: features, structure, logic slides, voice, captions, loudness and branding
+- `story` preset for chaptered product demos (title, overview, logic slide and footage per chapter, closing)
+- Cloud voice engines `elevenlabs` and `gradium` with `voice.provider_voice_id`, `voice.api_key_env` and `voice.model`
+- `reelsmith voice clone` and `reelsmith voice delete-clone` for cloud voices
+- `reelsmith doctor --profile cloud` to check the API key env var and provider DNS
 - Per-line voice cleanup (high-pass, gentle denoise, soft gate, edge fades) on by default via `voice.clean`, with phrase tail trim from Whisper word times
 - `options.loudness` and optional `options.true_peak` for compose loudnorm and QA loudness
 - `options.line_gap` for spacing between script lines, separate from the phrase gap inside a line

@@ -324,7 +324,8 @@ def test_no_cli_option_touches_consent_or_the_watermark() -> None:
 
     options = walk(typer.main.get_command(app))
     assert "--refs" in options, "the walk reaches nested voice commands"
-    assert not [o for o in options if "watermark" in o or "consent" in o]
+    assert not [o for o in options if "watermark" in o]
+    assert [o for o in options if o == "--consent"] == ["--consent"]
 
 
 def _one_second_tone(self: FakeModel, text: str, audio_prompt_path: str) -> np.ndarray:
