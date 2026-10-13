@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-13
+
 ### Added
 
 - Guided interview flow: features, structure, logic slides, voice, captions, loudness and branding
@@ -14,21 +16,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cloud voice engines `elevenlabs` and `gradium` with `voice.provider_voice_id`, `voice.api_key_env` and `voice.model`
 - `reelsmith voice clone` and `reelsmith voice delete-clone` for cloud voices
 - `reelsmith doctor --profile cloud` to check the API key env var and provider DNS
-- Per-line voice cleanup (high-pass, gentle denoise, soft gate, edge fades) on by default via `voice.clean`, with phrase tail trim from Whisper word times
+- Per-line voice cleanup on by default via `voice.clean`: high-pass, steady spectral noise reduction, a gentle downward expander (never to silence), level toward the loudness target, edge fades and a tail trim from Whisper word times
 - `options.loudness` and optional `options.true_peak` for compose loudnorm and QA loudness
 - `options.line_gap` for spacing between script lines, separate from the phrase gap inside a line
 - QA checks for background noise between words and abrupt line onsets; end of line noise always runs even when the next line is close
 - `options.hold_motion` (`push` or `none`, default `push`): slow push-in on held frames instead of a frozen picture.
 - QA checks for frozen mid-clip holds and sharp playback speed jumps.
+- QA Stutter check (judder frames per minute) and a digital-silence flip check in Background noise.
 
 ### Changed
 
 - Pace retries time-stretch audio in place when an engine sets `controls_rate: false`, instead of resynthesizing
 - Speed-up waits ease in and out over about 0.4 s instead of stepping instantly.
 - Scene joins pick a 0.2 s dissolve between similar clips and 0.4 s when a slide is involved (scene `transition` still wins).
-- Blur runs after the timeline so regions line up with output frames, including the first frame of each window.
+- Blur runs on the clip's own timeline before holds and speed changes, padded by two output frames at the scene's highest speed, so every frame showing a listed moment is blurred.
 - Panel text and eyebrows meet WCAG AA contrast on the brand background.
 - Slide HTML uses `brand.yaml` font family and files on titles and body text.
+- Hold pushes and the slide zoom are sub-pixel smooth (`perspective` filter) instead of resizing in 2 px steps.
+- Slide and image inputs are read at 30 fps, and every play and hold part gets a whole number of output frames, so short ramp pieces cannot drift the picture off the timeline.
+- The master narration keeps a constant very low floor with short fades on each phrase.
+- The scene cache key includes a fingerprint of the compose and slide code, so code changes re-render scenes.
 
 ## [0.1.2] - 2026-10-04
 
