@@ -11,10 +11,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from reelsmith.compose.blur import BlurBox, blur_filters
+from reelsmith.compose.blur import BlurBox, blur_filters_clip
+from reelsmith.compose.hold_motion import hold_center, hold_push_chain
 from reelsmith.compose.layouts import Box, Size, even, num
 from reelsmith.compose.motion import Key, track_expr
+from reelsmith.compose.speed_ramp import expand_speed_ramps
 from reelsmith.compose.studio import Backdrop
+from reelsmith.models import ClipModel
+from reelsmith.models.spec import HoldMotion
 from reelsmith.timing import Segment
 
 FPS = 30
@@ -108,6 +112,8 @@ class ScenePlan:
     audio: list[AudioPiece]
     duration: float  # the timeline duration
     tail: float  # extra held frames at the end, for the cross fade
+    hold_motion: HoldMotion = "push"
+    clip: ClipModel | None = None
     backdrop: Backdrop | None = None  # the Studio background, instead of a flat colour
     underlays: list[Still] = field(default_factory=list)  # under the footage: shadows
     view: list[Key] = field(default_factory=list)  # zoom keyframes, empty for none
@@ -142,11 +148,22 @@ def _image_input(path: Path, loop_seconds: float | None = None) -> list[str]:
 
 
 def segment_filters(
-    segments: Sequence[Segment], src: str, out: str, clip_duration: float, fps: int
+    segments: Sequence[Segment],
+    src: str,
+    out: str,
+    clip_duration: float,
+    fps: int,
+    hold_motion: HoldMotion = "push",
+    clip: ClipModel | None = None,
+    size: Size | None = None,
 ) -> list[str]:
     """Cut the clip into play and hold parts and join them back up."""
+    segments = expand_speed_ramps(segments)
     last_frame = max(0, round(clip_duration * fps) - 1)
-    parts = [_segment_filter(seg, last_frame, fps) for seg in segments]
+    parts = [
+        _segment_filter(seg, last_frame, fps, hold_motion, clip, size, number)
+        for number, seg in enumerate(segments)
+    ]
     if len(parts) == 1:
         return [f"[{src}]{parts[0]},fps={fps}[{out}]"]
     labels = "".join(f"[seg{i}]" for i in range(len(parts)))
@@ -157,14 +174,27 @@ def segment_filters(
     return chains
 
 
-def _segment_filter(seg: Segment, last_frame: int, fps: int) -> str:
+def _segment_filter(
+    seg: Segment,
+    last_frame: int,
+    fps: int,
+    hold_motion: HoldMotion,
+    clip: ClipModel | None,
+    size: Size | None,
+    number: int,
+) -> str:
     if seg.kind == "hold":
         frame = min(round(seg.src_start * fps), last_frame)
         length = num(seg.out_end - seg.out_start)
-        return (
+        base = (
             f"trim=start_frame={frame}:end_frame={frame + 1},setpts=PTS-STARTPTS,"
             f"tpad=stop_mode=clone:stop_duration={length},trim=duration={length}"
         )
+        if hold_motion != "push" or size is None:
+            return base
+        cx, cy = hold_center(clip, seg.src_start)
+        push = hold_push_chain(size.width, size.height, float(length), cx, cy)
+        return f"{base},{push}"
     pts = "PTS-STARTPTS" if abs(seg.speed - 1.0) < 1e-9 else f"(PTS-STARTPTS)/{num(seg.speed)}"
     return f"trim=start={num(seg.src_start)}:end={num(seg.src_end)},setpts={pts}"
 
@@ -175,8 +205,19 @@ def _clip_source(graph: _Graph, plan: ScenePlan, source: ClipSource) -> None:
     graph.chains.append(
         f"[{index}:v]fps={FPS},scale={size.width}:{size.height},setsar=1,format=yuv420p[raw]"
     )
-    graph.chains += blur_filters(plan.blur, "raw", "clean")
-    graph.chains += segment_filters(plan.segments, "clean", "src", source.clip_duration, FPS)
+    # Blur in clip time, before holds and speed changes, so every output frame
+    # that shows a listed moment of the clip is blurred, ramps included.
+    graph.chains += blur_filters_clip(plan.blur, "raw", "unblurred")
+    graph.chains += segment_filters(
+        plan.segments,
+        "unblurred",
+        "src",
+        source.clip_duration,
+        FPS,
+        plan.hold_motion,
+        plan.clip,
+        source.size,
+    )
 
 
 def _slide_source(graph: _Graph, plan: ScenePlan, source: SlideSource) -> None:

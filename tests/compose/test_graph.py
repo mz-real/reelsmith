@@ -58,14 +58,17 @@ def graph_of(args: list[str]) -> str:
 def test_segments_play_hold_and_speed_up() -> None:
     chains = segment_filters(PLAY_HOLD_FAST, "in", "out", clip_duration=6.0, fps=30)
     text = ";".join(chains)
-    assert text.startswith("[in]split=3[seg0][seg1][seg2]")
+    assert text.startswith("[in]split=") and "concat=n=" in text
     assert "[seg0]trim=start=0:end=2,setpts=PTS-STARTPTS[part0]" in text
     assert (
         "[seg1]trim=start_frame=60:end_frame=61,setpts=PTS-STARTPTS,"
         "tpad=stop_mode=clone:stop_duration=1.5,trim=duration=1.5[part1]"
     ) in text
-    assert "[seg2]trim=start=2:end=6,setpts=(PTS-STARTPTS)/2[part2]" in text
-    assert text.endswith("[part0][part1][part2]concat=n=3:v=1:a=0,fps=30[out]")
+    assert "split=11" in text
+    assert "setpts=(PTS-STARTPTS)/1.25" in text
+    assert "setpts=(PTS-STARTPTS)/2.269" in text
+    assert "concat=n=11" in text
+    assert text.endswith("fps=30[out]")
 
 
 def test_a_hold_at_the_very_end_uses_the_last_real_frame() -> None:
@@ -101,8 +104,16 @@ def test_clip_scene_args() -> None:
     # stills are single images read literally, never as a numbered pattern
     assert ["-f", "image2", "-pattern_type", "none", "-i", "frame.png"] == args[2:8]
     assert "[0:v]fps=30,scale=1172:2532,setsar=1,format=yuv420p[raw]" in graph
-    assert "crop=200:40:10:20" in graph  # blur comes before the timeline
-    assert graph.index("crop=200:40:10:20") < graph.index("concat=n=3")
+    # blur runs on the raw clip in clip time, then the segments read the blurred stream
+    assert "[raw]split[blurbase0][blurcut0]" in graph
+    assert "crop=200:40:10:20" in graph
+    assert "overlay=10:20:enable='gte(t,0)'[unblurred]" in graph
+    assert "[unblurred]split=11" in graph
+    assert "[raw]split=11" not in graph
+    assert graph.index("[raw]split[blurbase0]") < graph.index("[unblurred]split=11")
+    assert graph.index("crop=200:40:10:20") < graph.index("[unblurred]split=11")
+    assert graph.index("[unblurred]split=11") < graph.index("concat=n=11")
+    assert "[clean]" not in graph
     assert "color=c=0x0f172a:s=1920x1080:r=30:d=5.9[bg]" in graph
     assert "scale=1200:750,setsar=1[content]" in graph
     assert "[bg][content]overlay=100:120[layer0]" in graph

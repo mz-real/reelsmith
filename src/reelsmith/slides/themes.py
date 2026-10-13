@@ -113,9 +113,14 @@ def resolve_theme(spec: SpecModel, brand: BrandModel, demo_root: Path) -> SlideT
     if brand.colors.background is not None and not studio:
         muted = _pick_color(colors.secondary, base["muted"])
     default_family = SYSTEM_FONTS if studio else "system-ui, -apple-system, Segoe UI, sans-serif"
-    family = brand.font.family or default_family
+    brand_name = (brand.font.family or "").strip()
     if brand.font.files:
-        family = "ReelsmithBrand, " + family
+        face_name = brand_name or "BrandFont"
+        family = f"'{face_name}', {default_family}"
+        font_face_css = _font_face_css(demo_root, brand, face_name)
+    else:
+        family = brand_name or default_family
+        font_face_css = ""
     logo_uri: str | None = None
     if brand.logo:
         logo_path = (demo_root / brand.logo).resolve()
@@ -129,7 +134,7 @@ def resolve_theme(spec: SpecModel, brand: BrandModel, demo_root: Path) -> SlideT
         accent=accent,
         muted=muted,
         font_family=family,
-        font_face_css=_font_face_css(demo_root, brand, "ReelsmithBrand"),
+        font_face_css=font_face_css,
         logo_uri=logo_uri,
         style="studio" if studio else "classic",
         brand_name=(brand.name or "").strip(),

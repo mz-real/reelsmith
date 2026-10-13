@@ -5,13 +5,16 @@ from __future__ import annotations
 import pytest
 
 from reelsmith.compose.transitions import (
+    DISSOLVE,
     XFADE,
+    boundary_fade_durations,
     boundary_transitions,
     ffmpeg_transition,
     padded_lengths,
     scene_starts,
     xfade_filters,
 )
+from reelsmith.models.spec import SceneSpec
 
 
 def test_scene_starts_add_up_timeline_durations() -> None:
@@ -49,6 +52,22 @@ def test_boundary_transitions_use_incoming_scene_or_default() -> None:
     names = boundary_transitions([None, "slide", "zoom"], "fade")
     assert names == ["slideleft", "zoomin"]
     assert boundary_transitions([None], "push") == []
+
+
+def test_same_clip_pair_gets_a_short_dissolve() -> None:
+    scenes = [
+        SceneSpec(id="a", layout="browser", clip="search"),
+        SceneSpec(id="b", layout="browser", clip="search"),
+    ]
+    assert boundary_fade_durations(scenes) == [DISSOLVE]
+
+
+def test_slide_join_uses_the_longer_fade() -> None:
+    scenes = [
+        SceneSpec(id="a", layout="slide", slide="intro"),
+        SceneSpec(id="b", layout="browser", clip="search"),
+    ]
+    assert boundary_fade_durations(scenes) == [XFADE]
 
 
 def test_xfade_chain_uses_per_boundary_names() -> None:

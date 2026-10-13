@@ -46,3 +46,22 @@ def is_cached(path: Path) -> bool:
     """A finished scene file. Renders go to a temp name first, so a crash
     never leaves a half written file under this name."""
     return path.is_file() and path.stat().st_size > 0
+
+
+@lru_cache(maxsize=1)
+def render_code_fingerprint() -> str:
+    """A hash of the compose and slide code, so an upgrade or a local edit rebuilds scenes.
+
+    The package version alone misses changes between releases and in editable installs.
+    """
+    return code_fingerprint(Path(__file__).resolve().parent.parent)
+
+
+def code_fingerprint(root: Path) -> str:
+    """The hash behind render_code_fingerprint, for any package root."""
+    digest = hashlib.sha256()
+    for folder in ("compose", "slides"):
+        for path in sorted((root / folder).glob("*.py")):
+            digest.update(path.name.encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:16]

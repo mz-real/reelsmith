@@ -48,9 +48,13 @@ class VoiceSettings(StrictModel):
         return self
 
 
+HoldMotion = Literal["push", "none"]
+
+
 class Options(StrictModel):
     allow_holds: bool = True
     speed_up_waits: bool = False
+    hold_motion: HoldMotion = "push"
     captions: Literal["none", "burned", "srt", "both"] = "burned"
     highlight_clicks: bool = True
     transition: TransitionKind = "fade"

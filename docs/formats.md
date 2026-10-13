@@ -74,6 +74,7 @@ voice:
 options:
   allow_holds: true      # may hold the last frame when a line needs more time
   speed_up_waits: false  # may speed up long waits
+  hold_motion: push      # push: slow zoom on holds, none: freeze the frame
   captions: burned       # none, burned, srt or both
   highlight_clicks: true
   line_gap: 0.4          # minimum gap between lines (seconds)
