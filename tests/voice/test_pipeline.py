@@ -106,8 +106,10 @@ class FakeTranscriber:
         return self.results[index]
 
 
-def _spec(speed: float = 1.0) -> SpecModel:
-    return SpecModel(voice=VoiceSettings(engine="kokoro", kokoro_voice="af_heart", speed=speed))
+def _spec(speed: float = 1.0, clean: bool = False) -> SpecModel:
+    return SpecModel(
+        voice=VoiceSettings(engine="kokoro", kokoro_voice="af_heart", speed=speed, clean=clean)
+    )
 
 
 def _script(lines: dict[str, str]) -> ScriptModel:
@@ -157,6 +159,22 @@ def test_generate_writes_wav_and_timings(tmp_path: Path) -> None:
     assert timings_path.exists()
     payload = json.loads(timings_path.read_text(encoding="utf-8"))
     assert payload["lines"][0]["pace_checked"] is False
+
+
+def test_pace_retries_stretch_audio_when_the_engine_ignores_speed(tmp_path: Path) -> None:
+    paths = DemoPaths.at(tmp_path)
+    text = "one two three four five six seven eight nine ten"
+    script = _script({"l1": text})
+    engine = ScalingFakeEngine(text, wpm_at_speed_one=220.0)
+    engine.controls_rate = False
+    transcriber = _matching_transcriber(text)
+
+    report = generate(paths, _spec(), script, None, engine=engine, transcribe_fn=transcriber)
+
+    line = report.lines[0]
+    assert line.pace_retried is True
+    assert len(engine.calls) == 1
+    assert pace_ok(line.wpm)
 
 
 def test_generate_corrects_pace_by_scaling_speed_within_two_attempts(tmp_path: Path) -> None:
@@ -468,7 +486,7 @@ def test_a_line_without_say_keeps_its_old_hash() -> None:
     from reelsmith.voice.pipeline import _line_hash
 
     line = Line(id="l1", phrases=[Phrase(text="hello world")])
-    old = hashlib.sha256(b"hello world|fake|af_heart|1.0").hexdigest()
+    old = hashlib.sha256(b"hello world|fake|af_heart|1.0|clean=1").hexdigest()
 
     assert _line_hash(line, "fake", "af_heart", 1.0) == old
 
@@ -532,7 +550,10 @@ def test_the_line_hash_is_unaffected_by_pronounce_for_a_line_without_the_word(
 
     mapped_spec = SpecModel(
         voice=VoiceSettings(
-            engine="kokoro", kokoro_voice="af_heart", pronounce={"reelsmith": "ɹˈiːl smɪθ"}
+            engine="kokoro",
+            kokoro_voice="af_heart",
+            pronounce={"reelsmith": "ɹˈiːl smɪθ"},
+            clean=False,
         )
     )
     mapped_engine = FakeEngine(durations=[0.8])

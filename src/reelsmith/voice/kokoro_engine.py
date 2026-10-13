@@ -115,6 +115,7 @@ class KokoroEngine:
     # read as. See voice.pronounce in spec.yaml.
     pronounce: Mapping[str, str] = field(default_factory=dict)
     name: str = "kokoro"
+    controls_rate: bool = True
     _word_phonemes: dict[str, str] = field(default_factory=dict, init=False, repr=False)
 
     def _matched_words(self, text: str) -> list[str]:

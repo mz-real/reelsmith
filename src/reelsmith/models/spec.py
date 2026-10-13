@@ -23,6 +23,7 @@ class VoiceSettings(StrictModel):
     engine: Literal["kokoro", "chatterbox", "none"] = "kokoro"
     kokoro_voice: str = "af_heart"
     speed: float = Field(default=1.0, gt=0.0)
+    clean: bool = True
     sample: str | None = None
     consent: Literal["own", "permission"] | None = None
     # Product names and other rare words, passed to the speech model as hints.
@@ -53,6 +54,9 @@ class Options(StrictModel):
     captions: Literal["none", "burned", "srt", "both"] = "burned"
     highlight_clicks: bool = True
     transition: TransitionKind = "fade"
+    line_gap: float = Field(default=0.4, ge=0.0)
+    loudness: float = Field(default=-16.0, ge=-30.0, le=-10.0)
+    true_peak: float | None = Field(default=None, ge=-6.0, le=0.0)
 
 
 class PanelPoint(StrictModel):

@@ -9,7 +9,14 @@ from reelsmith.compose.graph import SAMPLE_RATE, Encode, encode_args
 from reelsmith.compose.layouts import num
 from reelsmith.compose.transitions import XFADE, scene_starts, xfade_filters
 
-LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11"
+DEFAULT_TRUE_PEAK = -1.5
+
+
+def loudnorm_filter(integrated: float = -16.0, true_peak: float = DEFAULT_TRUE_PEAK) -> str:
+    return f"loudnorm=I={integrated:g}:TP={true_peak:g}:LRA=11"
+
+
+LOUDNORM = loudnorm_filter()
 
 
 def master_args(
@@ -19,6 +26,8 @@ def master_args(
     out: Path,
     fade: float = XFADE,
     transitions: Sequence[str] | None = None,
+    loudness: float = -16.0,
+    true_peak: float = DEFAULT_TRUE_PEAK,
 ) -> list[str]:
     """Cross fade the scenes and lay each scene's audio at its start time.
 
@@ -35,9 +44,8 @@ def master_args(
         chains.append(f"[{k}:a]adelay={round(start * 1000)}:all=1[sa{k}]")
     labels = "".join(f"[sa{k}]" for k in range(len(starts)))
     mix = f"amix=inputs={len(starts)}:normalize=0:duration=longest," if len(starts) > 1 else ""
-    chains.append(
-        f"{labels}{mix}{LOUDNORM},aresample={SAMPLE_RATE},atrim=duration={num(total)}[aout]"
-    )
+    norm = loudnorm_filter(loudness, true_peak)
+    chains.append(f"{labels}{mix}{norm},aresample={SAMPLE_RATE},atrim=duration={num(total)}[aout]")
     return [
         *inputs,
         "-filter_complex",

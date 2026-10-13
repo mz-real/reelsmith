@@ -91,7 +91,7 @@ def _write_voice(root: Path) -> None:
                     "scene": scene.id,
                     "line": line.id,
                     "file": name,
-                    "hash": _line_hash(line, "kokoro", "af_heart", 1.0, {}),
+                    "hash": _line_hash(line, "kokoro", "af_heart", 1.0, {}, clean=True),
                 }
             )
     payload = {"engine": "kokoro", "voice": "af_heart", "lines": lines}

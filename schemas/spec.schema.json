@@ -102,6 +102,33 @@
           ],
           "title": "Transition",
           "type": "string"
+        },
+        "line_gap": {
+          "default": 0.4,
+          "minimum": 0.0,
+          "title": "Line Gap",
+          "type": "number"
+        },
+        "loudness": {
+          "default": -16.0,
+          "maximum": -10.0,
+          "minimum": -30.0,
+          "title": "Loudness",
+          "type": "number"
+        },
+        "true_peak": {
+          "anyOf": [
+            {
+              "maximum": 0.0,
+              "minimum": -6.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "True Peak"
         }
       },
       "title": "Options",
@@ -270,6 +297,11 @@
           "exclusiveMinimum": 0.0,
           "title": "Speed",
           "type": "number"
+        },
+        "clean": {
+          "default": true,
+          "title": "Clean",
+          "type": "boolean"
         },
         "sample": {
           "anyOf": [
