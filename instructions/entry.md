@@ -42,7 +42,7 @@ Each step (spec, clips, script, voice, slides, master, qa, export) is `done`, `s
 ## Workflow
 
 1. **Interview.** Follow `{{guides}}/interview.md`. The first question picks the mode: Narrate (they already have a recording) or Produce (a full demo).
-2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
+2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`story`, `quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
 3. **Footage.**
    - Narrate mode: `{{guides}}/narrate.md`.
    - Web app: `{{guides}}/capture-web.md`.

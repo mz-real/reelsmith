@@ -58,6 +58,15 @@ def test_profile_from_spec_chatterbox(tmp_path: Path) -> None:
     assert profile_from_spec(spec) == DoctorProfile.CLONE
 
 
+def test_cloud_engine_uses_cloud_profile(tmp_path: Path) -> None:
+    spec = tmp_path / "spec.yaml"
+    spec.write_text(
+        "version: 1\nvoice:\n  engine: elevenlabs\n  provider_voice_id: x\n",
+        encoding="utf-8",
+    )
+    assert profile_from_spec(spec) == DoctorProfile.CLOUD
+
+
 def test_web_profile_ok_without_java_or_maestro(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("shutil.which", lambda name: f"/bin/{name}" if name == "ffmpeg" else None)
 

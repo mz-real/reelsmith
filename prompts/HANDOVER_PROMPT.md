@@ -51,7 +51,7 @@ Each step (spec, clips, script, voice, slides, master, qa, export) is `done`, `s
 ## Workflow
 
 1. **Interview.** Follow `reelsmith-guides/interview.md`. The first question picks the mode: Narrate (they already have a recording) or Produce (a full demo).
-2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
+2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`story`, `quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
 3. **Footage.**
    - Narrate mode: `reelsmith-guides/narrate.md`.
    - Web app: `reelsmith-guides/capture-web.md`.
@@ -81,7 +81,7 @@ Any step can be rerun on its own. If the user changes words, rerun from voice. I
 
 ## Guides
 
-- `reelsmith-guides/interview.md`: Interview. Learn what the user wants in a few short questions, then write spec.yaml and get it approved.
+- `reelsmith-guides/interview.md`: Interview. Learn what the user wants in clear steps, one question at a time, then write spec.yaml and get it approved.
 - `reelsmith-guides/narrate.md`: Narrate a recording. Add a voice that explains each click in a recording the user already has.
 - `reelsmith-guides/capture-web.md`: Capture a web app. Record each web scene as a clip with Playwright, with every click logged at its exact time and position, so narration can be pinned to it.
 - `reelsmith-guides/capture-mobile.md`: Capture a mobile app. Record each mobile scene as a clip on an iOS simulator or an Android emulator or device.

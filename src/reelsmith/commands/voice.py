@@ -14,11 +14,19 @@ from reelsmith.fsutil import backup_existing
 from reelsmith.models import ScriptModel, SpecModel, load_model
 from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
+from reelsmith.voice.chatterbox_engine import CONSENT_VALUES
 from reelsmith.voice.compare import CompareReport, clone_engine, compare_references, why
+from reelsmith.voice.elevenlabs_engine import clone_voice as elevenlabs_clone
+from reelsmith.voice.elevenlabs_engine import default_api_key_env as elevenlabs_env
+from reelsmith.voice.elevenlabs_engine import delete_voice as elevenlabs_delete
+from reelsmith.voice.gradium_engine import clone_voice as gradium_clone
+from reelsmith.voice.gradium_engine import default_api_key_env as gradium_env
+from reelsmith.voice.gradium_engine import delete_voice as gradium_delete
 from reelsmith.voice.kokoro_engine import KokoroEngine
 from reelsmith.voice.pipeline import LineReport, VoiceReport, generate
 from reelsmith.voice.quality import pace_ok
 from reelsmith.voice.reference import ReferencePick, load_recording, pick_reference
+from reelsmith.voice.spec_patch import patch_voice_fields
 from reelsmith.voice.transcribe import transcribe
 
 # Module level so tests can swap in a fake engine and transcriber.
@@ -266,3 +274,110 @@ def compare_command(
         transcribe_fn=compare_transcribe,
     )
     return emit(_compare_result(report))
+
+
+def _cloud_api_key_env(spec: SpecModel, provider: str) -> str:
+    if spec.voice.api_key_env:
+        return spec.voice.api_key_env
+    return elevenlabs_env() if provider == "elevenlabs" else gradium_env()
+
+
+@app.command("clone")
+def clone_command(
+    sample: Annotated[Path, typer.Option("--sample", help="Voice sample to upload.")],
+    name: Annotated[str, typer.Option("--name", help="Name for the cloned voice.")],
+    consent: Annotated[str, typer.Option("--consent", help="own or permission.")],
+    directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
+    provider: Annotated[
+        str,
+        typer.Option("--provider", help="Cloud provider: elevenlabs or gradium."),
+    ] = "elevenlabs",
+) -> int:
+    """Clone a voice at ElevenLabs or Gradium and save the id in spec.yaml."""
+    if consent not in CONSENT_VALUES:
+        raise ReelsmithError(
+            "Cloning needs consent.",
+            fix="Pass --consent own or --consent permission.",
+        )
+    if provider not in ("elevenlabs", "gradium"):
+        raise ReelsmithError(
+            f"Unknown provider {provider!r}.",
+            fix="Use --provider elevenlabs or --provider gradium.",
+        )
+    if not sample.is_file():
+        raise ReelsmithError(f"Sample not found: {sample}", fix="Check --sample")
+    paths = DemoPaths.at(demo_dir(directory, None))
+    spec = load_model(paths.spec, SpecModel)
+    api_key_env = _cloud_api_key_env(spec, provider)
+    if provider == "elevenlabs":
+        voice_id = elevenlabs_clone(sample, name, api_key_env=api_key_env)
+        engine = "elevenlabs"
+    else:
+        voice_id = gradium_clone(sample, name, api_key_env=api_key_env)
+        engine = "gradium"
+    patch_voice_fields(
+        paths.spec,
+        engine=engine,
+        provider_voice_id=voice_id,
+        api_key_env=api_key_env,
+        consent=consent,
+    )
+    return emit(
+        Result(
+            status=Status.OK,
+            message=f"Cloned voice at {provider}",
+            details=[f"provider_voice_id: {voice_id}", f"api_key_env: {api_key_env}"],
+            next_step="reelsmith voice generate",
+        )
+    )
+
+
+@app.command("delete-clone")
+def delete_clone_command(
+    directory: Annotated[Path | None, typer.Argument(help=DEMO_DIR_HELP)] = None,
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", help="Delete without asking."),
+    ] = False,
+) -> int:
+    """Delete the cloud voice id in spec.yaml from the provider."""
+    paths = DemoPaths.at(demo_dir(directory, None))
+    spec = load_model(paths.spec, SpecModel)
+    if spec.voice.engine not in ("elevenlabs", "gradium"):
+        raise ReelsmithError(
+            "spec.yaml does not use a cloud voice engine.",
+            fix="Set voice.engine to elevenlabs or gradium first.",
+        )
+    voice_id = spec.voice.provider_voice_id
+    if not voice_id:
+        raise ReelsmithError(
+            "No voice.provider_voice_id in spec.yaml.",
+            fix="Nothing to delete.",
+        )
+    if not yes:
+        answer = typer.confirm(
+            f"Delete voice {voice_id} from {spec.voice.engine}? This cannot be undone."
+        )
+        if not answer:
+            return emit(
+                Result(
+                    status=Status.OK,
+                    message="Delete cancelled",
+                    next_step="reelsmith status",
+                )
+            )
+    api_key_env = spec.voice.api_key_env or (
+        elevenlabs_env() if spec.voice.engine == "elevenlabs" else gradium_env()
+    )
+    if spec.voice.engine == "elevenlabs":
+        elevenlabs_delete(voice_id, api_key_env=api_key_env)
+    else:
+        gradium_delete(voice_id, api_key_env=api_key_env)
+    return emit(
+        Result(
+            status=Status.OK,
+            message="Cloud voice deleted at the provider",
+            details=[f"removed {voice_id}"],
+            next_step="Clear voice.provider_voice_id in spec.yaml if you will not use it again",
+        )
+    )

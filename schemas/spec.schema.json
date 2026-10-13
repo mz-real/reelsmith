@@ -291,6 +291,8 @@
           "enum": [
             "kokoro",
             "chatterbox",
+            "elevenlabs",
+            "gradium",
             "none"
           ],
           "title": "Engine",
@@ -339,6 +341,35 @@
           ],
           "default": null,
           "title": "Consent"
+        },
+        "provider_voice_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Voice Id"
+        },
+        "api_key_env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Api Key Env"
+        },
+        "model": {
+          "default": "eleven_multilingual_v2",
+          "title": "Model",
+          "type": "string"
         },
         "vocabulary": {
           "items": {

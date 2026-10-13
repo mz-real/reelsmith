@@ -14,9 +14,17 @@ from reelsmith.paths import DemoPaths
 from reelsmith.result import Result, Status, emit
 from reelsmith.status import shell_arg
 
-PRESETS: tuple[str, ...] = ("quick", "tour", "mobile", "release-notes", "narrate")
+PRESETS: tuple[str, ...] = (
+    "quick",
+    "story",
+    "tour",
+    "mobile",
+    "release-notes",
+    "narrate",
+)
 PRESET_NAMES = {
     "quick": "quick feature clip",
+    "story": "chaptered product demo",
     "tour": "full app tour",
     "mobile": "mobile demo",
     "release-notes": "release notes video",

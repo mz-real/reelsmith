@@ -4,7 +4,7 @@
 
 Narrated product demos, made on your own machine and checked before you share them.
 
-You ask your AI coding tool for a demo. It interviews you, writes a plan and drives the `reelsmith` CLI: it records the app, voices the script with a local model, renders slides, puts it all together, then checks the finished video. You approve the plan and the words before anything is voiced or rendered. Nothing is uploaded.
+You ask your AI coding tool for a demo. It interviews you, writes a plan and drives the `reelsmith` CLI: it records the app, voices the script (local by default), renders slides, puts it all together, then checks the finished video. You approve the plan and the words before anything is voiced or rendered. Audio stays on your machine unless you choose a cloud voice.
 
 https://github.com/user-attachments/assets/f8cad838-b6bf-4ef9-8fef-a250751d1a61
 
@@ -179,7 +179,7 @@ The consent policy, stated plainly:
 - Only clone your own voice, or a voice you have the speaker's permission to use.
 - `spec.yaml` records that consent as `consent: own` or `consent: permission`. Without it, reelsmith refuses to clone.
 - The Chatterbox watermark is always on. reelsmith will not run a build without it.
-- Nothing is uploaded. Your sample and the generated audio stay on your machine.
+- Local by default. Your sample and the generated audio stay on your machine. Cloud voices are optional and send lines to the provider you choose.
 
 Cloning is supported and covered by tests with stand ins. A real Chatterbox run is on the manual release checklist. More in [docs/voices.md](docs/voices.md).
 
@@ -201,6 +201,8 @@ Most commands take the demo folder as an argument and default to the current fol
 | `reelsmith voice generate` | Voice every line in script.yaml. `--only scene/line` to redo some. |
 | `reelsmith voice pick-reference <recording>` | Find the cleanest stretch of a voice recording for cloning. |
 | `reelsmith voice compare --refs a.wav,b.wav` | Read a few lines with each reference and recommend one. |
+| `reelsmith voice clone --provider elevenlabs --sample ref.wav --name NAME --consent own` | Clone a cloud voice and save the id in spec.yaml. |
+| `reelsmith voice delete-clone` | Remove the cloud voice id from the provider. |
 | `reelsmith slides` | Render slides from slides.yaml. |
 | `reelsmith compose` | Render each scene and join them into `build/master_<format>.mp4`. `--preview` for a fast 540p draft. |
 | `reelsmith qa` | Check the composed video and write `qa/report.md`. |

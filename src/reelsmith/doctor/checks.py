@@ -13,14 +13,22 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 from reelsmith import __version__
 from reelsmith.doctor.profiles import (
     DoctorProfile,
     active_check_names,
     check_run_order,
+    find_spec_path,
     resolve_profile,
 )
 from reelsmith.result import Status
+from reelsmith.voice.cloud_http import resolve_host
+from reelsmith.voice.elevenlabs_engine import default_api_key_env as elevenlabs_env
+from reelsmith.voice.elevenlabs_engine import host as elevenlabs_host
+from reelsmith.voice.gradium_engine import default_api_key_env as gradium_env
+from reelsmith.voice.gradium_engine import host as gradium_host
 from reelsmith.voice.models_dl import KOKORO_INT8, KOKORO_VOICES, models_dir
 from reelsmith.voice.transcribe import WHISPER_MODEL, whisper_model_cache_dir
 
@@ -69,6 +77,7 @@ def _check_runner(name: str) -> Callable[[], Check]:
         "kokoro model": check_kokoro_model,
         "whisper model": check_whisper_model,
         "chatterbox": check_chatterbox,
+        "cloud voice": check_cloud_voice,
         "gpu": check_gpu,
         "plugin version": check_plugin_version,
     }
@@ -325,6 +334,52 @@ def check_gpu() -> Check:
         name=name,
         status=Status.WARN,
         found="no GPU detected, voice and video will use CPU",
+        fix=None,
+    )
+
+
+def check_cloud_voice() -> Check:
+    name = "cloud voice"
+    spec_path = find_spec_path(None)
+    if spec_path is None or not spec_path.is_file():
+        return Check(
+            name=name,
+            status=Status.WARN,
+            found="no spec.yaml in the working folder",
+            fix="Run from a demo folder or pass --spec",
+        )
+    data = yaml.safe_load(spec_path.read_text(encoding="utf-8"))
+    voice = data.get("voice") if isinstance(data, dict) else None
+    if not isinstance(voice, dict):
+        voice = {}
+    engine = voice.get("engine", "kokoro")
+    if engine == "elevenlabs":
+        env_name = voice.get("api_key_env") or elevenlabs_env()
+        host = elevenlabs_host()
+    elif engine == "gradium":
+        env_name = voice.get("api_key_env") or gradium_env()
+        host = gradium_host()
+    else:
+        return Check(
+            name=name,
+            status=Status.OK,
+            found="not a cloud voice in spec.yaml",
+            fix=None,
+        )
+    if not os.environ.get(str(env_name), "").strip():
+        return Check(
+            name=name,
+            status=Status.ERROR,
+            found=f"{env_name} is not set",
+            fix=f"Set {env_name} in your environment.",
+        )
+    resolved = resolve_host(host)
+    if resolved.startswith("cannot"):
+        return Check(name=name, status=Status.ERROR, found=resolved, fix="Check your network.")
+    return Check(
+        name=name,
+        status=Status.OK,
+        found=f"{env_name} is set; {resolved}",
         fix=None,
     )
 

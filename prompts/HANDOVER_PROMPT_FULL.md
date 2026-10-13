@@ -49,7 +49,7 @@ Each step (spec, clips, script, voice, slides, master, qa, export) is `done`, `s
 ## Workflow
 
 1. **Interview.** Follow `reelsmith-guides/interview.md`. The first question picks the mode: Narrate (they already have a recording) or Produce (a full demo).
-2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
+2. **Plan.** Run `reelsmith init DIR --preset NAME` with the preset closest to the answers (`story`, `quick`, `tour`, `mobile`, `release-notes` or `narrate`), then fill in `DIR/spec.yaml` from the answers. Prefer a preset over writing spec.yaml from scratch. Show it to the user. **Approval point 1: the user approves spec.yaml.**
 3. **Footage.**
    - Narrate mode: `reelsmith-guides/narrate.md`.
    - Web app: `reelsmith-guides/capture-web.md`.
@@ -79,7 +79,7 @@ Any step can be rerun on its own. If the user changes words, rerun from voice. I
 
 ## Guides
 
-- `reelsmith-guides/interview.md`: Interview. Learn what the user wants in a few short questions, then write spec.yaml and get it approved.
+- `reelsmith-guides/interview.md`: Interview. Learn what the user wants in clear steps, one question at a time, then write spec.yaml and get it approved.
 - `reelsmith-guides/narrate.md`: Narrate a recording. Add a voice that explains each click in a recording the user already has.
 - `reelsmith-guides/capture-web.md`: Capture a web app. Record each web scene as a clip with Playwright, with every click logged at its exact time and position, so narration can be pinned to it.
 - `reelsmith-guides/capture-mobile.md`: Capture a mobile app. Record each mobile scene as a clip on an iOS simulator or an Android emulator or device.
@@ -96,7 +96,7 @@ The guide below is `reelsmith-guides/interview.md`.
 
 ## Goal
 
-Learn what the user wants in a few short questions, then write spec.yaml and get it approved. This is approval point 1. Keep it quick: most people should be done in six questions or fewer.
+Learn what the user wants in clear steps, one question at a time, then write spec.yaml and get it approved. This is approval point 1. The demo must follow the answers: features shown, structure, logic slides, voice, captions and format.
 
 ## Rules
 
@@ -109,9 +109,9 @@ Learn what the user wants in a few short questions, then write spec.yaml and get
 
 ## What to ask or check
 
-Ask one question per message. Offer two to four suggested answers and a sensible default, so the user can reply with a single word. Skip a question when the answer is already clear from what they said or from the app.
+Ask one question per message. Offer two to four numbered suggested answers and a sensible default, so the user can reply with a number or a short phrase. Skip a question when the answer is already clear from what they said or from the app.
 
-Before you ask, look at the project: read the README, the routes or screens, and how the app starts. Use what you find to make the suggested answers concrete ("the checkout flow", not "a feature").
+Before you ask about features, read the project: README, routes, screens and how the app starts. Use real names from the code, not placeholders like "a feature".
 
 **Question 1 always picks the mode:**
 
@@ -119,138 +119,171 @@ Before you ask, look at the project: read the README, the routes or screens, and
 > 1. Narrate my recording
 > 2. Produce a full demo (default)
 
-- Narrate: continue with the questions below, then follow `reelsmith-guides/narrate.md`.
-- Produce: continue with the questions below.
+- Narrate: continue with the questions below that still apply, then follow `reelsmith-guides/narrate.md`.
+- Produce: continue with all questions below.
 
-**Offer a preset next.** A preset fills in most answers at once, so the interview gets shorter:
+**Question 2: Features (Produce only, skip if already clear).**
 
-| Preset | `--preset` | Length | Usual answers |
-|---|---|---|---|
-| Quick feature clip | `quick` | 30 to 60 s | one feature, `16:9`, slides only for the intro |
-| Full app tour | `tour` | 3 to 5 min | every main screen, `16:9`, a slide per section |
-| Mobile demo | `mobile` | 30 to 90 s | mobile footage, `16:9` and `9:16`, phone layout |
-| Release notes video | `release-notes` | 1 to 2 min | one scene per change, `16:9` and `1:1` |
-| Narrate a recording | `narrate` | the recording's length | imported footage, `full` layout, no slides |
+> Which parts of the app should the video show? Pick several.
+> Suggest two to four real features you found, for example checkout, search, settings, onboarding.
+> Let the user add or remove names. Then suggest how to group them into chapters (one chapter per feature or one per area). Confirm the grouping.
 
-**Then ask, one at a time, only what the preset did not settle:**
+**Question 3: Structure.**
 
-1. What should it show? Suggest: one feature, a full tour, the mobile app, or release notes. Name real features you found in the app.
-2. Who is watching, and how long should it be? Suggest: team, customers or social, and 30 s, 90 s, 3 min or 5 min.
-3. Where does the footage come from? Suggest: your own recordings (import), automated web capture, or automated mobile capture. Web capture needs a URL or a local file the browser can open. Mobile capture needs an iOS simulator (macOS only) or an Android emulator or device.
-4. Which voice? Suggest: a Kokoro stock voice (default), your own voice (Chatterbox), or silent with captions. For Kokoro, start with `af_heart` (US female, default) and `am_michael` (US male, calm), then mention `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Offer `reelsmith voice preview` so they can hear them.
-5. Format, branding and anything to blur. Suggest: `16:9` (default), `9:16`, `1:1`, or several. Theme `dark` (default), `light` or `minimal`. Ask whether they have a logo, colours or a font for brand.yaml. Always set `name` in brand.yaml to the product's name: it shows in every slide footer, and `reelsmith script check` warns while it still says `My product`. Ask whether any emails, names, keys or prices on screen must be hidden.
-6. Optional: a sample of how they talk (a past video, a blog post, a README they wrote). Use it for the script's tone.
+> What shape should the video take?
+> 1. Chaptered product demo: title, overview, then per chapter a chapter card, a logic slide, then live clips, then a closing slide (default when they picked three or more features)
+> 2. Quick feature clip: one feature, about 30 to 60 seconds
+> 3. Full app tour: walk every main area, about 3 to 5 minutes
+> 4. Release notes: one scene per change, about 1 to 2 minutes
 
-**Consent gate for your own voice (Chatterbox).** If the user picks their own voice, ask this before anything else about the voice:
+Map the answer to `reelsmith init --preset`: `story`, `quick`, `tour` or `release-notes`. Use `story` when they picked the chaptered demo or have three or more features unless they asked for something else.
+
+**Question 4: Logic explanation (chaptered demo and tours).**
+
+> How much business logic should we explain on slides before the live footage?
+> 1. None: only show the app
+> 2. One logic slide per chapter: state the rule in plain words and build step by step with the narration (default)
+> 3. One logic slide per feature: same idea, finer granularity
+
+A logic slide is a `flow` slide with `step_style: reveal`. Write one phrase per step so each step appears as the voice says it.
+
+**Question 5: Audience and length.**
+
+> Who is watching, and how long should it be?
+> Suggest: team, customers or social, and 30 s, 90 s, 3 min or 5 min. Set `audience` and `target_seconds` in spec.yaml.
+
+**Question 6: Footage source (unchanged meaning).**
+
+> Where does the footage come from?
+> 1. Your own recordings (`footage: import`)
+> 2. Automated web capture (`footage: web`, default for web apps)
+> 3. Automated mobile capture (`footage: mobile`)
+
+Web capture needs a URL or a local file the browser can open. Mobile capture needs an iOS simulator (macOS only) or an Android emulator or device. For mobile footage you can still use the `mobile` preset or a phone layout in another preset.
+
+**Question 7: Voice.**
+
+> Which voice should narrate the demo?
+> 1. Local stock voice (Kokoro, default). Nothing leaves the machine.
+> 2. Your own voice, cloned locally with Chatterbox (consent gate below).
+> 3. A cloud voice provider: ElevenLabs or Gradium.
+> 4. Silent, captions only (`voice.engine: none`)
+
+For Kokoro, start with `af_heart` (US female, default) and `am_michael` (US male). Offer `reelsmith voice preview` to hear more.
+
+**Consent gate (Chatterbox or cloud clone from a sample).** Before cloning, ask:
 
 > Is this sample your own voice, or do you have permission from the person speaking to clone it?
 > 1. It is my own voice
 > 2. I have their permission
 > 3. Neither
 
-- Own voice: set `consent: own`. Permission: set `consent: permission`.
-- Neither, or no clear answer: do not clone. Offer a Kokoro voice instead. No consent, no cloning.
-- Cloning also needs the optional install: `uv tool install --python 3.12 "reelsmith[clone]"` (Python 3.11 or 3.12).
+Own voice: `consent: own`. Permission: `consent: permission`. Neither: do not clone. No consent, no cloning. Offer Kokoro or an existing cloud voice id instead. Chatterbox needs `uv tool install --python 3.12 "reelsmith[clone]"` on Python 3.11 or 3.12.
+
+**Cloud voice follow-ups (when they picked ElevenLabs or Gradium).**
+
+Ask one follow-up at a time:
+
+1. Use an existing voice id from their account, or clone from a new sample?
+2. If existing: ask for the voice id (not the API key). Set `voice.engine` to `elevenlabs` or `gradium` and `voice.provider_voice_id`.
+3. If clone: run the consent gate, then say plainly that the sample and every script line will be sent to that provider. Run `reelsmith voice clone --provider elevenlabs|gradium --sample PATH --name NAME --consent own|permission`.
+4. Ask for the **name** of the environment variable that holds the API key (default `ELEVENLABS_API_KEY` or `GRADIUM_API_KEY`). Set `voice.api_key_env` in spec.yaml. Tell the user to set the variable themselves. Never ask them to paste a key into the chat and never log a key.
+
+Optional: ElevenLabs model id in `voice.model` (default `eleven_multilingual_v2`).
+
+**Question 8: Captions.**
+
+> How should captions be delivered?
+> 1. Burned-in subtitles on the video (`options.captions: burned`)
+> 2. An .srt file only (`options.captions: srt`)
+> 3. Both burned-in and an .srt file (default)
+> 4. None (`options.captions: none`)
+
+**Question 9: Format and quality.**
+
+> Which formats and quality?
+> Suggest aspect ratios: `16:9` (default), `9:16`, `1:1`, or several in `formats`.
+> Resolution: `1080p` (default) or `4k`.
+> Theme: `studio` (default), `dark`, `light` or `minimal`.
+> Loudness: web style `-16` LUFS (default) or broadcast `-23` LUFS in `options.loudness`.
+
+**Question 10: Branding and privacy.**
+
+> Branding and anything to hide on screen?
+> Set `name` and colours in brand.yaml, optional logo and font. Ask whether emails, names, keys or prices must be blurred (`blur:` boxes in spec.yaml).
+
+**Question 11 (optional): Tone sample.**
+
+> Do you have a sample of how you talk (a video, blog post or README)?
+> Use it for script tone if they share one.
+
+## After the questions
+
+Summarise the answers in one short bullet list. Then write or update spec.yaml, brand.yaml and the preset files. Show the user the plan in plain words and the file. **Approval point 1: the user approves spec.yaml.**
 
 ## Commands
 
-Create the demo folder from the preset closest to the answers. Use a new or empty folder, for example `demo/` inside their project:
+Create the demo folder from the preset that matches structure:
 
 ```
-reelsmith init demo --preset quick
+reelsmith init demo --preset story
 ```
 
-Presets: `quick`, `tour`, `mobile`, `release-notes` and `narrate`. Prefer a preset over writing spec.yaml from scratch: it already has the Studio theme, sensible options, scenes in a good order, and a matching script.yaml and slides.yaml skeleton. Comments in each file say what to fill in. Edit the goal, audience, scenes and clip ids to match the answers, and leave the rest unless the user asked for something else.
+Presets: `quick`, `story`, `tour`, `mobile`, `release-notes` and `narrate`. Prefer a preset over writing spec.yaml from scratch. Edit goal, audience, scenes, clip ids and voice to match the answers.
 
-Without `--preset`, `reelsmith init demo` writes a small example spec.yaml, brand.yaml and script.yaml to replace by hand.
-
-A Produce spec.yaml for a web app:
+Example Produce spec.yaml fragments:
 
 ```yaml
-version: 1
-mode: produce
-goal: Show how to save a favourite recipe
-audience: customers
-target_seconds: 90
-formats: ["16:9"]
-quality: 1080p          # 1080p or 4k
-theme: studio           # studio, dark, light or minimal
-footage: web            # import, web or mobile
 voice:
-  engine: kokoro        # kokoro, chatterbox or none
+  engine: kokoro
   kokoro_voice: af_heart
-  speed: 1.0
-  sample: null
-  consent: null
 options:
-  allow_holds: true
-  speed_up_waits: false
-  captions: burned      # none, burned, srt or both
-  highlight_clicks: true
-scenes:
-  - id: intro
-    layout: slide       # slide, phone, browser or full
-    slide: intro
-  - id: search
-    layout: browser
-    clip: search
-blur:
-  - clip: search
-    box: [0.05, 0.10, 0.30, 0.06]   # x, y, width, height as fractions of the frame
-    start: 0.0
-    end: null                        # null means to the end of the clip
+  captions: both
+  loudness: -16.0
 ```
 
-Own voice with consent:
+Cloud voice:
 
 ```yaml
 voice:
-  engine: chatterbox
-  sample: voice-sample.wav
-  consent: own          # own or permission
+  engine: elevenlabs
+  provider_voice_id: your_voice_id
+  api_key_env: ELEVENLABS_API_KEY
+  model: eleven_multilingual_v2
 ```
 
-Notes on the fields:
+Silent:
 
-- A `slide` scene needs `slide:` (an id in slides.yaml). Every other layout needs `clip:` (a clip id under `capture/clips/`).
-- Use `phone` for mobile footage, `browser` for web footage, `full` for raw recordings and desktop apps.
-- Scene ids must be unique. Use short lowercase ids like `intro`, `search`, `save`.
-- If you leave the blur list empty, write `blur: []`.
+```yaml
+voice:
+  engine: none
+options:
+  captions: burned
+```
 
-Show the user the finished spec.yaml in plain words (mode, goal, scenes in order, voice, format) as well as the file, and ask for approval.
+Show the user the finished spec.yaml in plain words (mode, goal, scenes in order, voice, captions, format) and ask for approval.
 
 ## Reading the output
 
-`reelsmith init` ends like this:
-
-```
-[OK] Demo folder ready at /path/to/demo
-  - preset: quick feature clip
-  - spec: /path/to/demo/spec.yaml
-  - script: /path/to/demo/script.yaml
-  - slides: /path/to/demo/slides.yaml
-Next: Fill in /path/to/demo/spec.yaml from the interview, then run: reelsmith status /path/to/demo
-```
-
-Most commands read spec.yaml, so a bad field shows up at the next command as an `[ERROR]` that names the field. Fix the file and rerun.
+`reelsmith init` ends with a result block naming the preset and paths. Most commands read spec.yaml; fix any `[ERROR]` that names a field and rerun.
 
 ## Common failures and fixes
 
 | Problem | Fix |
 |---|---|
-| `[ERROR] ... is not empty. Use --force to init anyway.` | Pick a new folder name. Only use `--force` if the user agrees, since it rewrites the starter files (old ones are kept as backups). |
-| `Cloning needs a voice sample and consent.` | Add `sample:` and `consent: own` or `consent: permission`. If the user did not give consent, switch to `engine: kokoro`. |
-| `Scene 'x' has layout slide, so it needs a slide` | Add `slide: <id>` to that scene, or change the layout. |
-| `Scene 'x' has layout browser, so it needs a clip` | Add `clip: <id>`. |
-| `Scene id 'x' is used more than once` | Rename one of the scenes. |
-| The user is unsure what to show | Suggest the Quick feature clip preset with the app's most used feature. |
+| `[ERROR] ... is not empty. Use --force to init anyway.` | Pick a new folder or use `--force` with care. |
+| `Cloning needs a voice sample and consent.` | Add consent or switch to Kokoro. |
+| `Set ELEVENLABS_API_KEY in your environment` | User sets the named env var locally. Never paste keys in chat. |
+| `Cloud voice needs voice.provider_voice_id` | Add an id or run `reelsmith voice clone`. |
+| Scene layout errors | Match `slide:` or `clip:` to the layout. |
 
 ## Done when
 
-- [ ] The mode is picked (question 1 was asked first).
-- [ ] Every scene in spec.yaml is a real screen or feature you found in the app, or one the user named.
-- [ ] Voice is set. For Chatterbox, `consent` is `own` or `permission`, as the user said.
-- [ ] Format, theme and blur list are set.
+- [ ] Mode was asked first (question 1).
+- [ ] Features and structure match what the user picked.
+- [ ] Logic slides match the logic explanation answer.
+- [ ] Voice and captions match the answers. Cloud keys only via env vars.
+- [ ] Format, theme, loudness and blur are set.
 - [ ] The user approved spec.yaml (approval point 1).
 
 ---
@@ -777,6 +810,7 @@ Then show the user the whole script as it will be read, scene by scene, with the
 - **Speed up repetitive taps.** Do not narrate the fifth identical tap. Say it once ("Add each ingredient the same way") and either cut the repeats from the flow or set `speed_up_waits: true` in spec.yaml so quiet stretches play faster.
 - **Keep the voice from running ahead of the clicks.** A phrase must fit in the gap before the next pinned event. At about 2.5 words per second, a 2 second gap holds about five words. If it does not fit, shorten the phrase. Holds (a frozen frame while the voice finishes) are a last resort, only if `allow_holds` is on, and at most about 3 seconds.
 - **Business logic first, then the screen.** Lead with what the user gets ("Your favourites stay on this device"), then where to click.
+- **Logic slides per chapter.** When the interview chose logic slides, add a `flow` slide with `step_style: reveal` before each chapter's footage. State the rule in plain words. Write one phrase per step so the slide builds with the narration. Match `options.captions` from spec.yaml: with `srt` or `both`, panel scenes still use points; burned captions follow the caption rules for footage.
 - **Truth rule.** Only claim what the viewer can see in that moment. No "instantly", "secure" or "AI powered" unless the screen shows it. Say "click" for web and desktop footage and "tap" for mobile footage, because this rule covers the words you use too.
 - Use short sentences and plain words. Spell numbers and names the way they should be spoken, or add `say:` when the captions should keep the written form.
 - **After you rename or split a line**, run `reelsmith voice generate` for every line, or `reelsmith voice generate --only` once per new scene/line id. The old line's audio is set aside automatically.
@@ -825,7 +859,7 @@ The guide below is `reelsmith-guides/voice.md`.
 
 ## Goal
 
-Turn the approved script into clean narration audio, one file per line, with each phrase timed so it can land on its event. Kokoro stock voices are the default. Chatterbox clones the user's own voice, only with consent.
+Turn the approved script into clean narration audio, one file per line, with each phrase timed so it can land on its event. Kokoro stock voices are the default and stay on the machine. Chatterbox clones locally with consent. ElevenLabs and Gradium are optional cloud engines: every line is sent to the provider you chose.
 
 ## Rules
 
@@ -839,9 +873,10 @@ Turn the approved script into clean narration audio, one file per line, with eac
 ## What to ask or check
 
 - Is script.yaml approved? If not, stop. Nothing is voiced before approval point 2.
-- Which engine does spec.yaml name? `kokoro` (default), `chatterbox` or `none`.
+- Which engine does spec.yaml name? `kokoro` (default), `chatterbox`, `elevenlabs`, `gradium` or `none`.
   - `none` means a silent video with captions: slides run on caption time, and `reelsmith voice generate` and the voice step inside `reelsmith run` both skip themselves with an `[OK]`. There is nothing for you to do here; go to compose.
   - `chatterbox` needs `sample:` and `consent: own` or `consent: permission`, set from the user's own answer in the interview. No consent, no cloning. Never fill in consent yourself.
+  - `elevenlabs` or `gradium` need `provider_voice_id` and an API key in the env var named by `api_key_env` (defaults `ELEVENLABS_API_KEY` and `GRADIUM_API_KEY`). Never ask for or log the key. Run `reelsmith doctor --profile cloud` to check the var is set. Clone with `reelsmith voice clone` only after consent. Delete a clone at the provider with `reelsmith voice delete-clone` when the user no longer needs it.
 - Not sure which Kokoro voice? Offer a preview first. Suggest `af_heart` (US female, default) and `am_michael` (US male, calm), then `af_bella`, `bf_emma`, `am_fenrir` and `bm_george` if they want more. Other languages are best effort.
 - Too fast or too slow? Set `voice.speed` in spec.yaml (1.0 is normal, 0.9 is a bit slower). It works for Chatterbox too: the cloned audio is slowed or sped up afterwards, from 0.75 to 1.25, keeping the pitch and the watermark.
 - The first run downloads models into the user's cache folder: the Kokoro model (about 114 MB plus 28 MB of voices) and the Whisper model used to check the words (about 145 MB). Tell the user before the first run.

@@ -237,6 +237,8 @@ def _voice_id(spec: SpecModel, timings: dict[str, object]) -> str:
     its sample, which only the engine can work out, so trust the last run."""
     if spec.voice.engine == "kokoro":
         return spec.voice.kokoro_voice
+    if spec.voice.engine in ("elevenlabs", "gradium"):
+        return spec.voice.provider_voice_id or ""
     if timings.get("engine") == spec.voice.engine:
         return str(timings.get("voice") or "")
     return ""
