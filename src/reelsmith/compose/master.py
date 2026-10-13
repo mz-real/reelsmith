@@ -52,7 +52,12 @@ def master_args(
     chains = xfade_filters(durations, fade, "vout", transitions, fade_durations)
     starts = scene_starts(durations)
     for k, start in enumerate(starts):
-        chains.append(f"[{k}:a]adelay={round(start * 1000)}:all=1[sa{k}]")
+        # Pad every scene's audio to the full master. Without it, amix could end the mix when
+        # an early scene's audio ran out before a later, delayed scene had queued any audio,
+        # depending on thread timing, and drop that later narration.
+        chains.append(
+            f"[{k}:a]adelay={round(start * 1000)}:all=1,apad=whole_dur={num(total)}[sa{k}]"
+        )
     labels = "".join(f"[sa{k}]" for k in range(len(starts)))
     mix = f"amix=inputs={len(starts)}:normalize=0:duration=longest," if len(starts) > 1 else ""
     norm = loudnorm_filter(loudness, true_peak)

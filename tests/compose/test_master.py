@@ -30,9 +30,10 @@ def test_scenes_join_with_xfade_and_narration_keeps_its_place() -> None:
     ]
     assert "xfade=transition=fade:duration=0.4:offset=3[x1]" in graph
     assert "xfade=transition=fade:duration=0.4:offset=7.5[vout]" in graph
-    assert "[0:a]adelay=0:all=1[sa0]" in graph
-    assert "[1:a]adelay=3000:all=1[sa1]" in graph
-    assert "[2:a]adelay=7500:all=1[sa2]" in graph
+    # Every scene's audio is padded to the whole master so the mix never ends early.
+    assert "[0:a]adelay=0:all=1,apad=whole_dur=9.5[sa0]" in graph
+    assert "[1:a]adelay=3000:all=1,apad=whole_dur=9.5[sa1]" in graph
+    assert "[2:a]adelay=7500:all=1,apad=whole_dur=9.5[sa2]" in graph
     assert "amix=inputs=3:normalize=0:duration=longest" in graph
     assert f"{LOUDNORM}," in graph
     assert LOUDNORM == "loudnorm=I=-16:TP=-1.5:LRA=11"
@@ -46,7 +47,7 @@ def test_one_scene_master_only_normalises_loudness() -> None:
     graph = graph_of(master_args([Path("a.mp4")], [5.0], Encode("ultrafast", 28), Path("m.mp4")))
     assert "xfade" not in graph
     assert "[0:v]null[vout]" in graph
-    assert "[0:a]adelay=0:all=1[sa0]" in graph
+    assert "[0:a]adelay=0:all=1,apad=whole_dur=5[sa0]" in graph
     assert "duration=longest" not in graph
     assert "[voiced][floor]amix=inputs=2" in graph
 
