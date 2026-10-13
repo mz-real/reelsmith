@@ -50,14 +50,21 @@ def blur_boxes(
     return boxes
 
 
-def _enable_window(start: float, end: float) -> str:
-    start_adj = max(0.0, start - START_PAD)
-    end_adj = end + FRAME_PAD
+def _enable_window(start: float, end: float, scale: float = 1.0) -> str:
+    start_adj = max(0.0, start - START_PAD * scale)
+    end_adj = end + START_PAD * scale
     return f"between(t,{num(start_adj)},{num(end_adj)})"
 
 
-def blur_filters_clip(boxes: Sequence[BlurBox], src: str, out: str) -> list[str]:
-    """Blur on a continuous clip timeline (clip times in enable)."""
+def blur_filters_clip(
+    boxes: Sequence[BlurBox], src: str, out: str, max_speed: float = 1.0
+) -> list[str]:
+    """Blur on a continuous clip timeline (clip times in enable).
+
+    The padding is two output frames. At max_speed times playback one output frame spans
+    max_speed frames of clip time, so the pad in clip time grows with it.
+    """
+    scale = max(1.0, max_speed)
     if not boxes:
         return [f"[{src}]null[{out}]"]
     chains: list[str] = []
@@ -67,9 +74,9 @@ def blur_filters_clip(boxes: Sequence[BlurBox], src: str, out: str) -> list[str]
         target = out if last else f"blur{number}"
         radius = max(1, min(MAX_RADIUS, min(box.w, box.h) // 4 - 1))
         enable = (
-            f"gte(t,{num(max(0.0, box.start - START_PAD))})"
+            f"gte(t,{num(max(0.0, box.start - START_PAD * scale))})"
             if box.end is None
-            else _enable_window(box.start, box.end)
+            else _enable_window(box.start, box.end, scale)
         )
         chains.append(
             f"[{current}]split[blurbase{number}][blurcut{number}];"

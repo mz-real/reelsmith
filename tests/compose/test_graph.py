@@ -59,10 +59,13 @@ def test_segments_play_hold_and_speed_up() -> None:
     chains = segment_filters(PLAY_HOLD_FAST, "in", "out", clip_duration=6.0, fps=30)
     text = ";".join(chains)
     assert text.startswith("[in]split=") and "concat=n=" in text
-    assert "[seg0]trim=start=0:end=2,setpts=PTS-STARTPTS[part0]" in text
+    assert (
+        "[seg0]trim=start=0:end=2,setpts=PTS-STARTPTS,fps=30,"
+        "tpad=stop_mode=clone:stop=60,trim=end_frame=60,setpts=PTS-STARTPTS[part0]"
+    ) in text
     assert (
         "[seg1]trim=start_frame=60:end_frame=61,setpts=PTS-STARTPTS,"
-        "tpad=stop_mode=clone:stop_duration=1.5,trim=duration=1.5[part1]"
+        "tpad=stop_mode=clone:stop=45,trim=end_frame=45,setpts=PTS-STARTPTS[part1]"
     ) in text
     assert "split=11" in text
     assert "setpts=(PTS-STARTPTS)/1.25" in text
@@ -79,7 +82,29 @@ def test_a_hold_at_the_very_end_uses_the_last_real_frame() -> None:
 
 def test_one_segment_needs_no_split() -> None:
     chains = segment_filters([Segment("play", 0.0, 3.0, 1.0, 0.0, 3.0)], "a", "b", 3.0, 30)
-    assert chains == ["[a]trim=start=0:end=3,setpts=PTS-STARTPTS,fps=30[b]"]
+    assert chains == [
+        "[a]trim=start=0:end=3,setpts=PTS-STARTPTS,fps=30,"
+        "tpad=stop_mode=clone:stop=90,trim=end_frame=90,setpts=PTS-STARTPTS,fps=30[b]"
+    ]
+
+
+def test_every_part_gets_whole_frames_from_its_rounded_timeline_edges() -> None:
+    from reelsmith.compose.graph import frame_count
+    from reelsmith.compose.speed_ramp import expand_speed_ramps
+
+    segments = [
+        Segment("play", 0.0, 9.37, 3.748, 0.0, 2.5),
+        Segment("play", 9.37, 12.87, 1.0, 2.5, 6.0),
+    ]
+    pieces = expand_speed_ramps(segments)
+    counts = [frame_count(seg, 30) for seg in pieces]
+    # Rounded edges telescope: the parts add up to exactly the scene's frames, so short ramp
+    # pieces cannot drift the picture away from the timeline.
+    assert sum(counts) == round(pieces[-1].out_end * 30) - round(pieces[0].out_start * 30)
+    text = ";".join(segment_filters(segments, "in", "out", clip_duration=13.0, fps=30))
+    for count in counts:
+        if count > 0:
+            assert f"trim=end_frame={count}," in text
 
 
 def test_audio_is_cut_per_phrase_and_placed_with_adelay() -> None:
@@ -102,7 +127,10 @@ def test_clip_scene_args() -> None:
     graph = graph_of(args)
     assert args[:2] == ["-i", str(Path("clips/my clip é/video.mp4"))]
     # stills are single images read literally, never as a numbered pattern
-    assert ["-f", "image2", "-pattern_type", "none", "-i", "frame.png"] == args[2:8]
+    # and at the scene frame rate, so the overlaid picture is not read at 25 fps
+    assert ["-f", "image2", "-pattern_type", "none", "-framerate", "30", "-i", "frame.png"] == args[
+        2:10
+    ]
     assert "[0:v]fps=30,scale=1172:2532,setsar=1,format=yuv420p[raw]" in graph
     # blur runs on the raw clip in clip time, then the segments read the blurred stream
     assert "[raw]split[blurbase0][blurcut0]" in graph
@@ -153,10 +181,10 @@ def test_slide_scene_steps_fade_in_and_zoom_slowly() -> None:
         "image2",
         "-pattern_type",
         "none",
-        "-loop",
-        "1",
         "-framerate",
         "30",
+        "-loop",
+        "1",
         "-t",
         "5.9",
         "-i",
@@ -164,7 +192,7 @@ def test_slide_scene_steps_fade_in_and_zoom_slowly() -> None:
     ]
     assert "fade=t=in:st=2.05:d=0.3:alpha=1" in graph
     assert "overlay=0:0:enable='gte(t,2.05)'" in graph
-    assert "eval=frame" in graph and "crop=1920:1080" in graph
+    assert "perspective=" in graph and "eval=frame" in graph and "trunc(" not in graph
     assert "concat=" not in graph and ",trim=start=" not in graph
 
 
@@ -174,3 +202,21 @@ def test_footage_with_an_inset_is_letterboxed_under_the_status_bar() -> None:
     assert "scale=1180:680:flags=lanczos" in graph
     assert "pad=1200:750:10:60:color=0xf4efe6" in graph
     assert graph.index("pad=1200:750") < graph.index("[content]")
+
+
+def test_each_phrase_fades_in_and_out_so_it_crosses_into_the_quiet_bed() -> None:
+    piece = AudioPiece(Path("a.wav"), 0.0, 2.0, 1.0)
+
+    chain = audio_filters([0], [piece], total=4.0)[0]
+
+    assert "afade=t=in:d=0.04" in chain
+    assert "afade=t=out:st=1.96:d=0.04" in chain
+
+
+def test_a_phrase_shorter_than_two_fades_gets_shorter_fades() -> None:
+    piece = AudioPiece(Path("a.wav"), 0.0, 0.06, 1.0)
+
+    chain = audio_filters([0], [piece], total=4.0)[0]
+
+    assert "afade=t=in:d=0.03" in chain
+    assert "afade=t=out:st=0.03:d=0.03" in chain

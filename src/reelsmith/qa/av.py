@@ -50,6 +50,44 @@ def rms_of_window(master: Path, start: float, end: float, work_dir: Path) -> flo
     return float(np.sqrt(np.mean(np.square(samples))))
 
 
+def extract_gray_frames(
+    master: Path, start: float, end: float, fps: float, size: tuple[int, int] = (160, 90)
+) -> np.ndarray:
+    """Small grey copies of the master's frames between start and end, as (n, h, w) floats.
+
+    Values run from 0 to 255. The window is read at the master's frame rate so
+    every frame of the picture is one row of the result.
+    """
+    require_ffmpeg()
+    width, height = size
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        f"{max(0.0, start):.3f}",
+        "-t",
+        f"{max(0.0, end - start):.3f}",
+        "-i",
+        str(master),
+        "-an",
+        "-vf",
+        f"fps={fps:g},scale={width}:{height}:flags=area,format=gray",
+        "-f",
+        "rawvideo",
+        "-",
+    ]
+    completed = subprocess.run(command, capture_output=True)
+    if completed.returncode != 0:
+        detail = _tail(completed.stderr.decode("utf-8", errors="replace"))
+        raise ReelsmithError(f"ffmpeg frame analysis failed: {detail}")
+    frame_bytes = width * height
+    count = len(completed.stdout) // frame_bytes
+    raw = np.frombuffer(completed.stdout[: count * frame_bytes], dtype=np.uint8)
+    return raw.reshape(count, height, width).astype(np.float64)
+
+
 def ebur128_loudness(master: Path) -> tuple[float, float]:
     """Return (integrated loudness in LUFS, true peak in dBTP) for the master."""
     require_ffmpeg()

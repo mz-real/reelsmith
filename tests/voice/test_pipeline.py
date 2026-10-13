@@ -480,15 +480,29 @@ def test_the_line_hash_includes_say(tmp_path: Path) -> None:
     assert second.lines[0].hash != first.lines[0].hash
 
 
-def test_a_line_without_say_keeps_its_old_hash() -> None:
+def test_a_line_without_say_or_cleanup_keeps_its_old_hash() -> None:
     import hashlib
 
     from reelsmith.voice.pipeline import _line_hash
 
     line = Line(id="l1", phrases=[Phrase(text="hello world")])
-    old = hashlib.sha256(b"hello world|fake|af_heart|1.0|clean=1").hexdigest()
+    old = hashlib.sha256(b"hello world|fake|af_heart|1.0|clean=0").hexdigest()
 
-    assert _line_hash(line, "fake", "af_heart", 1.0) == old
+    assert _line_hash(line, "fake", "af_heart", 1.0, clean=False) == old
+
+
+def test_the_line_hash_changes_with_the_cleanup_version_and_the_loudness() -> None:
+    import hashlib
+
+    from reelsmith.voice.pipeline import CLEAN_VERSION, _line_hash
+
+    line = Line(id="l1", phrases=[Phrase(text="hello world")])
+    previous = hashlib.sha256(b"hello world|fake|af_heart|1.0|clean=1").hexdigest()
+    current = _line_hash(line, "fake", "af_heart", 1.0)
+
+    assert CLEAN_VERSION >= 2
+    assert current != previous
+    assert _line_hash(line, "fake", "af_heart", 1.0, loudness=-23.0) != current
 
 
 def test_the_line_hash_includes_applicable_pronounce_entries(tmp_path: Path) -> None:

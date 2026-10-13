@@ -1,4 +1,4 @@
-"""The nine QA checks run against a composed master video."""
+"""The QA checks run against a composed master video."""
 
 from __future__ import annotations
 
@@ -13,8 +13,19 @@ from reelsmith.compose.speed_ramp import expand_speed_ramps, max_speed_jump
 from reelsmith.compose.transitions import XFADE
 from reelsmith.errors import ReelsmithError
 from reelsmith.models import ScriptModel, SpecModel
-from reelsmith.qa.av import ebur128_loudness, extract_audio_window, extract_frame, rms_of_window
-from reelsmith.qa.image import build_contact_sheet, grayscale_crop, laplacian_variance
+from reelsmith.qa.av import (
+    ebur128_loudness,
+    extract_audio_window,
+    extract_frame,
+    extract_gray_frames,
+    rms_of_window,
+)
+from reelsmith.qa.image import (
+    build_contact_sheet,
+    grayscale_crop,
+    judder_frames,
+    laplacian_variance,
+)
 from reelsmith.qa.timeline import CaptionOut, PlacementOut, SceneOut, Timeline
 from reelsmith.qa.transcribe import Transcriber
 from reelsmith.text import compare_text
@@ -26,6 +37,12 @@ LOUDNESS_TOLERANCE = 1.5
 DEFAULT_TRUE_PEAK_CEILING = -1.0
 NOISE_WARN_DB = -50.0
 NOISE_FAIL_DB = -40.0
+SILENT_DB = -100.0
+AUDIBLE_FLOOR_DB = -60.0
+SILENT_SHARE_FAIL = 0.10
+AUDIBLE_SHARE_MIN = 0.10
+STUTTER_WARN_PER_MIN = 6.0
+STUTTER_FAIL_PER_MIN = 15.0
 ABRUPT_ONSET_S = 0.020
 ABRUPT_ONSET_RATIO = 0.65
 END_NOISE_WINDOW = 0.30
@@ -441,6 +458,17 @@ def check_background_noise(ctx: QAContext) -> CheckRow:
         details.append("No gaps between words were long enough to measure.")
         return CheckRow("Background noise", status, details)
     tenth = sorted(floor_readings)[max(0, len(floor_readings) // 10)]
+    total = len(floor_readings)
+    silent = sum(1 for level in floor_readings if level < SILENT_DB)
+    audible = sum(1 for level in floor_readings if level > AUDIBLE_FLOOR_DB)
+    if silent / total > SILENT_SHARE_FAIL and audible / total >= AUDIBLE_SHARE_MIN:
+        status = CheckStatus.FAIL
+        details.append(
+            f"The narration flips between digital silence and an audible floor: "
+            f"{silent} of {total} gaps between words sit below {SILENT_DB:g} dB while "
+            f"{audible} sit above {AUDIBLE_FLOOR_DB:g} dB, so the noise is heard switching "
+            "on and off. Fix: regenerate the lines and recompose."
+        )
     if tenth > NOISE_FAIL_DB + EPS:
         status = CheckStatus.FAIL
         details.append(
@@ -449,12 +477,12 @@ def check_background_noise(ctx: QAContext) -> CheckRow:
             "the lines, and recompose."
         )
     elif tenth > NOISE_WARN_DB + EPS:
-        status = CheckStatus.WARN
+        status = worse(status, CheckStatus.WARN)
         details.append(
             f"The noise floor between words sits near {tenth:.1f} dB RMS (10th percentile), "
             f"above {NOISE_WARN_DB:g} dB. Fix: regenerate noisy lines or lower options.loudness."
         )
-    else:
+    elif status == CheckStatus.PASS:
         details.append(f"The between-word noise floor is about {tenth:.1f} dB RMS.")
     return CheckRow("Background noise", status, details)
 
@@ -756,6 +784,50 @@ def check_frozen_picture(ctx: QAContext) -> CheckRow:
     return CheckRow("Frozen picture", status, details)
 
 
+def check_stutter(ctx: QAContext) -> CheckRow:
+    """Count frames where a moving picture stands still for one frame.
+
+    A slow zoom that moves in whole pixel steps shows as a few of these every
+    second. Each scene is read at the master's frame rate, and the count is
+    given per minute of footage so a long demo is judged like a short one.
+    """
+    seconds = 0.0
+    total = 0
+    worst: list[tuple[int, str]] = []
+    for scene_tl in ctx.timeline.scenes:
+        if not scene_tl.segments:
+            continue
+        length = scene_tl.out_end - scene_tl.out_start
+        if length <= 0:
+            continue
+        frames = extract_gray_frames(
+            ctx.master, scene_tl.out_start, scene_tl.out_end, ctx.master_fps
+        )
+        count = len(judder_frames(frames))
+        seconds += length
+        total += count
+        if count:
+            worst.append((count, f"{_scene_where(scene_tl.id)}: {count} at {length:.1f}s"))
+    if seconds <= 0:
+        return CheckRow("Stutter", CheckStatus.PASS, ["No footage scenes to measure."])
+    per_minute = total * 60.0 / seconds
+    listing = "; ".join(text for _, text in sorted(worst, reverse=True))
+    summary = f"{total} judder frames in {seconds:.0f}s of footage, {per_minute:.1f} per minute."
+    if per_minute > STUTTER_FAIL_PER_MIN + EPS:
+        status = CheckStatus.FAIL
+        limit = STUTTER_FAIL_PER_MIN
+    elif per_minute > STUTTER_WARN_PER_MIN + EPS:
+        status = CheckStatus.WARN
+        limit = STUTTER_WARN_PER_MIN
+    else:
+        return CheckRow("Stutter", CheckStatus.PASS, [summary])
+    return CheckRow(
+        "Stutter",
+        status,
+        [f"{summary} Over {limit:g} per minute. Scenes: {listing}. Fix: recompose the scenes."],
+    )
+
+
 def check_speed_jumps(ctx: QAContext) -> CheckRow:
     """Warn when playback speed changes too sharply in a short window."""
     status = CheckStatus.PASS
@@ -857,6 +929,7 @@ CHECKS: tuple[tuple[str, Callable[[QAContext], CheckRow]], ...] = (
     ("Blur", check_blur),
     ("Frozen picture", check_frozen_picture),
     ("Speed jumps", check_speed_jumps),
+    ("Stutter", check_stutter),
     ("Contact sheets", check_contact_sheets),
 )
 

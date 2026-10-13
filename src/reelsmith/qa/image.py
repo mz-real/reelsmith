@@ -33,6 +33,32 @@ def grayscale_crop(png_path: Path, box: Box | None) -> np.ndarray:
         return np.asarray(gray, dtype=np.float64)
 
 
+JUDDER_STILL = 0.02
+JUDDER_MOVING = 0.15
+
+
+def judder_frames(frames: np.ndarray) -> list[int]:
+    """Indexes of frames that barely change between two frames that move.
+
+    frames is (n, h, w) grey values from 0 to 255. Frame k is a judder frame
+    when the mean absolute difference to frame k+1 is under JUDDER_STILL while
+    the differences just before and just after are over JUDDER_MOVING: the
+    picture was moving, stood still for one frame, and moved again.
+    """
+    if len(frames) < 4:
+        return []
+    diffs = np.abs(np.diff(frames, axis=0)).mean(axis=(1, 2))
+    found = []
+    for k in range(1, len(diffs) - 1):
+        if (
+            diffs[k] < JUDDER_STILL
+            and diffs[k - 1] > JUDDER_MOVING
+            and diffs[k + 1] > JUDDER_MOVING
+        ):
+            found.append(k)
+    return found
+
+
 def laplacian_variance(gray: np.ndarray) -> float:
     """How much high frequency detail is in a grayscale array.
 

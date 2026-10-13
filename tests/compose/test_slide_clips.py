@@ -67,8 +67,8 @@ def test_graph_plays_each_clip_then_holds_its_still() -> None:
     assert "[sclip0][shold0]concat=n=2:v=1:a=0,trim=duration=2," in graph
     assert "[sclip1][shold1]concat=n=2:v=1:a=0,trim=duration=3.9," in graph
     assert "[sp0][sp1]concat=n=2:v=1:a=0[slides]" in graph
-    assert "eval=frame" in graph  # the slow push in stays on top
-    assert "fade=t=in" not in graph
+    assert "perspective=" in graph  # the slow push in stays on top
+    assert "fade=t=in:st" not in graph
 
 
 def test_compose_picks_the_clips(ready: Path) -> None:
